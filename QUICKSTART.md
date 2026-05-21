@@ -47,6 +47,7 @@ KAIF_PORT=8080
 KAIF_HOST=0.0.0.0
 KAIF_ISSUER=https://auth.kindred.systems
 KAIF_LOG_LEVEL=info
+KAIF_DEV_MODE=true
 
 # Redis
 KAIF_REDIS_URL=redis://redis:6379
@@ -60,7 +61,7 @@ KAIF_IDP_JWKS_URL=http://localhost:9999/fake-jwks
 KAIF_IDP_ISSUER=https://fake-idp.example.com
 
 # Config
-KAIF_AGENTS_CONFIG_PATH=./config/agents.yaml
+KAIF_AGENTS_CONFIG_PATH=./packages/server/config/agents.yaml
 KAIF_STRICT_REVOCATION=false
 ```
 
@@ -69,7 +70,7 @@ KAIF_STRICT_REVOCATION=false
 ## Start the Stack (1 minute)
 
 ```bash
-docker compose up -d
+KAIF_DEV_MODE=true docker compose up -d --build
 ```
 
 This brings up:
@@ -77,7 +78,8 @@ This brings up:
 - **SPIRE Server** (1.9.0) — Workload identity issuer
 - **SPIRE Agent** (1.9.0) — Workload identity receiver
 - **KAIF Server** (Fastify on port 8080)
-- **Mock Agent** (demonstrates client usage)
+
+`KAIF_DEV_MODE=true` is for local demos only. It lets `/provision` accept `dev-mock-token` instead of requiring a real OIDC provider.
 
 **Verify health:**
 ```bash
@@ -95,7 +97,7 @@ Expected output:
   "redis": "connected",
   "spire": "reachable",
   "uptime": 5,
-  "version": "1.0.0"
+  "version": "0.1.0"
 }
 ```
 
@@ -103,30 +105,36 @@ Expected output:
 
 ## Your First Token Exchange (2 minutes)
 
-### Option A: Use the Mock Agent (Easiest)
-
-The mock agent automatically provisions a delegation and exchanges tokens:
+Run the end-to-end demo against the running stack:
 
 ```bash
-# View mock agent logs (automatically runs after KAIF is healthy)
-docker compose logs mock-agent
+./scripts/demo.sh
 ```
 
-You'll see:
+You'll see a provisioned delegation token, a successful RFC 8693 exchange, and decoded KAIF JWT claims:
 ```
-mock-agent | ✓ Token exchange successful
-mock-agent | Access Token: eyJhbGc...
-mock-agent | Decoded claims: { sub: "user@example.com", actor: { sub: "spiffe://..." } }
+Delegation ID: ...
+Delegation token: eyJ...
+Decoded KAIF JWT:
+{
+  "sub": "dev@local",
+  "actor": { "sub": "spiffe://kindred.systems/ns/examples/agent/mock" },
+  "kaif": { "delegation_depth": 0, ... }
+}
 ```
 
-### Option B: Manual Token Exchange
+### Manual Token Exchange
 
-If you want to test the API directly:
+If you want to test the API directly, use the SPIRE agent CLI to fetch a JWT-SVID and use the signed `delegation_token` returned by `/provision`.
 
 **Step 1: Get an SVID from SPIRE**
 ```bash
-# This is normally automatic; here we simulate it
-SVID=$(docker exec kaif-server curl -s http://spire-agent:8006/svid.json | jq -r '.svids[0].svid')
+SVID=$(docker compose exec spire-agent \
+  /opt/spire/bin/spire-agent api fetch jwt \
+  -spiffeID "spiffe://kindred.systems/ns/examples/agent/mock" \
+  -audience "http://localhost:8080" \
+  -socketPath /run/spire/sockets/agent.sock \
+  2>/dev/null | grep -v "^Received" | tr -d '[:space:]')
 echo "SVID extracted: $SVID"
 ```
 
@@ -135,10 +143,10 @@ echo "SVID extracted: $SVID"
 curl -X POST http://localhost:8080/provision \
   -H "Content-Type: application/json" \
   -d '{
-    "id_token": "fake-oidc-token",
+    "id_token": "dev-mock-token",
     "agent_id": "mock-agent",
     "scope": "invoke:completion",
-    "ttl_seconds": 900
+    "ttl_seconds": 300
   }' | jq .
 ```
 
@@ -146,18 +154,25 @@ Response (sample):
 ```json
 {
   "delegation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "delegation_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6...",
   "expires_at": 1716252000
 }
 ```
 
 **Step 3: Exchange for KAIF JWT**
 ```bash
-# Copy the delegation_id from above
-DELEGATION_ID="550e8400-e29b-41d4-a716-446655440000"
+# Copy delegation_token from the /provision response
+DELEGATION_TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6..."
 
 curl -X POST http://localhost:8080/oauth/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange&subject_token=$DELEGATION_ID&subject_token_type=urn:ietf:params:oauth:token-type:access_token&actor_token=$SVID&actor_token_type=urn:ietf:params:oauth:token-type:jwt&scope=invoke:completion&audience=my-service" | jq .
+  --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  --data-urlencode "subject_token=$DELEGATION_TOKEN" \
+  --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
+  --data-urlencode "actor_token=$SVID" \
+  --data-urlencode "actor_token_type=urn:ietf:params:oauth:token-type:jwt" \
+  --data-urlencode "scope=invoke:completion" \
+  --data-urlencode "audience=my-service" | jq .
 ```
 
 Response (sample):
@@ -186,10 +201,8 @@ echo $TOKEN | cut -d. -f2 | base64 -d | jq .
 ### View Audit Log
 
 ```bash
-# Get all audit entries
-curl -s http://localhost:8080/audit | jq .
-
-# Expected actions: TOKEN_ISSUED, TOKEN_REVOKED, AUTH_FAILED, etc.
+# Inspect the Redis-backed global audit chain
+docker compose exec redis redis-cli LRANGE kaif:audit:global 0 -1
 ```
 
 ### View JWKS (Public Keys)
@@ -201,7 +214,7 @@ curl -s http://localhost:8080/.well-known/jwks.json | jq .
 ### Check Redis Data
 
 ```bash
-docker exec -it redis redis-cli
+docker compose exec redis redis-cli
 
 # Inside redis-cli:
 keys kaif:*           # List all KAIF keys
@@ -222,15 +235,16 @@ docker compose logs -f kaif-server
 
 | Task | Command |
 |------|---------|
-| Start all services | `docker compose up -d` |
+| Start server stack | `KAIF_DEV_MODE=true docker compose up -d --build` |
+| Run local token demo | `./scripts/demo.sh` |
 | Stop services | `docker compose down` |
 | View logs (live) | `docker compose logs -f kaif-server` |
 | Restart KAIF | `docker compose restart kaif-server` |
 | View all services | `docker compose ps` |
 | Clean up everything | `docker compose down -v` |
-| Shell into KAIF container | `docker exec -it kaif-server sh` |
-| Shell into Redis | `docker exec -it redis redis-cli` |
-| View mock agent output | `docker compose logs mock-agent` |
+| Shell into KAIF container | `docker compose exec kaif-server sh` |
+| Shell into Redis | `docker compose exec redis redis-cli` |
+| Run optional mock-agent profile | `DELEGATION_TOKEN=<token> docker compose --profile demo-agent up mock-agent` |
 
 ---
 

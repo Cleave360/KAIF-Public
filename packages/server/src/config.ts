@@ -11,6 +11,13 @@ export interface KAIFConfig {
   agents_config_path:    string
   log_level:             string
   strict_revocation:     boolean
+  dev_mode:              boolean
+  tenant_address?:       string
+  governance_audit_append_url?: string
+  governance_workspace_id: string
+  governance_project_id:   string
+  governance_ui_instance_id: string
+  class_c_degraded_open: boolean
 }
 
 function requireEnv(name: string): string {
@@ -21,20 +28,49 @@ function requireEnv(name: string): string {
 
 export function loadConfig(): KAIFConfig {
   const keyPath = process.env['KAIF_PRIVATE_KEY_PATH'] || undefined
+  const devMode = process.env['KAIF_DEV_MODE'] === 'true'
+  const production = process.env['NODE_ENV'] === 'production'
+  const redisUrl = requireEnv('KAIF_REDIS_URL')
+
+  if (production && devMode) {
+    throw new Error('KAIF_DEV_MODE=true is not permitted when NODE_ENV=production')
+  }
+
+  if (production && !keyPath) {
+    throw new Error('KAIF_PRIVATE_KEY_PATH is required when NODE_ENV=production')
+  }
+
+  if (
+    production
+    && !redisUrl.startsWith('rediss://')
+    && process.env['KAIF_ALLOW_INSECURE_REDIS'] !== 'true'
+  ) {
+    throw new Error('KAIF_REDIS_URL must use rediss:// when NODE_ENV=production')
+  }
 
   return {
     port:                  parseInt(process.env['KAIF_PORT'] ?? '8080', 10),
     host:                  process.env['KAIF_HOST'] ?? '0.0.0.0',
     issuer:                requireEnv('KAIF_ISSUER'),
-    redis_url:             requireEnv('KAIF_REDIS_URL'),
+    redis_url:             redisUrl,
     spire_bundle_endpoint: requireEnv('KAIF_SPIRE_BUNDLE_ENDPOINT'),
     spire_trust_domain:    requireEnv('KAIF_SPIRE_TRUST_DOMAIN'),
-    idp_jwks_url:          requireEnv('KAIF_IDP_JWKS_URL'),
-    idp_issuer:            requireEnv('KAIF_IDP_ISSUER'),
+    // IdP settings are required in production; optional in dev_mode
+    idp_jwks_url:          devMode ? (process.env['KAIF_IDP_JWKS_URL'] ?? '') : requireEnv('KAIF_IDP_JWKS_URL'),
+    idp_issuer:            devMode ? (process.env['KAIF_IDP_ISSUER'] ?? '')   : requireEnv('KAIF_IDP_ISSUER'),
     // exactOptionalPropertyTypes: omit the key entirely when absent
     ...(keyPath !== undefined ? { private_key_path: keyPath } : {}),
     agents_config_path:    requireEnv('KAIF_AGENTS_CONFIG_PATH'),
     log_level:             process.env['KAIF_LOG_LEVEL'] ?? 'info',
     strict_revocation:     process.env['KAIF_STRICT_REVOCATION'] === 'true',
+    dev_mode:              devMode,
+    ...(process.env['KAIF_TENANT_ADDRESS'] ? { tenant_address: process.env['KAIF_TENANT_ADDRESS'] } : {}),
+    ...(process.env['KAIF_GOVERNANCE_AUDIT_APPEND_URL']
+      ? { governance_audit_append_url: process.env['KAIF_GOVERNANCE_AUDIT_APPEND_URL'] }
+      : {}),
+    governance_workspace_id:    process.env['KAIF_GOVERNANCE_WORKSPACE_ID'] ?? 'ws-kaif',
+    governance_project_id:      process.env['KAIF_GOVERNANCE_PROJECT_ID'] ?? 'kaif',
+    governance_ui_instance_id:  process.env['KAIF_GOVERNANCE_UI_INSTANCE_ID'] ?? 'ui-kaif',
+    class_c_degraded_open:      process.env['KAIF_CLASS_C_DEGRADED_OPEN'] === 'true',
   }
 }

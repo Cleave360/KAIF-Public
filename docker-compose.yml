@@ -1,0 +1,132 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes: ["redis-data:/data"]
+    command: redis-server --appendonly yes --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  spire-server:
+    image: ghcr.io/spiffe/spire-server:1.9.0
+    restart: unless-stopped
+    hostname: spire-server
+    volumes:
+      - ./spire/server.conf:/opt/spire/conf/server/server.conf:ro
+      - spire-server-data:/run/spire/data
+      - spire-server-socket:/run/spire/server-sockets
+    ports:
+      - "8081:8081"   # bundle endpoint (HTTP) consumed by kaif-server
+      - "8443:8443"   # agent API (gRPC)
+    healthcheck:
+      test:
+        - "CMD"
+        - "/opt/spire/bin/spire-server"
+        - "healthcheck"
+        - "-socketPath"
+        - "/run/spire/server-sockets/api.sock"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # One-shot: generates a join token + registers workload entries, then exits.
+  # The spire-agent reads the token from the shared spire-token volume.
+  spire-init:
+    build:
+      context: ./spire
+      dockerfile: Dockerfile.init
+    depends_on:
+      spire-server: { condition: service_healthy }
+    volumes:
+      - spire-server-socket:/run/spire/server-sockets:ro
+      - spire-token:/run/spire/token
+    restart: "no"
+
+  spire-agent:
+    # ⚠️  DEVELOPMENT ONLY: spire/agent.conf uses insecure_bootstrap = true.
+    # Production deployments must use upstream_authority or a pre-provisioned
+    # trust bundle. See: https://spiffe.io/docs/latest/deploying/spire_agent/
+    build:
+      context: ./spire
+      dockerfile: Dockerfile.agent
+    restart: on-failure
+    depends_on:
+      spire-server: { condition: service_healthy }
+      spire-init:   { condition: service_completed_successfully }
+    volumes:
+      - ./spire/agent.conf:/opt/spire/conf/agent/agent.conf:ro
+      - spire-server-socket:/run/spire/server-sockets:ro
+      - spire-agent-socket:/run/spire/sockets
+      - spire-agent-data:/run/spire/data
+      - spire-token:/run/spire/token:ro
+    pid: "host"
+    healthcheck:
+      test:
+        - "CMD"
+        - "/opt/spire/bin/spire-agent"
+        - "healthcheck"
+        - "-socketPath"
+        - "/run/spire/sockets/agent.sock"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  kaif-server:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:       { condition: service_healthy }
+      spire-agent: { condition: service_healthy }
+    ports: ["8080:8080"]
+    environment:
+      KAIF_PORT:                  "8080"
+      KAIF_HOST:                  "0.0.0.0"
+      KAIF_ISSUER:                "http://localhost:8080"
+      KAIF_REDIS_URL:             "redis://redis:6379"
+      KAIF_SPIRE_BUNDLE_ENDPOINT: "http://spire-server:8081/bundles/jwt"
+      KAIF_SPIRE_TRUST_DOMAIN:    "kindred.systems"
+      KAIF_IDP_JWKS_URL:          "${KAIF_IDP_JWKS_URL:-}"
+      KAIF_IDP_ISSUER:            "${KAIF_IDP_ISSUER:-}"
+      KAIF_AGENTS_CONFIG_PATH:    "/app/config/agents.yaml"
+      KAIF_LOG_LEVEL:             "info"
+      KAIF_STRICT_REVOCATION:     "false"
+      KAIF_DEV_MODE:              "${KAIF_DEV_MODE:-false}"
+    volumes:
+      - spire-agent-socket:/run/spire/sockets:ro
+      - ./packages/server/config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mock-agent:
+    profiles: ["demo-agent"]
+    build:
+      context: .
+      dockerfile: examples/mock-agent/Dockerfile
+    depends_on:
+      kaif-server: { condition: service_healthy }
+    environment:
+      KAIF_SERVER_URL:   "http://kaif-server:8080"
+      AGENT_SPIFFE_ID:   "spiffe://kindred.systems/ns/examples/agent/mock"
+      DELEGATION_TOKEN:  "${DELEGATION_TOKEN:-}"
+    volumes:
+      - spire-agent-socket:/run/spire/sockets:ro
+
+volumes:
+  redis-data:
+  spire-server-data:
+  spire-server-socket:
+  spire-agent-socket:
+  spire-agent-data:
+  spire-token:

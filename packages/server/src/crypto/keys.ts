@@ -14,7 +14,8 @@ interface KeyCache {
   kid:        string
 }
 
-let _cache: KeyCache | null = null
+// Promise-cache: concurrent callers share one buildEphemeral/buildFromFile call.
+let _cachePromise: Promise<KeyCache> | null = null
 
 async function buildFromFile(keyPath: string): Promise<KeyCache> {
   const pem = await readFile(keyPath, 'utf8')
@@ -48,17 +49,20 @@ async function buildEphemeral(): Promise<KeyCache> {
   }
 }
 
-async function getCache(): Promise<KeyCache> {
-  if (_cache) return _cache
+function getCache(): Promise<KeyCache> {
+  if (_cachePromise) return _cachePromise
 
   const keyPath = process.env['KAIF_PRIVATE_KEY_PATH'] || undefined
-  _cache = keyPath ? await buildFromFile(keyPath) : await buildEphemeral()
-  return _cache
+  _cachePromise = (keyPath ? buildFromFile(keyPath) : buildEphemeral()).catch(err => {
+    _cachePromise = null  // allow retry after error
+    throw err
+  })
+  return _cachePromise
 }
 
 // Exposed for testing — allows resetting the in-process key cache
 export function _resetKeyCache(): void {
-  _cache = null
+  _cachePromise = null
 }
 
 export async function getSigningKey(): Promise<KeyLike> {

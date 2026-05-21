@@ -4,6 +4,26 @@ Status: Draft execution checklist
 Owner: Adaptive Layer / KAIF working group  
 Last updated: 2026-05-20
 
+## Current Assessment Snapshot (2026-05-20)
+
+This snapshot reflects the latest Claude Platform assessment and is the source of truth for release-readiness communication. The detailed checklist below remains the working checklist.
+
+| Section | Status |
+|---|---|
+| §1 Protocol Core | Complete |
+| §2 Verification Contract | Complete |
+| §3 Revocation + SLOs | Partial |
+| §4 Attestation + Identity | Complete |
+| §5 Security + Threat Hardening | Complete |
+| §6 Open Source Readiness | Complete |
+| §7 Conformance + Test Kit | Complete |
+| §8 Enterprise Adoption Pack | SHOULD (not blocking v1.0) |
+| §9 Acceptance Matrix | Partial (2 of 4 gates remain) |
+
+Open v1.0 external gates:
+- [ ] Security review sign-off
+- [ ] Two independent conforming implementations passing the conformance kit
+
 ## Purpose
 Define the minimum interoperable KAIF profile required for open-source release and enterprise integration.
 
@@ -162,6 +182,9 @@ Section 5.1 deliverable:
 - [ ] Security review signed off.
 - [ ] Interop trial completed with at least 2 independent relying-party implementations.
 - [ ] Conformance kit published and reproducible.
+
+Current gate status:
+- [ ] 2 of 4 gates remain (security review sign-off and second independent implementation)
 
 ### Recommended before broad launch
 - [ ] Section 8 SHOULD items materially complete.

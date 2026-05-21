@@ -489,8 +489,8 @@ Internal flow — implement in this exact order:
    - If score < ACL minimum tier → reject with 403 INSUFFICIENT_TRUST
 
 5. Compute delegation depth
-   - If subject_token is a KAIF token: depth = subject.kaif.delegation_depth + 1
-   - If subject_token is a raw human OIDC token: depth = 1
+   - If subject_token is a direct `/provision` grant: depth = 0
+   - If subject_token is an issued access token: depth = subject.kaif.delegation_depth + 1
    - If depth > ACL max_delegation_depth → reject with 403 DEPTH_EXCEEDED
 
 6. Compute RFC 8705 thumbprint if client_cert provided
@@ -631,7 +631,7 @@ export interface KAIFClientConfig {
   server_url:     string   // e.g. http://kaif-server:8080
   spiffe_id:      string   // this agent's SPIFFE ID
   svid_path?:     string   // path to JWT-SVID file (SPIRE writes this)
-  delegation_grant_id: string
+  delegation_token: string
 }
 
 export class KAIFClient {

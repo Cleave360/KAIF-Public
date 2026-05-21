@@ -1,0 +1,17 @@
+{
+  "name": "@kaif/mock-agent",
+  "version": "0.1.0",
+  "description": "KAIF example: demonstrates SDK token exchange flow",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --import tsx/esm index.ts"
+  },
+  "dependencies": {
+    "@kaif/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0"
+  }
+}

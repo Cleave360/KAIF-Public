@@ -1,0 +1,57 @@
+agents:
+  lyra:
+    spiffe_id: "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra"
+    trust_tier_minimum: STANDARD
+    permitted_scopes:
+      - "vault:read:anthropic_key"
+      - "invoke:completion"
+      - "audit:read"
+    may_sub_delegate: false
+    max_delegation_depth: 1
+    delegation_ttl_seconds: 900
+    human_principal_required: true
+
+  orion:
+    spiffe_id: "spiffe://kindred.systems/ns/adaptive-layer/agent/orion"
+    trust_tier_minimum: VERIFIED
+    permitted_scopes:
+      - "vault:read:*"
+      - "invoke:*"
+      - "agent:delegate"
+    may_sub_delegate: true
+    max_delegation_depth: 2
+    delegation_ttl_seconds: 900
+    human_principal_required: true
+
+  cipher:
+    spiffe_id: "spiffe://kindred.systems/ns/adaptive-layer/agent/cipher"
+    trust_tier_minimum: TRUSTED
+    permitted_scopes:
+      - "vault:*"
+      - "invoke:*"
+      - "agent:delegate"
+      - "admin:revoke"
+    may_sub_delegate: true
+    max_delegation_depth: 3
+    delegation_ttl_seconds: 900
+    human_principal_required: true
+
+  mock-agent:
+    spiffe_id: "spiffe://kindred.systems/ns/examples/agent/mock"
+    trust_tier_minimum: PROVISIONAL
+    permitted_scopes:
+      - "invoke:completion"
+    may_sub_delegate: false
+    max_delegation_depth: 0
+    delegation_ttl_seconds: 300
+    human_principal_required: false
+
+  conformance-agent:
+    spiffe_id: "spiffe://kindred.systems/ns/conformance/agent/test"
+    trust_tier_minimum: PROVISIONAL
+    permitted_scopes:
+      - "invoke:completion"
+    may_sub_delegate: false
+    max_delegation_depth: 0
+    delegation_ttl_seconds: 900
+    human_principal_required: false

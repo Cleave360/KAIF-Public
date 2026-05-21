@@ -1,0 +1,6 @@
+FROM ghcr.io/spiffe/spire-agent:1.9.0 AS spire
+FROM debian:12-slim
+COPY --from=spire /opt/spire/bin/spire-agent /opt/spire/bin/spire-agent
+COPY agent-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

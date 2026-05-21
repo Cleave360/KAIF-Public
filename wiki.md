@@ -16,6 +16,7 @@ This wiki documents the naming conventions, acronyms, data types, and core conce
 - [Code Style Conventions](#code-style-conventions)
 - [Redis Key Prefixes](#redis-key-prefixes)
 - [Error Codes](#error-codes)
+- [Implementation Status](#implementation-status)
 
 ---
 
@@ -111,7 +112,7 @@ This wiki documents the naming conventions, acronyms, data types, and core conce
 **Delegation Grant**
 - Provision: Human provides OIDC `id_token` to `/provision` endpoint
 - Storage: Stored in Redis with expiry
-- Use: Exchanged at `/oauth/token` for KAIF JWT
+- Use: `delegation_token` (signed JWT returned by `/provision`) is exchanged at `/oauth/token` for KAIF JWT
 
 **KAIF JWT**
 - Issued: KAIF signs token with RSA-2048 private key (RS256)
@@ -440,6 +441,27 @@ All errors follow RFC 6749 format:
 
 ---
 
+## Implementation Status
+
+KAIF reference implementation phases are complete.
+
+| Phase | Status |
+|-------|--------|
+| Phase 0 — Project Scaffold | Complete |
+| Phase 1 — Crypto Foundation | Complete |
+| Phase 2 — Services | Complete |
+| Phase 3–4 — Routes & Server | Complete |
+| Phase 5 — SDK | Complete |
+| Phase 6 — Infrastructure | Complete |
+| Phase 7 — Documentation | Complete |
+
+Release-readiness note:
+- External launch gates still pending (security review sign-off and second independent conforming implementation).
+
+For detailed completion and gate status, see [index.md](index.md#implementation-phases-checklist).
+
+---
+
 ## Future Considerations (v1.1+)
 
 - **Neo4j delegation graph** (reserved for policy-as-code queries)
@@ -450,6 +472,6 @@ All errors follow RFC 6749 format:
 
 ---
 
-**Last updated:** 2026-05-20  
+**Last updated:** 2026-05-21  
 **Maintainer:** KAIF Core Team  
 **Status:** Reference Implementation v1.0

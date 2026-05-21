@@ -1,0 +1,234 @@
+# KAIF — Kindred Agent Identity Framework
+
+KAIF is an open protocol for authorising autonomous AI agents. It composes SPIFFE/SPIRE workload attestation with RFC 8693 token exchange to produce agent credentials that are short-lived, scoped, and cryptographically traceable to a human principal. Status: **v0.1.0-alpha** — reference implementation.
+
+---
+
+## The Problem
+
+- No existing standard provides workload-attested agent identity + human-principal-traced delegation + adaptive revocation as a unified protocol.
+- Service accounts authenticate with static secrets. KAIF agents authenticate with ephemeral SVIDs.
+- OAuth tokens assert what a caller *claims* to be. KAIF tokens *prove* what a workload is, attested by SPIRE.
+- Current auth systems treat trust as binary. KAIF gates token authority on a continuous trust score.
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/kindred-systems/kaif
+cd kaif
+KAIF_DEV_MODE=true docker compose up -d --build
+./scripts/demo.sh
+```
+
+Four commands. Working demo. Decoded JWT on screen.
+
+> **Note:** `demo.sh` sets `KAIF_DEV_MODE=true` so no real OIDC IdP is required locally. Never enable `KAIF_DEV_MODE` in production — the server refuses to start if `NODE_ENV=production` and `KAIF_DEV_MODE=true`.
+
+> ⚠️ The default SPIRE config uses `insecure_bootstrap = true`. This is safe for local development only. See `spire/agent.conf` before any non-local deployment.
+
+---
+
+## How It Works
+
+```
+Human Principal (geoff@kindred.systems)
+          │
+          │ POST /provision  (OIDC id_token)
+          ▼
+┌─────────────────────────────┐
+│      KAIF Token Server      │  ← validates OIDC token
+│  (RFC 8693 Token Exchange)  │  ← issues DelegationGrant
+└──────────────┬──────────────┘
+               │
+               │ delegation_token passed out-of-band to agent
+               │
+               │ POST /oauth/token  (subject_token=grant, actor_token=SVID)
+               ▼
+┌─────────────────────────────┐        ┌─────────────────┐
+│      KAIF Token Server      │◄───────│  SPIRE Agent    │
+│  validates SVID + trust     │        │  (workload id)  │
+│  score + scope + depth      │        └─────────────────┘
+└──────────────┬──────────────┘
+               │
+               │ KAIF JWT (sub=human, actor.sub=SPIFFE ID, kaif.trust_score)
+               ▼
+┌─────────────────────────────┐
+│    Downstream Service       │  ← verifies JWT via /.well-known/jwks.json
+│    (vault, LLM API, etc.)   │  ← checks scope, trust_tier, delegation_depth
+└─────────────────────────────┘
+```
+
+The KAIF JWT binds three things in one credential: the human principal who authorised the action (`sub`), the workload identity of the executing agent (`actor.sub`, SPIRE-attested), and a live trust score that governs token TTL and scope ceiling.
+
+---
+
+## Token Format
+
+```typescript
+{
+  iss:  "https://auth.kindred.systems",   // KAIF server
+  sub:  "geoff@kindred.systems",          // human principal — always present
+  aud:  "urn:kaif:target-service",
+  iat:  1716220800,
+  exp:  1716221700,                       // iat + tier TTL (300–900s)
+  jti:  "550e8400-e29b-41d4-a716-...",    // UUID v4 — denylist key
+
+  scope: "invoke:completion",
+
+  actor: {
+    sub:             "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra",
+    svid_thumbprint: "sha256:3a4b..."     // RFC 8705 cert binding
+  },
+
+  may_act: { sub: "spiffe://kindred.systems/..." },
+
+  kaif: {
+    trust_score:      0.82,              // 0.0–1.0 continuous
+    trust_tier:       "VERIFIED",        // PROVISIONAL | STANDARD | VERIFIED | TRUSTED
+    delegation_depth: 0,                 // 0 = direct human grant
+    delegation_id:    "uuid-v4",
+    rollback_window:  "PT15M",           // ISO 8601 duration
+    principal_chain:  ["geoff@kindred.systems"]
+  }
+}
+```
+
+`sub` is always the human who authorised the chain. `actor.sub` is the SPIRE-attested workload identity of the executing agent. `kaif.trust_score` determines token TTL and maximum scope. `kaif.delegation_depth` enforces sub-delegation limits.
+
+---
+
+## Verification (for relying parties)
+
+Six-step sequence per KAIF Core Profile v1.0 §2.1:
+
+1. Verify JWT signature against KAIF server JWKS (`/.well-known/jwks.json`)
+2. Verify `iss` matches your configured KAIF server URL
+3. Verify `exp` — reject expired tokens (10-second clock skew tolerance maximum)
+4. Verify `jti` is not in the local denylist (or call `/introspect` in strict mode)
+5. Verify `scope` contains the required permission
+6. Verify `kaif.trust_tier` meets your service's minimum requirement
+
+```typescript
+import { createRemoteJWKSet, jwtVerify } from 'jose'
+
+const JWKS = createRemoteJWKSet(
+  new URL('https://your-kaif-server/.well-known/jwks.json')
+)
+
+const { payload } = await jwtVerify(token, JWKS, {
+  issuer: 'https://your-kaif-server',
+})
+// payload.sub      → human principal
+// payload.actor.sub → SPIFFE ID of executing agent
+// payload.kaif.trust_tier → PROVISIONAL | STANDARD | VERIFIED | TRUSTED
+```
+
+See `examples/mock-service/index.ts` for a complete relying-party implementation.
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `KAIF_PORT` | number | `8080` | HTTP listen port |
+| `KAIF_HOST` | string | `0.0.0.0` | HTTP listen host |
+| `KAIF_ISSUER` | string | required | JWT `iss` claim, e.g. `https://auth.kindred.systems` |
+| `KAIF_REDIS_URL` | string | required | Redis connection URL |
+| `KAIF_TENANT_ADDRESS` | string | — | Optional tenant address used by external governance/agent handoff integrations |
+| `KAIF_ALLOW_INSECURE_REDIS` | boolean | `false` | Allows non-TLS Redis when `NODE_ENV=production`; only for controlled production-like tests |
+| `KAIF_SPIRE_BUNDLE_ENDPOINT` | string | required | SPIRE HTTP bundle endpoint for SVID validation |
+| `KAIF_SPIRE_TRUST_DOMAIN` | string | required | SPIFFE trust domain, e.g. `kindred.systems` |
+| `KAIF_IDP_JWKS_URL` | string | required* | OIDC IdP JWKS URL for `/provision` id_token validation |
+| `KAIF_IDP_ISSUER` | string | required* | OIDC IdP issuer claim |
+| `KAIF_PRIVATE_KEY_PATH` | string | — | RSA private key PEM path; generates ephemeral key if unset |
+| `KAIF_AGENTS_CONFIG_PATH` | string | required | Path to `agents.yaml` |
+| `KAIF_LOG_LEVEL` | string | `info` | Pino log level |
+| `KAIF_STRICT_REVOCATION` | boolean | `false` | If `true`, every token use calls `/introspect` |
+| `KAIF_DEV_MODE` | boolean | `false` | Accept `dev-mock-token` at `/provision`. **Never use in production.** |
+
+*Not required when `KAIF_DEV_MODE=true`.
+
+For production and serious staging, give KAIF its own Redis host or managed instance with TLS, ACLs, and dedicated credentials. Sharing a Redis server with the governance engine is acceptable for local development only; a separate Redis DB/index is not enough isolation for production-grade retention, restart, and security policy boundaries.
+
+### Agent ACL (`agents.yaml`)
+
+| Field | Type | Description |
+|---|---|---|
+| `spiffe_id` | string | SPIFFE workload ID — must match SVID exactly |
+| `trust_tier_minimum` | `PROVISIONAL\|STANDARD\|VERIFIED\|TRUSTED` | Minimum trust score to receive a token |
+| `permitted_scopes` | string[] | Allowed scopes; glob supported (`vault:read:*`) |
+| `may_sub_delegate` | boolean | Whether agent can pass its token as subject_token |
+| `max_delegation_depth` | number | Maximum depth of the delegation chain |
+| `delegation_ttl_seconds` | number | Override TTL for grants to this agent |
+| `human_principal_required` | boolean | If `true`, delegation chain must include a human `sub` |
+
+---
+
+## SDK Usage
+
+```typescript
+import { KAIFClient } from '@kaif/sdk'
+
+const client = new KAIFClient({
+  server_url:          'http://kaif-server:8080',
+  spiffe_id:           'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
+  svid_path:           '/run/spire/sockets/svid.jwt',   // SPIRE writes this
+  delegation_token:    delegationTokenJWT,               // from POST /provision
+})
+
+const token  = await client.getToken('invoke:completion', 'urn:kaif:my-service')
+const header = await client.authHeader('invoke:completion', 'urn:kaif:my-service')
+// → "Bearer eyJ..."
+
+await client.revoke()   // revoke all cached tokens on shutdown
+```
+
+See [`packages/sdk/`](packages/sdk/) for the full API.
+
+---
+
+## Conformance
+
+```bash
+npx kaif-conformance \
+  --server https://your-kaif-server \
+  --svid-jwt /tmp/svid.jwt \
+  --grant-token <delegation-grant-token> \
+  --agent-id spiffe://your-domain/your/agent
+```
+
+See [`conformance/README.md`](conformance/README.md) for setup and fixture details.
+
+---
+
+## Standards
+
+| Standard | Role in KAIF |
+|---|---|
+| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) | Token exchange protocol — the core grant type |
+| [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068) | JWT Profile for OAuth 2.0 Access Tokens — claim structure |
+| [RFC 8705](https://www.rfc-editor.org/rfc/rfc8705) | Mutual TLS certificate binding — `cnf/x5t#S256` |
+| [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) | JSON Web Tokens |
+| [RFC 7638](https://www.rfc-editor.org/rfc/rfc7638) | JSON Web Key Thumbprint — JWK thumbprint for actor binding |
+| [SPIFFE SVID](https://github.com/spiffe/spiffe/blob/main/standards/SPIFFE-ID.md) | Workload identity attestation format |
+| [SPIRE](https://spiffe.io/docs/latest/spire-about/) | SPIFFE Runtime Environment for SVID issuance |
+| [NIST SP 800-207](https://csrc.nist.gov/publications/detail/sp/800-207/final) | Zero Trust Architecture — conceptual framework |
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Licence
+
+Apache 2.0. See [LICENSE](LICENSE).
+
+KAIF is designed and maintained by Geoff, Kindred Systems OS.

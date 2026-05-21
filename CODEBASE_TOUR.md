@@ -153,9 +153,8 @@ This is the **core KAIF operation**. Understanding this flow is essential.
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 7. Compute delegation depth                                             │
 │    • Parse subject_token claims                                         │
-│    • If subject_token.kaif.delegation_depth exists:                     │
-│      depth = subject_token.kaif.delegation_depth + 1                    │
-│    • Else: depth = 1 (first delegation from human)                      │
+│    • Direct /provision grants keep depth 0                              │
+│    • Issued access-token subjects increment parent depth by 1           │
 │    → Returns 403 delegation_depth_exceeded if > ACL max_depth           │
 │    → Also build principal_chain (human emails from parents)             │
 └──────────────────────┬──────────────────────────────────────────────────┘
@@ -617,8 +616,8 @@ import { KAIFClient } from '@kindred/kaif-sdk'
 const client = new KAIFClient({
   server_url: 'http://kaif-server:8080',
   spiffe_id: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
-  svid_path: '/run/spire/sockets/agent.sock',  // Where SPIRE writes SVID
-  delegation_grant_id: 'uuid-from-provision'   // From /provision call
+  svid_path: '/tmp/svid.jwt',                  // JWT-SVID file from SVIDStore
+  delegation_token: 'jwt-from-provision'       // From /provision call
 })
 
 // Get a token (auto-caches)
@@ -1042,16 +1041,19 @@ pnpm test services/audit.test.ts
 docker compose logs kaif-server | grep ERROR
 
 # 2. Check Redis state
-docker exec redis redis-cli keys 'kaif:*'
+docker compose exec redis redis-cli keys 'kaif:*'
 
-# 3. Verify SPIRE SVID
-docker exec kaif-server curl http://spire-agent:8006/svid.json
+# 3. Verify SPIRE can issue a JWT-SVID
+docker compose exec spire-agent /opt/spire/bin/spire-agent api fetch jwt \
+  -spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
+  -audience http://localhost:8080 \
+  -socketPath /run/spire/sockets/agent.sock
 
 # 4. Test /health
 curl http://localhost:8080/health | jq .
 
 # 5. Check ACL
-docker exec kaif-server cat config/agents.yaml
+docker compose exec kaif-server cat config/agents.yaml
 ```
 
 ### Add a new agent to ACL
@@ -1090,4 +1092,3 @@ curl http://localhost:8080/audit | jq '.entries[] | {ts, action, detail, hash}'
 **Next:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues  
 **Reference:** [wiki.md](wiki.md) for naming conventions  
 **Quick Start:** [QUICKSTART.md](QUICKSTART.md) to run KAIF locally in 5 min
-

@@ -2,8 +2,8 @@
 
 **KAIF** (Kindred Agent Identity Framework) is a composable protocol stack that gives autonomous AI agents scoped, auditable, revocable authority traceable to a human principal.
 
-**Status:** Reference Implementation v1.0  
-**Last Updated:** 2026-05-20
+**Status:** Implementation Complete (All 8 Phases), Release Gates Pending
+**Last Updated:** 2026-05-21
 
 ---
 
@@ -71,7 +71,7 @@ KAIF/
 │
 ├── packages/
 │   ├── server/                        ← KAIF Token Exchange Server (Fastify)
-│   │   ├── src/core/                  ← [See Server Structure](#kaif-server-structure) below
+│   │   ├── src/                       ← [See Server Structure](#kaif-server-structure) below
 │   │   ├── config/agents.yaml         ← Agent ACL definitions (runtime loaded)
 │   │   ├── tests/                     ← Unit & integration tests
 │   │   ├── package.json
@@ -84,6 +84,13 @@ KAIF/
 │       ├── tests/
 │       ├── package.json
 │       └── tsconfig.json
+│
+├── conformance/                       ← KAIF conformance kit (fixtures + CLI + CI workflow)
+│   ├── fixtures/                      ← KAIF-001..KAIF-007
+│   ├── runner/                        ← Harness and reporters
+│   ├── tests/                         ← Conformance package tests
+│   ├── ci/conformance.yml             ← GitHub Actions workflow
+│   └── README.md
 │
 ├── spire/
 │   ├── server.conf                    ← SPIRE server configuration
@@ -235,8 +242,8 @@ KAIF/
 new KAIFClient({
   server_url: 'http://kaif-server:8080',
   spiffe_id: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
-  svid_path: '/run/spire/sockets/agent.sock',  // where to read SVID
-  delegation_grant_id: 'uuid-from-provision'
+  svid_path: '/tmp/svid.jwt',                  // path to JWT file SPIRE writes (not the gRPC socket)
+  delegation_token: '<signed-grant-jwt>'       // signed KAIF JWT returned by POST /provision
 })
 
 // Core methods:
@@ -285,7 +292,10 @@ await client.revoke()                            // revoke all held tokens
 
 ### Security
 
-**File:** [SECURITY.md](SECURITY.md)  
+- **File:** [SECURITY.md](SECURITY.md)
+- **Production hardening:** [security/PRODUCTION_ATTESTATION_PROTOCOL_PLAN.md](security/PRODUCTION_ATTESTATION_PROTOCOL_PLAN.md)
+- **Governance Redis integration:** [security/GOVERNANCE_REDIS_INTEGRATION.md](security/GOVERNANCE_REDIS_INTEGRATION.md)
+- **Gap register:** [security/gaps.md](security/gaps.md)
 **Contents:**
 - Supported versions
 - How to report vulnerabilities
@@ -343,64 +353,86 @@ await client.revoke()                            // revoke all held tokens
 
 ### Implementation Phases Checklist
 
+Completion status: all phases complete (Phase 0 through Phase 7).
+
 **Phase 0 — Project Scaffold**
-- [ ] Root `package.json` (pnpm workspaces)
-- [ ] `tsconfig.base.json`
-- [ ] `packages/server/package.json` & `packages/sdk/package.json`
-- [ ] `.env.example` (all required env vars documented)
-- [ ] `.gitignore`
-- [ ] `LICENSE` (Apache 2.0)
+- [x] Root `package.json` (pnpm workspaces)
+- [x] `tsconfig.base.json`
+- [x] `packages/server/package.json` & `packages/sdk/package.json`
+- [x] `.env.example` (all required env vars documented)
+- [x] `.gitignore`
+- [x] `LICENSE` (Apache 2.0)
 
 **Phase 1 — Crypto Foundation** ← _All phases depend on this_
-- [ ] `packages/server/src/crypto/keys.ts` — `getSigningKey()`, `getJWKS()`
-- [ ] `packages/server/src/crypto/jwt.ts` — `signKAIFToken()`, `verifyJWT()`
-- [ ] RFC 8705 thumbprint computation: `sha256:<hex>`
-- [ ] Tests pass: `100%` coverage on crypto
+- [x] `packages/server/src/crypto/keys.ts` — `getSigningKey()`, `getJWKS()`
+- [x] `packages/server/src/crypto/jwt.ts` — `signKAIFToken()`, `verifyJWT()`
+- [x] RFC 8705 thumbprint computation: `sha256:<hex>`
+- [x] Tests pass: `100%` coverage on crypto
 
 **Phase 2 — Services**
-- [ ] `services/audit.ts` — SHA-256 hash chain
-- [ ] `services/revocation.ts` — JTI denylist
-- [ ] `services/trust-score.ts` — Score → tier resolution
-- [ ] `services/svid.ts` — SPIFFE validation
-- [ ] `services/acl.ts` — Agent permissions
-- [ ] `services/token-exchange.ts` — **RFC 8693 core**
-- [ ] Unit tests: 90%+ coverage
+- [x] `services/audit.ts` — SHA-256 hash chain
+- [x] `services/revocation.ts` — JTI denylist
+- [x] `services/trust-score.ts` — Score → tier resolution
+- [x] `services/svid.ts` — SPIFFE validation
+- [x] `services/acl.ts` — Agent permissions
+- [x] `services/token-exchange.ts` — **RFC 8693 core**
+- [x] Unit tests: 90%+ coverage
 
 **Phase 3–4 — Routes & Server**
-- [ ] 6 routes: `/oauth/token`, `/introspect`, `/provision`, `/revoke`, `/.well-known/jwks.json`, `/health`
-- [ ] `server.ts` (Fastify app factory)
-- [ ] `config.ts` (env + agents.yaml loader)
-- [ ] Fastify plugins: rate-limit, helmet, request ID
-- [ ] Graceful shutdown
-- [ ] All tests pass
+- [x] 6 routes: `/oauth/token`, `/introspect`, `/provision`, `/revoke`, `/.well-known/jwks.json`, `/health`
+- [x] `server.ts` (Fastify app factory)
+- [x] `config.ts` (env + agents.yaml loader)
+- [x] Fastify plugins: rate-limit, helmet, request ID
+- [x] Graceful shutdown
+- [x] All tests pass
 
 **Phase 5 — SDK**
-- [ ] `KAIFClient` class
-- [ ] `getToken()`, `authHeader()`, `refreshToken()`, `revoke()`
-- [ ] Token cache with TTL
-- [ ] Tests pass
+- [x] `KAIFClient` class
+- [x] `getToken()`, `authHeader()`, `refreshToken()`, `revoke()`
+- [x] Token cache with TTL
+- [x] Tests pass
 
 **Phase 6 — Infrastructure**
-- [ ] `docker-compose.yml` — Redis, SPIRE server, SPIRE agent, KAIF, mock agent
-- [ ] `spire/server.conf` & `spire/agent.conf`
-- [ ] `packages/server/config/agents.yaml` (sample agents)
-- [ ] Stack brings up healthy: `docker compose up`
+- [x] `docker-compose.yml` — Redis, SPIRE server, SPIRE agent, KAIF, mock agent
+- [x] `spire/server.conf` & `spire/agent.conf`
+- [x] `packages/server/config/agents.yaml` (sample agents)
+- [x] Stack brings up healthy: `docker compose up`
 
 **Phase 7 — Documentation**
-- [ ] `README.md` (quick start in 5 min)
-- [ ] `SPEC.md` (protocol design)
-- [ ] `SECURITY.md` (vulnerability policy)
-- [ ] `GOVERNANCE.md` (project roles, RFC process)
-- [ ] `CONTRIBUTING.md` (dev setup, PR requirements)
+- [x] `README.md` (quick start in 5 min)
+- [x] `SPEC.md` (protocol design)
+- [x] `SECURITY.md` (vulnerability policy)
+- [x] `GOVERNANCE.md` (project roles, RFC process)
+- [x] `CONTRIBUTING.md` (dev setup, PR requirements)
 
 **Full Done Criteria:**
-- [ ] Integration test passes against Docker Compose stack
-- [ ] `scripts/demo.sh` runs end-to-end
-- [ ] No TypeScript errors in strict mode
-- [ ] No ESLint errors
-- [ ] All documentation files complete
+- [x] Integration test passes against Docker Compose stack
+- [x] `scripts/demo.sh` runs end-to-end
+- [x] No TypeScript errors in strict mode
+- [x] No ESLint errors
+- [x] All documentation files complete
 
 **See:** [CLAUDE.md — Definition of Done](CLAUDE.md#definition-of-done)
+
+### Core Profile Release Gates (Honest Status)
+
+Based on current project notes and [KAIF-Core-Profile-v1.0-Checklist.md](KAIF-Core-Profile-v1.0-Checklist.md):
+
+| Section | Status |
+|---|---|
+| §1 Protocol Core | Complete |
+| §2 Verification Contract | Complete |
+| §3 Revocation + SLOs | Partial (formal SLO document alignment pending) |
+| §4 Attestation + Identity | Complete |
+| §5 Security + Threat Hardening | Complete |
+| §6 Open Source Readiness | Complete |
+| §7 Conformance + Test Kit | Complete |
+| §8 Enterprise Adoption Pack | SHOULD (not blocking v1.0) |
+| §9 Acceptance Matrix | Partial (2 of 4 gates remain) |
+
+Open v1.0 external gates:
+- [ ] Security review sign-off (structured adversarial review across routes/services)
+- [ ] Two independent conforming implementations passing the conformance kit
 
 ---
 
@@ -465,10 +497,10 @@ For reference, see also:
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-05-20 |
+| Last Updated | 2026-05-21 |
 | Created For | KAIF Reference Implementation v1.0 |
 | Maintainer | KAIF Core Team |
-| Status | Active / Evolving |
+| Status | Implementation Complete; External Release Gates Pending |
 
 ---
 

@@ -1,0 +1,37 @@
+[
+  {
+    "comment": "Lyra — adaptive-layer agent, STANDARD minimum trust tier",
+    "spiffe_id": "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra",
+    "parent_id": "spiffe://kindred.systems/spire/agent/join_token/bootstrap",
+    "selectors": [{ "type": "unix", "value": "uid:1000" }],
+    "ttl": 3600
+  },
+  {
+    "comment": "Orion — adaptive-layer agent, VERIFIED minimum trust tier",
+    "spiffe_id": "spiffe://kindred.systems/ns/adaptive-layer/agent/orion",
+    "parent_id": "spiffe://kindred.systems/spire/agent/join_token/bootstrap",
+    "selectors": [{ "type": "unix", "value": "uid:1000" }],
+    "ttl": 3600
+  },
+  {
+    "comment": "Cipher — adaptive-layer agent, TRUSTED minimum trust tier",
+    "spiffe_id": "spiffe://kindred.systems/ns/adaptive-layer/agent/cipher",
+    "parent_id": "spiffe://kindred.systems/spire/agent/join_token/bootstrap",
+    "selectors": [{ "type": "unix", "value": "uid:1000" }],
+    "ttl": 3600
+  },
+  {
+    "comment": "mock-agent — examples agent, PROVISIONAL minimum trust tier",
+    "spiffe_id": "spiffe://kindred.systems/ns/examples/agent/mock",
+    "parent_id": "spiffe://kindred.systems/spire/agent/join_token/bootstrap",
+    "selectors": [{ "type": "unix", "value": "uid:0" }],
+    "ttl": 3600
+  },
+  {
+    "comment": "conformance-agent — conformance kit test agent, PROVISIONAL minimum trust tier",
+    "spiffe_id": "spiffe://kindred.systems/ns/conformance/agent/test",
+    "parent_id": "spiffe://kindred.systems/spire/agent/join_token/bootstrap",
+    "selectors": [{ "type": "unix", "value": "uid:0" }],
+    "ttl": 3600
+  }
+]

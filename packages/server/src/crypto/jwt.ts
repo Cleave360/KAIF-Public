@@ -66,6 +66,32 @@ async function getRawSpireJWKS(): Promise<JWK[]> {
   return body.keys
 }
 
+// ── IdP JWKS (for /provision id_token verification) ──────────────
+// Same injection pattern as SPIRE JWKS so tests never hit the network.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _idpJWKS: any = null
+
+function getIdpJWKS(): ReturnType<typeof createRemoteJWKSet> {
+  if (_idpJWKS) return _idpJWKS as ReturnType<typeof createRemoteJWKSet>
+  const url = process.env['KAIF_IDP_JWKS_URL']
+  if (!url) throw new Error('KAIF_IDP_JWKS_URL is not set')
+  _idpJWKS = createRemoteJWKSet(new URL(url), { cacheMaxAge: 5 * 60 * 1000 })
+  return _idpJWKS
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function _setIdpJWKS(fn: any): void { _idpJWKS = fn }
+export function _resetIdpJWKSCache(): void { _idpJWKS = null }
+
+export async function verifyIdpToken(token: string): Promise<JWTPayload> {
+  const issuer = process.env['KAIF_IDP_ISSUER']
+  const { payload } = await jwtVerify(token, getIdpJWKS(), {
+    algorithms: ['RS256'],
+    ...(issuer ? { issuer } : {}),
+  })
+  return payload
+}
+
 // ── Public API ────────────────────────────────────────────────────
 
 export async function signKAIFToken(claims: KAIFTokenClaims): Promise<string> {

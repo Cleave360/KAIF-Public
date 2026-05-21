@@ -61,10 +61,10 @@ docker compose config | grep -A 10 'kaif-server:'
 ```bash
 # Kill and restart
 docker compose down
-docker compose up -d
+KAIF_DEV_MODE=true docker compose up -d --build
 
 # Force rebuild
-docker compose up -d --build
+KAIF_DEV_MODE=true docker compose up -d --build
 
 # Check health after 10 seconds
 sleep 10 && curl http://localhost:8080/health | jq .
@@ -235,8 +235,12 @@ docker exec redis redis-cli GET kaif:revoke:$JTI
 
 ```bash
 # 1. Check SVID validity
-SVID="eyJhbGc..."
-docker exec kaif-server curl -s http://spire-agent:8006/svid.json | jq '.[] | select(.svid == "'$SVID'")'
+SVID=$(docker compose exec spire-agent \
+  /opt/spire/bin/spire-agent api fetch jwt \
+  -spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
+  -audience http://localhost:8080 \
+  -socketPath /run/spire/sockets/agent.sock \
+  2>/dev/null | grep -v "^Received" | tr -d '[:space:]')
 
 # 2. Decode SVID and check claims
 PAYLOAD=$(echo $SVID | cut -d. -f2 | base64 -d)
@@ -649,13 +653,16 @@ docker compose up -d kaif-server
 **Diagnostics:**
 
 ```bash
-# 1. Get current SVID
-docker exec kaif-server curl http://spire-agent:8006/svid.json | jq .
+# 1. Fetch a JWT-SVID from the SPIRE agent
+SVID=$(docker compose exec spire-agent \
+  /opt/spire/bin/spire-agent api fetch jwt \
+  -spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
+  -audience http://localhost:8080 \
+  -socketPath /run/spire/sockets/agent.sock \
+  2>/dev/null | grep -v "^Received" | tr -d '[:space:]')
 
-# 2. Extract SPIFFE ID
-SVID_RESPONSE=$(docker exec kaif-server curl -s http://spire-agent:8006/svid.json)
-SPIFFE_ID=$(echo $SVID_RESPONSE | jq -r '.svids[0].id')
-echo "SPIFFE ID: $SPIFFE_ID"
+# 2. Inspect the JWT payload
+echo "$SVID" | cut -d. -f2 | base64 -d | jq .
 
 # 3. Validate format
 # Should be: spiffe://<trust-domain>/<namespace>/<path>
@@ -990,4 +997,3 @@ Instead:
 ---
 
 **Still stuck?** Check [index.md](index.md) for navigation, or open discussion on GitHub Issues (non-security).
-

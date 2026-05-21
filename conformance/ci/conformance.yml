@@ -1,0 +1,130 @@
+name: KAIF Conformance Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build conformance package
+        run: pnpm --filter @kaif/conformance build
+
+      - name: Start KAIF stack
+        run: KAIF_DEV_MODE=true docker compose up -d --build
+
+      - name: Wait for KAIF server health
+        run: |
+          echo "Waiting for KAIF server..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Server healthy after $((i * 2))s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "ERROR: KAIF server did not become healthy within 60s"
+          docker compose logs kaif-server
+          exit 1
+
+      - name: Bootstrap test delegation grant
+        run: |
+          # CI_OIDC_TOKEN is a valid human OIDC token from your configured IdP.
+          # Local CI uses KAIF_DEV_MODE=true and dev-mock-token.
+          if [ -n "$CI_OIDC_TOKEN" ]; then
+            ID_TOKEN="$CI_OIDC_TOKEN"
+          else
+            ID_TOKEN="dev-mock-token"
+          fi
+          GRANT_RESP=$(curl -sf -X POST http://localhost:8080/provision \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"id_token\": \"$ID_TOKEN\",
+              \"agent_id\": \"mock-agent\",
+              \"scope\": \"invoke:completion\",
+              \"ttl_seconds\": 300
+            }")
+          GRANT_TOKEN=$(echo "$GRANT_RESP" | jq -r '.delegation_token // empty')
+          if [ -z "$GRANT_TOKEN" ]; then
+            echo "ERROR: /provision did not return a delegation_token"
+            echo "$GRANT_RESP"
+            exit 1
+          fi
+          echo "GRANT_TOKEN=$GRANT_TOKEN" >> "$GITHUB_ENV"
+        env:
+          CI_OIDC_TOKEN:      ${{ secrets.CI_OIDC_TOKEN }}
+
+      - name: Fetch test JWT-SVID
+        run: |
+          # Attempt to get a JWT-SVID from the SPIRE agent.
+          # Falls back to a pre-generated test SVID if SPIRE is unavailable.
+          AGENT_CTR=$(docker compose ps -q spire-agent 2>/dev/null | head -1)
+          if [ -n "$AGENT_CTR" ] && \
+             docker exec "$AGENT_CTR" \
+               /opt/spire/bin/spire-agent api fetch jwt \
+               --spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
+               --audience kaif-conformance \
+               --socketPath /run/spire/sockets/agent.sock \
+               2>/dev/null | grep -v "^Received" | tr -d '[:space:]' > /tmp/svid.jwt; then
+            echo "Using SPIRE-issued JWT-SVID"
+          else
+            echo "SPIRE not bootstrapped — using pre-generated test SVID"
+            echo "${CI_TEST_SVID_JWT:?CI_TEST_SVID_JWT must be set when SPIRE is unavailable}" \
+              > /tmp/svid.jwt
+          fi
+        env:
+          CI_TEST_SVID_JWT: ${{ secrets.CI_TEST_SVID_JWT }}
+
+      - name: Run conformance suite
+        run: |
+          node conformance/dist/runner/index.js \
+            --server http://localhost:8080 \
+            --svid-jwt /tmp/svid.jwt \
+            --grant-token "$GRANT_TOKEN" \
+            --agent-id spiffe://kindred.systems/ns/examples/agent/mock \
+            --output json | tee conformance-result.json
+          # tee prints the output; exit code comes from the node process via pipefail
+        shell: bash
+        env:
+          GRANT_TOKEN: ${{ env.GRANT_TOKEN }}
+
+      - name: Assert conformance passed
+        run: |
+          RESULT=$(jq -r '.result' conformance-result.json)
+          if [ "$RESULT" != "PASS" ]; then
+            echo "Conformance suite FAILED"
+            jq '.fixtures[] | select(.result != "PASS")' conformance-result.json
+            exit 1
+          fi
+          echo "Conformance suite PASSED"
+
+      - name: Upload conformance result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-result-${{ github.sha }}
+          path: conformance-result.json
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v

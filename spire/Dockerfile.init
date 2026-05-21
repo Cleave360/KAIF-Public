@@ -1,0 +1,6 @@
+FROM ghcr.io/spiffe/spire-server:1.9.0 AS spire
+FROM debian:12-slim
+COPY --from=spire /opt/spire/bin/spire-server /opt/spire/bin/spire-server
+COPY init.sh /init.sh
+RUN chmod +x /init.sh
+ENTRYPOINT ["/init.sh"]
