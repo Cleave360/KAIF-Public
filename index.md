@@ -11,6 +11,7 @@
 
 - **📋 Project Overview** — [KAIF Specification](#kaif-specification) | [Build Instructions](#build-instructions) | [Repository Layout](#repository-layout)
 - **🔐 Core Concepts** — [Trust Model](#trust-model-and-tiers) | [Token Exchange](#token-exchange-rfc-8693) | [Audit Chain](#audit-chain-and-compliance)
+- **🧪 Testing & Conformance** — [Verification Snapshot](#latest-verification-snapshot) | [Test Surface Map](#test-surface-map) | [Conformance Fixtures](#conformance-fixtures-kaif-001-kaif-007)
 - **📁 Source Code** — [Server](#kaif-server-implementation) | [SDK](#kaif-agent-sdk) | [Examples](#example-implementations)
 - **📚 Documentation** — [Architecture Decisions](#architecture-and-decisions) | [Security](#security) | [Contributing](#contributing-and-governance)
 - **🎯 Reference** — [Wiki (Naming Conventions)](#wiki--reference) | [Phase Checklist](#implementation-phases-checklist)
@@ -278,6 +279,48 @@ await client.revoke()                            // revoke all held tokens
 
 ---
 
+## 🧪 Testing & Conformance
+
+### Latest Verification Snapshot
+
+Latest verification status recorded in project review artifacts:
+
+- `pnpm test` passed (server + SDK + conformance packages)
+- `pnpm build` passed (`@kaif/server`, `@kaif/sdk`, `@kaif/conformance`)
+- `docker compose config` renders successfully
+
+Reference: [review.md](review.md)
+
+### Test Surface Map
+
+| Area | Location | Focus |
+|------|----------|-------|
+| Server unit tests | `packages/server/tests/` | Crypto, routes, services, auth flow guards |
+| Server integration | `packages/server/tests/integration.test.ts` | End-to-end token lifecycle with mock Redis and injected SPIRE/IdP keys |
+| SDK tests | `packages/sdk/tests/client.test.ts` | Token cache behavior, refresh/revoke flows |
+| Conformance tests | `conformance/fixtures/` + `conformance/tests/` | KAIF Core Profile fixture-based interoperability checks |
+
+### Conformance Fixtures (KAIF-001..KAIF-007)
+
+Conformance suite location: [conformance/README.md](conformance/README.md)
+
+| Fixture | Requirement | Validates |
+|---------|-------------|-----------|
+| KAIF-001 | MUST | Happy-path token exchange and claims shape |
+| KAIF-002 | MUST | Expired `subject_token` returns `invalid_grant` |
+| KAIF-003 | MUST | Audience restriction enforcement |
+| KAIF-004 | MUST | Revoked JTI is rejected |
+| KAIF-005 | SHOULD | CNF thumbprint mismatch handling (advisory) |
+| KAIF-006 | MUST | Scope overreach rejected with `invalid_scope` |
+| KAIF-007 | MUST | Delegation depth / sub-delegation constraints |
+
+Conformance result semantics:
+- `PASS`: fixture behavior matches the Core Profile requirement
+- `FAIL`: required behavior not met (MUST failures should fail CI)
+- `WARN`: advisory requirement not enforced (SHOULD-level)
+
+---
+
 ## 📚 Documentation
 
 ### Architecture and Decisions
@@ -350,6 +393,7 @@ await client.revoke()                            // revoke all held tokens
 - [Code Style Conventions](wiki.md#code-style-conventions) — Naming, comments, imports
 - [Redis Key Prefixes](wiki.md#redis-key-prefixes) — All Redis operations
 - [Error Codes](wiki.md#error-codes) — RFC 6749 compliance
+- [Conformance & Test Vocabulary](wiki.md#conformance--test-vocabulary) — Fixture IDs, MUST/SHOULD levels, PASS/FAIL/WARN semantics
 
 ### Implementation Phases Checklist
 
@@ -464,6 +508,9 @@ Open v1.0 external gates:
 **...debug a token exchange failure**
 → Check [Error Codes](wiki.md#error-codes) in wiki.md, then [services/token-exchange.ts](packages/server/src/services/token-exchange.ts)
 
+**...run or interpret conformance tests**
+→ Start at [conformance/README.md](conformance/README.md), then review [wiki.md — Conformance & Test Vocabulary](wiki.md#conformance--test-vocabulary)
+
 ---
 
 ## 🗂️ Related Project Checklists
@@ -484,6 +531,7 @@ For reference, see also:
 | **HTTP Server** | Fastify 4.x |
 | **Package Manager** | pnpm (workspaces) |
 | **Testing** | Vitest |
+| **Conformance** | `@kaif/conformance` (KAIF-001..KAIF-007 fixtures) |
 | **Protocol Base** | RFC 8693 (Token Exchange) |
 | **Workload ID** | SPIFFE/SPIRE |
 | **Audit Log** | SHA-256 hash-chained |

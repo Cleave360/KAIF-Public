@@ -16,6 +16,7 @@ This wiki documents the naming conventions, acronyms, data types, and core conce
 - [Code Style Conventions](#code-style-conventions)
 - [Redis Key Prefixes](#redis-key-prefixes)
 - [Error Codes](#error-codes)
+- [Conformance & Test Vocabulary](#conformance--test-vocabulary)
 - [Implementation Status](#implementation-status)
 
 ---
@@ -438,6 +439,54 @@ All errors follow RFC 6749 format:
 | `access_denied` | 403 | General authorization failure | Check ACL and trust tier |
 | `server_error` | 500 | Internal server error | Retry; contact ops if persistent |
 | `temporarily_unavailable` | 503 | Redis or SPIRE unreachable | Retry with backoff |
+
+---
+
+## Conformance & Test Vocabulary
+
+### Core Terms
+
+**Conformance Fixture**
+- A deterministic test case that validates one KAIF Core Profile behavior against a target server.
+- Fixture IDs use the format `KAIF-00N`.
+
+**MUST Fixture**
+- Required behavior under the Core Profile.
+- Any MUST failure should be treated as non-conformant.
+
+**SHOULD Fixture**
+- Advisory behavior.
+- Failure produces warning-level output rather than hard failure.
+
+**delegation_token**
+- Signed JWT returned by `POST /provision`.
+- Used as `subject_token` in `POST /oauth/token` exchanges.
+
+**Test Agent (conformance-agent)**
+- SPIFFE workload identity used for conformance runs.
+- Default ID in this repo: `spiffe://kindred.systems/ns/conformance/agent/test`.
+
+### Result Semantics
+
+| Result | Meaning | CI Impact |
+|--------|---------|-----------|
+| `PASS` | Fixture behavior matches expected contract | None |
+| `FAIL` | Requirement mismatch | Fail pipeline when fixture is MUST |
+| `WARN` | Advisory behavior not enforced | Record and review; does not block by default |
+
+### KAIF Core Profile Fixture Set
+
+| ID | Level | Contract |
+|----|-------|----------|
+| `KAIF-001` | MUST | Happy path exchange + claims validation |
+| `KAIF-002` | MUST | Expired `subject_token` rejected (`invalid_grant`) |
+| `KAIF-003` | MUST | Wrong audience rejected |
+| `KAIF-004` | MUST | Revoked JTI rejected |
+| `KAIF-005` | SHOULD | CNF mismatch behavior (advisory) |
+| `KAIF-006` | MUST | Scope overreach rejected (`invalid_scope`) |
+| `KAIF-007` | MUST | Delegation depth / sub-delegation enforcement |
+
+Reference: [conformance/README.md](conformance/README.md)
 
 ---
 
