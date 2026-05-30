@@ -81,7 +81,7 @@ Every relying party must verify:
 Addresses: GAP-004, GAP-009, quick-start/runtime mismatch.
 
 - Replace unauthenticated SPIRE bundle fetches with HTTPS or mTLS.
-- Add `KAIF_SPIRE_BUNDLE_CA_PATH` or equivalent trust bundle configuration.
+- Add `KAIF_SPIRE_BUNDLE_CA_PATH` or equivalent trust bundle configuration. Implemented for Node HTTPS bundle fetches on 2026-05-22; production deployment must still provide the CA file.
 - Remove `insecure_bootstrap = true` from production agent configs.
 - Require `trust_bundle_path` or upstream authority bootstrap for production SPIRE agents.
 - Decide one production SVID retrieval path:
@@ -130,7 +130,8 @@ Addresses: governance-engine coupling, noisy-neighbor risk, mixed retention/secu
 - `KAIF_TENANT_ADDRESS` is accepted in configuration and included in Day 7b evidence reports.
 - Governance engine Redis must remain independently restartable and observable.
 - Direct shared Redis access between KAIF and the governance engine is not a production integration contract.
-- Preferred integration is a narrow API/stream bridge with explicit signal schema and failure policy.
+- Preferred integration is API-first Adaptive evidence append: `POST /v1/audit/append`, `layer="auth"`, and `envelope.tenant_id=KAIF_TENANT_ADDRESS`.
+- Current dev tenant is `tenant-dev`; expected evidence stream is `audit:auth:tenant-dev:<yyyy-mm-dd>`.
 
 Release gate: a production deployment must document the dedicated KAIF Redis endpoint, ACL policy, tenant address, and governance signal contract.
 
@@ -141,7 +142,7 @@ Addresses: conformance advisory KAIF-005 and production bearer-token replay resi
 - Define the production binding mode:
   - mTLS `cnf.x5t#S256`, or
   - JWT-SVID signing-key thumbprint for SPIFFE-only flows.
-- Enforce CNF binding on relying-party examples and conformance tests.
+- Enforce CNF binding on relying-party examples and conformance tests. Implemented for protected-route `X-Client-Cert-Thumbprint` mismatch checks on 2026-05-23; direct peer-certificate inspection remains the stronger production path.
 - Add route support for `X-Client-Cert-Thumbprint` only behind trusted proxies that sanitize the header.
 - Prefer direct mTLS peer certificate inspection where possible.
 
@@ -166,6 +167,7 @@ Addresses: review findings around false confidence.
 - Happy-path fixtures must assert exact `actor.sub`.
 - CNF fixtures must distinguish authentication failure from actual CNF enforcement.
 - Day 7b evidence runner must map protocol cases to conformance artifacts and identify incomplete production evidence.
+- Day 7b `DAY7B-008` must exercise `/relying/class-a/authorize` and `/relying/class-c/authorize`.
 - Production CI should set `KAIF_DAY7B_STRICT=true` so incomplete or failing Day 7b production evidence fails the job.
 - CI must run:
   - unit tests,
@@ -184,17 +186,18 @@ Release gate: a release candidate cannot pass CI if conformance relies on unauth
 | Sub-delegation | Parent actor must allow `may_sub_delegate` | Implemented for access-token subjects |
 | Protected routes | Bearer token revocation and route authorization enforced | Implemented |
 | Direct grant depth | Direct human grants issue depth `0` | Implemented |
-| SPIRE bundle security | No unauthenticated HTTP bundle fetch in production | Open |
+| SPIRE bundle security | No unauthenticated HTTP bundle fetch in production | CA path support implemented; production CA provisioning and deployment guide pending |
 | SPIRE bootstrap | No `insecure_bootstrap = true` in production | Open |
 | Audit atomicity | Redis Lua or equivalent atomic append | Implemented for global chain with Redis lock |
 | Per-agent audit chain | Independently verifiable per-agent chain | Open |
 | Signing key guard | Production cannot boot with ephemeral signing key | Implemented |
 | Signing key lifecycle | KMS/HSM-backed keys and JWKS rotation | Open |
-| Redis isolation | Dedicated TLS Redis for production/staging | Startup TLS guard implemented; infrastructure pending |
-| Governance tenant | Tenant address and governance signal contract | Config field implemented; contract pending |
-| CNF enforcement | Replay-resistant token binding enforced | Open |
+| Redis isolation | Dedicated TLS Redis for production/staging | Startup TLS guard implemented; local Docker isolation uses host port 6380 when available |
+| Governance tenant | Tenant address and governance signal contract | Dev contract implemented for Adaptive auth evidence |
+| Failure-mode endpoints | Class A fail-closed and Class C degraded policy | Implemented in KAIF test surface |
+| CNF enforcement | Replay-resistant token binding enforced | Header mismatch enforcement implemented; direct mTLS peer cert binding pending |
 | ACL validation | Startup schema validation and safe scope grammar | Implemented |
-| Day 7b evidence | Handshake cases mapped to report artifacts | Implemented except external failure-mode endpoints |
+| Day 7b evidence | Handshake cases mapped to report artifacts | Local strict run passed 2026-05-23 with no blocking cases |
 | CI gates | Full conformance, Day 7b, and smoke demo in CI | Open |
 
 ## Immediate Implementation Order
@@ -204,4 +207,4 @@ Release gate: a release candidate cannot pass CI if conformance relies on unauth
 3. Implement SDK Workload API SVID retrieval or document SVIDStore as the only supported production path.
 4. Add CNF enforcement to relying-party examples and conformance.
 5. Add independent per-agent audit chains.
-6. Finalize governance signal schema and wire Day 7b failure-mode endpoints.
+6. Add production Adaptive endpoint deployment config and CI Day 7b evidence upload.

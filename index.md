@@ -478,6 +478,52 @@ Open v1.0 external gates:
 - [ ] Security review sign-off (structured adversarial review across routes/services)
 - [ ] Two independent conforming implementations passing the conformance kit
 
+### Adoption Decision Matrix (Grounded + Falsifiable)
+
+This matrix defines an evidence-based go/no-go policy for real-world deployment.
+
+| Area | Go Now | Pilot First | Hold |
+|---|---|---|---|
+| Security controls | All critical auth findings closed and regression-tested | High findings partially mitigated with compensating controls | Any known high auth bypass remains unmitigated |
+| Revocation performance | p99 revoke-to-enforce under 5s in strict mode | 5-30s under controlled load | Over 30s or unstable during incident load |
+| Interoperability | 2 independent implementations pass MUST fixtures | 1 implementation passes fully, second in progress | MUST fixtures fail or require local fixture changes |
+| Operational reliability | 99.9% token endpoint success in soak tests | 99.0-99.9% with bounded incidents | Under 99.0% or frequent identity-plane outages |
+| Policy quality | Least-privilege scope review complete | Partial role/scope review complete | Broad wildcard scopes with no review |
+| Audit trustworthiness | Chain verification automated and continuously passing | Manual or daily verification only | No routine chain verification |
+
+Falsifiable validation claims:
+- Claim: KAIF reduces blast radius versus static API keys.
+  - Falsifier: red-team simulation shows equal or higher privilege persistence compared to API-key baseline.
+- Claim: revocation materially improves incident response.
+  - Falsifier: measured revoke-to-deny latency shows no meaningful improvement versus gateway-only baseline.
+- Claim: interoperability is implementation-independent.
+  - Falsifier: two independent implementations cannot pass MUST fixtures without fixture modifications.
+
+### Consumer-Grade Profile Note (Low Friction + High Robustness)
+
+For consumer-facing agent scenarios, adopt a dedicated profile to minimize integration friction while preserving core safety invariants.
+
+Recommended shape:
+- Option A (faster iteration): maintain a `consumer-profile` branch in this repo.
+- Option B (stronger boundary): create `kaif-consumer-profile` as a separate repository with independent release cadence.
+
+Low-friction adoption strategy:
+- Provide managed defaults for identity bootstrap and key rotation (no manual SPIRE operations for app teams).
+- Offer SDK-first integration with one-step token exchange helpers and transparent retry/backoff.
+- Ship opinionated scope bundles (read-only, action-limited, escalation-required) instead of free-form scope composition.
+- Publish copy-paste deployment recipes for common stacks (serverless, edge, mobile-backed APIs).
+
+High-robustness invariants (must remain unchanged):
+- Short-lived tokens and strict JTI revocation semantics.
+- Immutable audit chain verification and incident replayability.
+- Actor-to-authority binding checks at issuance time.
+- Conformance MUST fixture compatibility for core auth behaviors.
+
+Exit criteria from Pilot to GA for consumer profile:
+- 30-day production pilot with no unresolved high-severity auth defects.
+- p99 token exchange latency and p99 revoke-to-enforce latency within published SLOs.
+- Independent security review sign-off and documented abuse-case exercises.
+
 ---
 
 ## 📞 How to Use This Index

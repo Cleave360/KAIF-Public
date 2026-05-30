@@ -13,7 +13,12 @@ echo "→ Generating bootstrap join token..."
 JOIN_TOKEN=$($SPIRE_SERVER \
   /opt/spire/bin/spire-server token generate \
   -spiffeID "spiffe://${TRUST_DOMAIN}/spire/agent/join_token/bootstrap" \
-  | awk '{print $2}')
+  | awk -F': ' '/^Token[[:space:]]*:/{print $2; exit}')
+
+if [[ -z "${JOIN_TOKEN}" ]]; then
+  echo "ERROR: token generate returned empty output" >&2
+  exit 1
+fi
 
 echo "  Join token: ${JOIN_TOKEN}"
 
@@ -28,7 +33,7 @@ register() {
     -parentID  "spiffe://${TRUST_DOMAIN}/spire/agent/join_token/bootstrap" \
     -selector  "${SELECTOR}" \
     -jwtSVIDTTL 3600 \
-    2>&1 | grep -E "(Entry ID|SPIFFE ID|already exists)" || true
+    2>&1 | grep -E "(Entry ID|SPIFFE ID|already exists)"
 }
 
 register "spiffe://${TRUST_DOMAIN}/ns/adaptive-layer/agent/lyra"    "unix:uid:1000"

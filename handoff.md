@@ -7,6 +7,8 @@
 
 ### Session summary
 
+## Codex conversation thread 019e47ca-8a8a-7c53-ae0d-787acdec7803 added 2026-06-22
+
 Built Phase 0 (scaffold), Phase 1 (crypto foundation), and Phase 8 (conformance kit). Phase 2 services built in this same session immediately following.
 
 **Phase 0 — Repository scaffold**
@@ -412,3 +414,106 @@ Required behavior when governance signal is unavailable:
 - Shared Redis acceptable for local dev only
 - Keep KAIF key namespace `kaif:*`
 - Avoid direct mutation across system boundaries (no shared mutable key ownership between KAIF and governance engine)
+
+## 2026-05-21 — Codex — Governance Contract Implemented in KAIF Test Surface
+
+Implemented the finalized Adaptive integration contract in the KAIF repo:
+
+- Config now accepts Adaptive evidence settings:
+  - `KAIF_TENANT_ADDRESS=tenant-dev`
+  - `KAIF_GOVERNANCE_AUDIT_APPEND_URL`
+  - `KAIF_GOVERNANCE_WORKSPACE_ID=ws-kaif`
+  - `KAIF_GOVERNANCE_PROJECT_ID=kaif`
+  - `KAIF_GOVERNANCE_UI_INSTANCE_ID=ui-kaif`
+  - `KAIF_CLASS_C_DEGRADED_OPEN=false`
+- Added relying-party failure-mode endpoints:
+  - `POST /relying/class-a/authorize`
+  - `POST /relying/class-c/authorize`
+- Class A fails closed when Adaptive evidence append is unavailable.
+- Class C fails closed by default and degraded-opens only when `KAIF_CLASS_C_DEGRADED_OPEN=true`.
+- Day 7b wrapper now exercises `DAY7B-008` against these endpoints and writes redacted request/response evidence to `day7b_failure_mode_payloads.json`.
+- Governance docs now record the API-first Adaptive contract and expected stream `audit:auth:tenant-dev:<yyyy-mm-dd>`.
+
+---
+## 2026-05-22 — Codex — Design Architecture and Success Bar Added
+
+Created [design_architecture.md](design_architecture.md) as the top-level architecture and success-standard document.
+
+Key points:
+
+- Defines KAIF success as measurable production gates, not general ambition.
+- Frames near-term and future real-world agent authorization problems.
+- Sets non-negotiable standards for workload authenticity, human traceability, least privilege, revocation, audit evidence, governance boundaries, and operational restartability.
+- Defines Redis as hot authorization state and separates warm/cold evidence storage from Redis runtime memory.
+- Adds a Floci evaluation plan for optional dev/CI testing of AWS-shaped warm evidence exports, credential wiring, multi-account isolation, and storage modes.
+- Keeps Floci explicitly out of the production dependency path.
+- Links the architecture plan to existing docs: `SPEC.md`, `security/gaps.md`, `security/PRODUCTION_ATTESTATION_PROTOCOL_PLAN.md`, `security/GOVERNANCE_REDIS_INTEGRATION.md`, SLO docs, troubleshooting, and this handoff log.
+
+---
+## 2026-05-22 — Codex — Adversarial Brief and Phase 1 Start
+
+Created [skills.md](skills.md) as the adversarial operating brief for a second Codex instance. Its mission is to find false confidence by testing KAIF claims against implementation, runtime behavior, and evidence artifacts. Output target is `adversarial_review.md`.
+
+Started Phase 1 hardening with the highest-risk production trust gap:
+
+- Added `KAIF_SPIRE_BUNDLE_CA_PATH` support for trusted private HTTPS SPIRE bundle endpoints.
+- Reused the CA-backed SPIRE bundle fetch path for JWT-SVID verification and direct health-check bundle fetches.
+- Kept `KAIF_SPIRE_BUNDLE_TLS_INSECURE=true` as a local-dev-only path; production startup rejects it.
+- Added config guardrails for missing CA files and conflicting CA/insecure settings.
+- Added `packages/server/tests/spire-bundle.test.ts` for transport-option regression coverage.
+- Updated `security/gaps.md`, `security/STATUS.md`, and `security/PRODUCTION_ATTESTATION_PROTOCOL_PLAN.md` to mark GAP-004 as partial rather than fully open.
+
+Validation:
+
+- `pnpm --filter @kaif/server test` passed: 149 tests after Phase 1 verifier and audience regression coverage.
+- `pnpm --filter @kaif/server build` passed.
+- `pnpm test` passed: 180 tests.
+- `pnpm build` passed.
+- `docker compose --env-file .env.example config` passed.
+- `docker compose --env-file .env.example up -d --build kaif-server` produced healthy Redis, SPIRE server, SPIRE agent, and KAIF server containers.
+- `KAIF_DAY7B_STRICT=true` Day 7b rerun produced a complete evidence bundle at `reports/day7b_conformance/run-kaif-day7b-20260522_083052`; production attestation still fails only on `DAY7B-005` CNF binding enforcement.
+
+Remaining GAP-004 production work:
+
+- Provide the actual SPIRE bundle CA file in staging/production deployment.
+- Document the production deployment path prominently.
+- Remove any dev-only insecure SPIRE bootstrap assumptions from production profiles.
+
+Additional Phase 1 fixes completed:
+
+- Normalized SPIRE `use="jwt-svid"` bundle keys for JOSE verification while ignoring X.509-SVID bundle keys for JWT-SVID validation.
+- Fixed the Day 7b wrapper to call `conformance/dist/runner/index.js` directly so JSON artifacts are not polluted by `pnpm` script banners.
+- Added `KAIF_ALLOWED_AUDIENCES` and rejected explicit token-exchange audiences outside the configured allowlist.
+- Made local scripts derive their server URL from `KAIF_SERVER_URL` or `KAIF_HOST_PORT`.
+
+---
+## 2026-05-23 — Codex — Phase 1 CNF and Redis Isolation
+
+Continued Phase 1 using the Adaptive Redis guidance:
+
+- Set KAIF local Redis guidance to `KAIF_REDIS_URL=redis://localhost:6380`.
+- Added `KAIF_REDIS_HOST_PORT=6380` and Docker Redis port mapping `${KAIF_REDIS_HOST_PORT:-6380}:6379`.
+- Kept Compose-internal KAIF server Redis as `redis://redis:6379`.
+- Verified this machine already has `research_lab_redis` bound to host port `6380`, so the validation run used `KAIF_REDIS_HOST_PORT=6381` without stopping unrelated containers.
+- Verified `redis-cli -p 6381 PING` returned `PONG`.
+
+Closed the local Day 7b strict blocker:
+
+- KAIF access tokens now include `cnf.jkt` matching `actor.svid_thumbprint` for JWT-SVID flows.
+- Protected route auth rejects a supplied `X-Client-Cert-Thumbprint` that does not match `cnf.jkt` or `cnf.x5t#S256`.
+- Added regression coverage for CNF claim issuance and `/introspect` `cnf_binding_mismatch`.
+
+Validation:
+
+- `pnpm --filter @kaif/server test` passed: 150 tests.
+- `pnpm --filter @kaif/server build` passed.
+- `pnpm test` passed: 181 tests.
+- `pnpm build` passed.
+- KAIF stack healthy with `KAIF_REDIS_HOST_PORT=6381`.
+- `KAIF_DAY7B_STRICT=true` passed with no blocking cases.
+- Evidence bundle: `reports/day7b_conformance/run-kaif-day7b-20260523_061001`.
+
+Remaining production caveat:
+
+- Header-based CNF enforcement is suitable only behind a trusted proxy that sanitizes `X-Client-Cert-Thumbprint`.
+- Production-grade mTLS should prefer direct peer-certificate inspection or a trusted sidecar/proxy contract.

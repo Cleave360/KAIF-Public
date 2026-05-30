@@ -63,24 +63,23 @@ Maintain a separate, independent hash chain per agent (separate Redis list with 
 ---
 
 ## GAP-004 — SPIRE bundle and IdP JWKS fetched over plain HTTP in dev config
-**Status:** OPEN  
+**Status:** PARTIAL (CA-path support implemented; production deployment wiring remains)
 **Severity:** High (in production deployment)  
 **File:** `packages/server/src/crypto/jwt.ts`, `.env.example`
 
 **Description:**  
-`.env.example` shows `KAIF_SPIRE_BUNDLE_ENDPOINT=http://localhost:8081/bundles/jwt` with HTTP (not HTTPS). A MITM attacker on the network path between the KAIF server and SPIRE could substitute their own JWKS, allowing arbitrary JWT-SVIDs to be accepted.
+Local Compose now uses SPIRE's HTTPS federation bundle endpoint at `https://spire-server:8081/`, but development mode sets `KAIF_SPIRE_BUNDLE_TLS_INSECURE=true` because the local `https_spiffe` endpoint is not trusted by Node's default CA set. A MITM attacker on the network path between the KAIF server and SPIRE could substitute their own JWKS if insecure TLS were allowed outside local development.
 
 **Impact:**  
 Full authentication bypass for the actor_token (SVID) validation path.
 
 **Mitigation for v0.1:**  
-Docker Compose network is internal (`kaif-server` and `spire-server` share a bridge network). This is acceptable for development. Production deployments MUST use HTTPS or mTLS between KAIF server and SPIRE.
+Docker Compose network is internal (`kaif-server` and `spire-server` share a bridge network), and `loadConfig()` rejects `KAIF_SPIRE_BUNDLE_TLS_INSECURE=true` when `NODE_ENV=production`. Production deployments MUST use trusted HTTPS or mTLS between KAIF server and SPIRE.
 
 **Required fix for production:**  
-1. Configure SPIRE's bundle endpoint with TLS.
-2. Add `KAIF_SPIRE_BUNDLE_ENDPOINT_CA` env var pointing to the SPIRE CA cert.
-3. Use Node.js `https.Agent` with the CA cert when fetching the SPIRE bundle.
-4. Document this requirement prominently in the deployment guide.
+1. Add `KAIF_SPIRE_BUNDLE_CA_PATH` env var pointing to the SPIRE CA cert. **Implemented 2026-05-22.**
+2. Use Node.js `https.Agent` with the CA cert when fetching the SPIRE bundle. **Implemented 2026-05-22.**
+3. Document this requirement prominently in the deployment guide.
 
 ---
 
@@ -253,7 +252,7 @@ KMS/HSM key storage, JWKS rotation, Redis infrastructure provisioning, and Redis
 ---
 
 ## GAP-015 — Governance Redis and KAIF tenant boundary was undefined
-**Status:** DOCUMENTED, implementation contract pending (2026-05-21)  
+**Status:** CLOSED for current Adaptive dev contract (fixed 2026-05-21)
 **Severity:** Medium  
 **Files:** `security/GOVERNANCE_REDIS_INTEGRATION.md`, `scripts/day7b_kaif_handshake_conformance.sh`, `packages/server/src/config.ts`
 
@@ -261,17 +260,17 @@ KMS/HSM key storage, JWKS rotation, Redis infrastructure provisioning, and Redis
 KAIF is intended to run as the external receiver for an agentic handshake while a separate governance engine runs on Redis. Without an explicit boundary, production deployments could accidentally couple KAIF to the governance engine's Redis, mix retention/security policies, or make the two systems non-independently restartable.
 
 **Fix applied:**  
-The governance integration plan now states that production/staging KAIF uses dedicated Redis with TLS, ACLs, and dedicated credentials. `KAIF_TENANT_ADDRESS` is accepted by configuration and included in Day 7b evidence when set. The Day 7b wrapper records Redis guidance in its summary artifacts.
+The governance integration plan now states that production/staging KAIF uses dedicated Redis with TLS, ACLs, and dedicated credentials. `KAIF_TENANT_ADDRESS` defaults to the current dev integration value `tenant-dev` in local examples and is included in Day 7b evidence. KAIF uses API-first Adaptive evidence append (`POST /v1/audit/append`, `layer="auth"`) rather than direct governance Redis coupling. Day 7b now exercises Class A/Class C failure-mode endpoints.
 
 **Required fix for production:**  
-Finalize the external governance repo path, exact `KAIF_TENANT_ADDRESS`, trust signal schema, failure policy, and whether KAIF consumes governance state through API pull, stream subscribe, or a one-way bridge.
+Provision the production Adaptive endpoint URL, tenant slug, Redis ACL policy, and evidence export/upload path in deployment configuration.
 
 ---
 
 ## Production Tracking
 
-The remaining open production work is tracked in `security/PRODUCTION_ATTESTATION_PROTOCOL_PLAN.md`, including GAP-003, GAP-004, GAP-009, GAP-014 remaining lifecycle work, and GAP-015 integration contract work.
+The remaining open production work is tracked in `security/PRODUCTION_ATTESTATION_PROTOCOL_PLAN.md`, including GAP-003, GAP-004, GAP-009, GAP-014 remaining lifecycle work, and production deployment wiring for GAP-015.
 
 ---
 
-*Last updated: 2026-05-21 by Codex — GAP-014 CLOSED for startup guardrails; GAP-015 documented; Day 7b evidence plan expanded*
+*Last updated: 2026-05-21 by Codex — GAP-015 CLOSED for current Adaptive dev contract; Day 7b failure-mode endpoints added*

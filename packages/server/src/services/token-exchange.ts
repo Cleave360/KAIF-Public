@@ -76,6 +76,14 @@ function extractGrantedScopes(payload: JWTPayload): string[] {
   return scopeStr.split(' ').filter(Boolean)
 }
 
+function extractDefaultAudience(payload: JWTPayload, fallback: string): string {
+  if (typeof payload['aud'] === 'string') return payload['aud']
+  if (Array.isArray(payload['aud']) && typeof payload['aud'][0] === 'string') {
+    return payload['aud'][0]
+  }
+  return fallback
+}
+
 export async function executeTokenExchange(params: {
   redis:        Redis
   request:      TokenExchangeRequest
@@ -230,13 +238,11 @@ export async function executeTokenExchange(params: {
     : [...parentChain, humanPrincipal]
 
   const jti = randomUUID()
-  const audience = request.audience ?? (
-    typeof subjectPayload['aud'] === 'string'
-      ? subjectPayload['aud']
-      : Array.isArray(subjectPayload['aud'])
-        ? subjectPayload['aud'][0] ?? config.issuer
-        : config.issuer
-  )
+  if (request.audience && !config.allowed_audiences.includes(request.audience)) {
+    throw new KAIFError('access_denied', `audience is not permitted: ${request.audience}`)
+  }
+
+  const audience = request.audience ?? extractDefaultAudience(subjectPayload, config.issuer)
 
   const claims: KAIFTokenClaims = {
     iss:   config.issuer,
@@ -250,6 +256,7 @@ export async function executeTokenExchange(params: {
       sub:             svid.spiffe_id,
       svid_thumbprint: svid.thumbprint,
     },
+    cnf: { jkt: svid.thumbprint },
     may_act: { sub: svid.spiffe_id },
     kaif: {
       trust_score:      trustSignal.score,

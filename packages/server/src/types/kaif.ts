@@ -33,6 +33,11 @@ export interface KAIFActorClaim {
   svid_thumbprint: string  // sha256:<hex> of signing JWK thumbprint
 }
 
+export interface KAIFConfirmationClaim {
+  jkt?: string
+  'x5t#S256'?: string
+}
+
 export interface KAIFTokenClaims {
   iss:     string
   sub:     string           // human principal
@@ -42,6 +47,7 @@ export interface KAIFTokenClaims {
   jti:     string           // UUID v4
   scope:   string           // space-separated
   actor:   KAIFActorClaim
+  cnf?:    KAIFConfirmationClaim
   may_act: { sub: string }
   kaif:    KAIFExtensionClaims
 }
@@ -97,6 +103,8 @@ export type AuditAction =
   | 'TRUST_SCORE_UPDATED'
   | 'SUB_DELEGATION_ISSUED'
   | 'REVOCATION_PROPAGATED'
+  | 'RELYING_CLASS_A_AUTHORIZE'
+  | 'RELYING_CLASS_C_AUTHORIZE'
 
 export interface AuditEntry {
   id:          string   // UUID v4

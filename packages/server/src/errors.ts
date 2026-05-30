@@ -2,6 +2,7 @@ const HTTP_STATUS: Record<string, number> = {
   invalid_request:           400,
   invalid_grant:             400,
   invalid_client:            401,
+  cnf_binding_mismatch:      401,
   invalid_scope:             400,
   insufficient_scope:        403,
   insufficient_trust:        403,

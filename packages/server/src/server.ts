@@ -11,6 +11,7 @@ import { introspectRoute } from './routes/introspect.js'
 import { tokenRoute }  from './routes/token.js'
 import { provisionRoute } from './routes/provision.js'
 import { revokeRoute } from './routes/revoke.js'
+import { relyingRoute } from './routes/relying.js'
 
 export interface BuildServerDeps {
   redis: Redis
@@ -87,6 +88,16 @@ export async function buildServer(
   await app.register(provisionRoute, { redis, issuer: config.issuer, devMode: config.dev_mode })
 
   await app.register(revokeRoute, { redis })
+
+  await app.register(relyingRoute, {
+    redis,
+    ...(config.tenant_address ? { tenantAddress: config.tenant_address } : {}),
+    ...(config.governance_audit_append_url ? { governanceAuditAppendUrl: config.governance_audit_append_url } : {}),
+    governanceWorkspaceId:   config.governance_workspace_id,
+    governanceProjectId:     config.governance_project_id,
+    governanceUiInstanceId:  config.governance_ui_instance_id,
+    classCDegradedOpen:      config.class_c_degraded_open,
+  })
 
   // ── Graceful shutdown ──────────────────────────────────────────
   let requestCount = 0

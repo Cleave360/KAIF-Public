@@ -93,7 +93,7 @@ docker compose ps
 docker exec kaif-server redis-cli -u $KAIF_REDIS_URL ping
 
 # 3. Test SPIRE reachability
-docker exec kaif-server curl http://spire-server:8081/bundles/jwt | head -20
+docker exec kaif-server wget --no-check-certificate -qO- https://spire-server:8081/ | head -20
 
 # 4. Check network connectivity
 docker exec kaif-server ping redis
@@ -106,7 +106,7 @@ docker exec kaif-server ping spire-server
 |-----------|-----------|----------|
 | Redis | `redis-cli: command not found` | Add redis-cli to container or use DNS check |
 | Redis | Connection refused on 6379 | Ensure Redis service is running: `docker compose up redis` |
-| SPIRE | 404 on `/bundles/jwt` | SPIRE server not initialized; wait 10s and retry |
+| SPIRE | 400/404 on `/bundles/jwt` | Use the SPIRE federation root endpoint: `https://spire-server:8081/` |
 | SPIRE | Connection refused on 8081 | SPIRE server not running; check logs: `docker compose logs spire-server` |
 | Network | `ping: command not found` | Use `nc -z redis 6379` instead |
 
@@ -254,7 +254,7 @@ echo "SPIFFE ID: $SPIFFE_ID"
 grep -q "$SPIFFE_ID" packages/server/config/agents.yaml && echo "Found in ACL" || echo "NOT in ACL"
 
 # 5. Check SPIRE bundle reachability
-docker exec kaif-server curl http://spire-server:8081/bundles/jwt -s | jq '.keys | length'
+docker exec kaif-server wget --no-check-certificate -qO- https://spire-server:8081/ | jq '.keys | length'
 ```
 
 **Solutions:**
@@ -513,7 +513,7 @@ docker stats
 
 # 4. Check network connectivity between services
 docker exec kaif-server curl -v http://redis:6379
-docker exec kaif-server curl -v http://spire-server:8081/bundles/jwt
+docker exec kaif-server wget --no-check-certificate -S -O- https://spire-server:8081/
 ```
 
 **Solutions:**
@@ -614,7 +614,7 @@ docker compose ps spire-server
 docker compose logs spire-server | tail -30
 
 # 3. Test bundle endpoint
-docker exec kaif-server curl -v http://spire-server:8081/bundles/jwt
+docker exec kaif-server wget --no-check-certificate -S -O- https://spire-server:8081/
 
 # 4. Check SPIRE server is initialized
 docker exec spire-server spire-server healthcheck
@@ -629,17 +629,16 @@ docker exec spire-server ls -la /run/spire/data/
 |-------|----------|
 | SPIRE not running | Start: `docker compose up -d spire-server` |
 | SPIRE healthcheck fails | Wait 30s and retry; SPIRE takes time to initialize |
-| Bundle endpoint 404 | Check SPIRE config; ensure `federation.bundle_endpoint` is configured |
+| Bundle endpoint 400/404 | Check that KAIF uses `https://spire-server:8081/`; `/bundles/jwt` is not served by SPIRE |
 | No socket file | Check SPIRE agent is running: `docker compose up -d spire-agent` |
+| `certificate signed by unknown authority` after SPIRE config changes | Reset the local SPIRE agent trust cache and re-attest |
 
 ```bash
-# Full reset of SPIRE
-docker compose down
-docker volume rm kaif_spire-data kaif_spire-agent-socket
-docker compose up -d spire-server
-sleep 10  # Wait for initialization
-docker compose up -d spire-agent
-docker compose up -d kaif-server
+# Reset stale local SPIRE agent trust cache only
+docker compose stop spire-agent kaif-server
+docker compose rm -f spire-agent
+docker volume rm kaif_spire-agent-data
+docker compose up -d spire-agent kaif-server
 ```
 
 ---
@@ -865,7 +864,7 @@ docker compose logs kaif-server | grep -i error
 docker exec redis redis-cli --latency-history
 
 # 5. Test SPIRE bundle fetch latency
-time docker exec kaif-server curl http://spire-server:8081/bundles/jwt -s > /dev/null
+time docker exec kaif-server wget --no-check-certificate -qO- https://spire-server:8081/ > /dev/null
 ```
 
 **Solutions:**

@@ -6,7 +6,7 @@ const originalEnv = { ...process.env }
 function setBaseEnv(): void {
   process.env['KAIF_ISSUER'] = 'https://auth.test'
   process.env['KAIF_REDIS_URL'] = 'redis://localhost:6379'
-  process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'http://spire.test/bundles/jwt'
+  process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'https://spire.test/'
   process.env['KAIF_SPIRE_TRUST_DOMAIN'] = 'kindred.systems'
   process.env['KAIF_IDP_JWKS_URL'] = 'https://idp.test/jwks'
   process.env['KAIF_IDP_ISSUER'] = 'https://idp.test'
@@ -21,6 +21,9 @@ describe('loadConfig production guardrails', () => {
     delete process.env['KAIF_DEV_MODE']
     delete process.env['KAIF_PRIVATE_KEY_PATH']
     delete process.env['KAIF_ALLOW_INSECURE_REDIS']
+    delete process.env['KAIF_ALLOWED_AUDIENCES']
+    delete process.env['KAIF_SPIRE_BUNDLE_CA_PATH']
+    delete process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE']
     delete process.env['KAIF_TENANT_ADDRESS']
     delete process.env['KAIF_GOVERNANCE_AUDIT_APPEND_URL']
     delete process.env['KAIF_GOVERNANCE_WORKSPACE_ID']
@@ -71,10 +74,59 @@ describe('loadConfig production guardrails', () => {
     expect(config.redis_url).toBe('redis://localhost:6379')
   })
 
+  it('rejects insecure SPIRE bundle TLS in production', () => {
+    process.env['NODE_ENV'] = 'production'
+    process.env['KAIF_PRIVATE_KEY_PATH'] = '/run/secrets/kaif.pem'
+    process.env['KAIF_REDIS_URL'] = 'rediss://kaif.redis:6380'
+    process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE'] = 'true'
+
+    expect(() => loadConfig()).toThrow(/KAIF_SPIRE_BUNDLE_TLS_INSECURE=true/)
+  })
+
+  it('captures insecure SPIRE bundle TLS for local development', () => {
+    process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE'] = 'true'
+
+    const config = loadConfig()
+    expect(config.spire_bundle_tls_insecure).toBe(true)
+  })
+
+  it('captures SPIRE bundle CA path when provided', () => {
+    const caPath = new URL('../config/agents.yaml', import.meta.url).pathname
+    process.env['KAIF_SPIRE_BUNDLE_CA_PATH'] = caPath
+
+    const config = loadConfig()
+    expect(config.spire_bundle_ca_path).toBe(caPath)
+  })
+
+  it('rejects missing SPIRE bundle CA path', () => {
+    process.env['KAIF_SPIRE_BUNDLE_CA_PATH'] = '/definitely/missing/spire-ca.pem'
+
+    expect(() => loadConfig()).toThrow(/KAIF_SPIRE_BUNDLE_CA_PATH does not exist/)
+  })
+
+  it('rejects conflicting SPIRE bundle CA and insecure TLS settings', () => {
+    process.env['KAIF_SPIRE_BUNDLE_CA_PATH'] = new URL('../config/agents.yaml', import.meta.url).pathname
+    process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE'] = 'true'
+
+    expect(() => loadConfig()).toThrow(/cannot both be set/)
+  })
+
   it('captures KAIF tenant address when provided', () => {
     process.env['KAIF_TENANT_ADDRESS'] = 'kaif://tenant/test'
     const config = loadConfig()
     expect(config.tenant_address).toBe('kaif://tenant/test')
+  })
+
+  it('defaults allowed audiences to issuer', () => {
+    const config = loadConfig()
+    expect(config.allowed_audiences).toEqual(['https://auth.test'])
+  })
+
+  it('captures configured allowed audiences', () => {
+    process.env['KAIF_ALLOWED_AUDIENCES'] = 'urn:service:a, https://service-b.test '
+
+    const config = loadConfig()
+    expect(config.allowed_audiences).toEqual(['urn:service:a', 'https://service-b.test'])
   })
 
   it('captures governance audit append settings when provided', () => {

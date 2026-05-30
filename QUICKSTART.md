@@ -50,10 +50,13 @@ KAIF_LOG_LEVEL=info
 KAIF_DEV_MODE=true
 
 # Redis
-KAIF_REDIS_URL=redis://redis:6379
+KAIF_REDIS_URL=redis://localhost:6380
+KAIF_REDIS_HOST_PORT=6380
 
 # SPIRE
-KAIF_SPIRE_BUNDLE_ENDPOINT=http://spire-server:8081/bundles/jwt
+KAIF_SPIRE_BUNDLE_ENDPOINT=https://spire-server:8081/
+# Local dev only; production must use trusted TLS for this endpoint.
+KAIF_SPIRE_BUNDLE_TLS_INSECURE=true
 KAIF_SPIRE_TRUST_DOMAIN=kindred.systems
 
 # IdP (mock — use real IdP in production)
@@ -171,8 +174,7 @@ curl -X POST http://localhost:8080/oauth/token \
   --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
   --data-urlencode "actor_token=$SVID" \
   --data-urlencode "actor_token_type=urn:ietf:params:oauth:token-type:jwt" \
-  --data-urlencode "scope=invoke:completion" \
-  --data-urlencode "audience=my-service" | jq .
+  --data-urlencode "scope=invoke:completion" | jq .
 ```
 
 Response (sample):

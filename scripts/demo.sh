@@ -8,7 +8,12 @@
 
 set -euo pipefail
 
-KAIF="http://localhost:8080"
+KAIF_HOST_PORT="${KAIF_HOST_PORT:-8080}"
+KAIF="${KAIF_SERVER_URL:-http://localhost:${KAIF_HOST_PORT}}"
+COMPOSE_ARGS=()
+if [ -n "${KAIF_COMPOSE_ENV_FILE:-}" ]; then
+  COMPOSE_ARGS=(--env-file "${KAIF_COMPOSE_ENV_FILE}")
+fi
 BOLD=$(tput bold 2>/dev/null || true)
 RESET=$(tput sgr0 2>/dev/null || true)
 
@@ -17,7 +22,10 @@ header() { echo ""; echo "${BOLD}▶ $1${RESET}"; }
 # ── 1. Start stack ────────────────────────────────────────────────
 
 header "Starting KAIF stack with dev_mode enabled..."
-KAIF_DEV_MODE=true docker compose up -d --build
+KAIF_DEV_MODE=true \
+KAIF_HOST_PORT="${KAIF_HOST_PORT}" \
+KAIF_ISSUER="${KAIF_ISSUER:-${KAIF}}" \
+docker compose "${COMPOSE_ARGS[@]}" up -d --build
 
 header "Waiting for stack to be healthy..."
 ATTEMPTS=0
@@ -36,7 +44,7 @@ echo "  Stack healthy ✓"
 # ── 2. Fetch mock agent SVID ─────────────────────────────────────
 
 header "Fetching mock agent JWT-SVID from SPIRE..."
-SVID=$(docker compose exec spire-agent \
+SVID=$(docker compose "${COMPOSE_ARGS[@]}" exec spire-agent \
   /opt/spire/bin/spire-agent api fetch jwt \
   -spiffeID "spiffe://kindred.systems/ns/examples/agent/mock" \
   -audience "${KAIF}" \
@@ -115,4 +123,8 @@ else
 fi
 
 header "Done."
-echo "  Stack is still running. Stop with: docker compose down"
+if [ -n "${KAIF_COMPOSE_ENV_FILE:-}" ]; then
+  echo "  Stack is still running. Stop with: docker compose --env-file ${KAIF_COMPOSE_ENV_FILE} down"
+else
+  echo "  Stack is still running. Stop with: docker compose down"
+fi

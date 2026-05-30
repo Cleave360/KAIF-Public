@@ -6,7 +6,7 @@
 
 ## Overall status: 🟡 IMPLEMENTATION COMPLETE — NOT PRODUCTION READY
 
-All 8 phases of the reference implementation are built and tested (128 tests, 0 failures, TypeScript strict clean). Two known gaps block a real end-to-end flow (GAP-008) and production deployment (GAP-009). Two external release gates remain open (security review sign-off, second independent conforming implementation).
+All current workspace suites are built and tested (181 tests, 0 failures, TypeScript strict clean). Day 7b strict production-attestation evidence now passes locally. The reference implementation is still not production ready: SPIRE production bootstrap, signing-key lifecycle, per-agent audit integrity, direct mTLS peer-certificate binding, and production deployment evidence remain open.
 
 ---
 
@@ -17,12 +17,12 @@ All 8 phases of the reference implementation are built and tested (128 tests, 0 
 - `kid` derived from JWK thumbprint for file-based keys (stable, deterministic) — compliant
 - Ephemeral keys use random UUID for kid — acceptable for dev/test
 - `_cachePromise` pattern prevents key-generation race — **fixed GAP-001**
-- SPIRE JWKS cached at 5-minute TTL via `jose`'s `createRemoteJWKSet` — compliant
+- SPIRE JWT-SVID bundle keys cached at 5-minute TTL, normalized from SPIRE `use="jwt-svid"` to JOSE signing keys — compliant
 - `actor.svid_thumbprint` uses JWK thumbprint (sha256) — correct per Clarification 2
 - Private key never leaves process memory — compliant with Security Rule 4
 - No third-party crypto primitives — compliant with Security Rule 3
 
-**Open:** GAP-004 (HTTP vs HTTPS for SPIRE bundle in dev)
+**Partial:** GAP-004 (CA-backed SPIRE bundle retrieval implemented; production CA provisioning and deployment guide remain)
 
 ---
 
@@ -187,9 +187,9 @@ All 8 phases of the reference implementation are built and tested (128 tests, 0 
 |-----|----------|---------|--------|
 | GAP-002 | Medium | `audit.ts` — non-atomic append | Open — v0.2 |
 | GAP-003 | Low | `audit.ts` — per-agent chain not independently verifiable | Open — v0.2 |
-| GAP-004 | High (prod) | SPIRE bundle over HTTP in dev config | Open — deployment guide |
+| GAP-004 | High (prod) | SPIRE bundle trust path | Partial — CA path support added; deployment guide/prod CA provisioning pending |
 | GAP-006 | Low | `acl.ts` — micromatch with `/` separator scopes | Open — monitoring |
 | GAP-008 | High | `/provision` → `/oauth/token` flow broken (UUID vs JWT) | **CLOSED 2026-05-20** |
 | GAP-009 | High (prod) | `insecure_bootstrap` in SPIRE agent config | Documented (compose + README) |
 
-*Last updated: 2026-05-20 by Claude Code (claude-sonnet-4-6) — All phases complete*
+*Last updated: 2026-05-23 by Codex — Phase 1 Day 7b strict evidence passed locally*

@@ -16,8 +16,10 @@ if [[ "${1:-}" == "--export" ]]; then
   EXPORT_MODE=true
 fi
 
-KAIF_URL="${KAIF_SERVER_URL:-http://127.0.0.1:8080}"
-AGENT_ID="conformance-agent"
+DEFAULT_HOST_PORT="${KAIF_HOST_PORT:-8080}"
+KAIF_URL="${KAIF_SERVER_URL:-http://127.0.0.1:${DEFAULT_HOST_PORT}}"
+CONFIG_AGENT_ID="conformance-agent"
+SPIFFE_AGENT_ID="spiffe://kindred.systems/ns/conformance/agent/test"
 SCOPE="invoke:completion"
 TTL=900
 
@@ -39,7 +41,7 @@ RESPONSE=$(curl -sf -X POST "${KAIF_URL}/provision" \
   -H "Content-Type: application/json" \
   -d "{
     \"id_token\":    \"dev-mock-token\",
-    \"agent_id\":   \"${AGENT_ID}\",
+    \"agent_id\":   \"${CONFIG_AGENT_ID}\",
     \"scope\":      \"${SCOPE}\",
     \"ttl_seconds\": ${TTL}
   }")
@@ -69,22 +71,22 @@ fi
 
 if $EXPORT_MODE; then
   echo "export KAIF_GRANT_TOKEN=\"${DELEGATION_TOKEN}\""
-  echo "export KAIF_AGENT_ID=\"${AGENT_ID}\""
+  echo "export KAIF_AGENT_ID=\"${SPIFFE_AGENT_ID}\""
 else
   echo ""
-  echo "✓ Delegation token minted for ${AGENT_ID}"
+  echo "✓ Delegation token minted for ${CONFIG_AGENT_ID}"
   echo "  Expires at: $(date -r "${EXPIRES_AT}" 2>/dev/null || date -d "@${EXPIRES_AT}" 2>/dev/null || echo "${EXPIRES_AT}")"
   echo ""
   echo "Run the following to set your environment variables:"
   echo ""
   echo "  export KAIF_GRANT_TOKEN=\"${DELEGATION_TOKEN}\""
-  echo "  export KAIF_AGENT_ID=\"${AGENT_ID}\""
+  echo "  export KAIF_AGENT_ID=\"${SPIFFE_AGENT_ID}\""
   echo ""
   echo "Or run:  eval \"\$(./scripts/mint-grant-token.sh --export)\""
   echo ""
   echo "Then run the conformance kit:"
   echo "  kaif-conformance \\"
-  echo "    --server http://127.0.0.1:8080 \\"
+  echo "    --server \"${KAIF_URL}\" \\"
   echo "    --svid-jwt /tmp/svid.jwt \\"
   echo "    --grant-token \"\$KAIF_GRANT_TOKEN\" \\"
   echo "    --agent-id spiffe://kindred.systems/ns/conformance/agent/test"

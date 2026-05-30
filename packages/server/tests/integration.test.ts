@@ -23,6 +23,7 @@ import {
   _setSpireJWKS, _setRawSpireKeys, _resetSpireJWKSCache,
   _setIdpJWKS, _resetIdpJWKSCache,
 } from '../src/crypto/jwt.js'
+import { _setSpireBundleFetcher, _resetSpireBundleFetcher } from '../src/crypto/spire-bundle.js'
 import { _resetKeyCache, getPublicJWK } from '../src/crypto/keys.js'
 import { updateTrustScore } from '../src/services/trust-score.js'
 import { verifyChain } from '../src/services/audit.js'
@@ -54,7 +55,7 @@ let jwksKid:       string
 function setEnv(): void {
   process.env['KAIF_ISSUER']                = 'https://auth.integration.test'
   process.env['KAIF_REDIS_URL']             = 'redis://localhost:6379'
-  process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'http://spire.integration.test:8081/bundles/jwt'
+  process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'https://spire.integration.test:8081/'
   process.env['KAIF_SPIRE_TRUST_DOMAIN']    = 'kindred.systems'
   process.env['KAIF_IDP_JWKS_URL']          = 'https://idp.integration.test/.well-known/jwks.json'
   process.env['KAIF_IDP_ISSUER']            = 'https://idp.integration.test'
@@ -69,13 +70,7 @@ function setEnv(): void {
 beforeAll(async () => {
   setEnv()
 
-  // Stub global fetch: return 200 for SPIRE health HEAD, reject everything else
-  vi.stubGlobal('fetch', async (url: string | URL, init?: RequestInit) => {
-    if (String(url).includes('spire.integration.test')) {
-      return new Response(null, { status: 200 }) as Response
-    }
-    throw new Error(`Unexpected fetch in integration test: ${url}`)
-  })
+  _setSpireBundleFetcher(async () => ({ keys: [spireJWK] }))
 
   // Generate SPIRE keypair
   const spirePair = await generateKeyPair('RS256', { modulusLength: 2048 })
@@ -139,6 +134,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   vi.unstubAllGlobals()
+  _resetSpireBundleFetcher()
   await app?.close()
   redis?.reset()
 })

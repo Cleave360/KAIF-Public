@@ -2,28 +2,40 @@ import {
   SignJWT,
   jwtVerify,
   createRemoteJWKSet,
+  createLocalJWKSet,
   importJWK,
   decodeProtectedHeader,
   calculateJwkThumbprint,
 } from 'jose'
 import type { JWTPayload, JWK, KeyLike } from 'jose'
 import { getSigningKey, getPublicJWK, getKid } from './keys.js'
+import { fetchSpireBundle } from './spire-bundle.js'
 import type { KAIFTokenClaims, ParsedSVID } from '../types/kaif.js'
 
-// ── SPIRE bundle JWKS (cached via jose at 5-minute TTL) ───────────
+// ── SPIRE bundle JWKS (cached via raw bundle fetch at 5-minute TTL) ─
 // The type is kept broad so tests can inject createLocalJWKSet output.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _spireJWKS: any = null
 
-function getSpireJWKS(): ReturnType<typeof createRemoteJWKSet> {
-  if (_spireJWKS) return _spireJWKS as ReturnType<typeof createRemoteJWKSet>
-  const endpoint = process.env['KAIF_SPIRE_BUNDLE_ENDPOINT']
-  if (!endpoint) throw new Error('KAIF_SPIRE_BUNDLE_ENDPOINT is not set')
-  _spireJWKS = createRemoteJWKSet(new URL(endpoint), { cacheMaxAge: 5 * 60 * 1000 })
+function normalizeSpireJwtKeys(keys: JWK[]): JWK[] {
+  return keys
+    .filter((key) => key.use === undefined || key.use === 'jwt-svid' || key.use === 'sig')
+    .map((key) => key.use === 'jwt-svid' ? { ...key, use: 'sig' } : key)
+}
+
+function getSpireJWKS(): ReturnType<typeof createLocalJWKSet> {
+  if (_spireJWKS) return _spireJWKS as ReturnType<typeof createLocalJWKSet>
+  _spireJWKS = async (protectedHeader: unknown, token: unknown) => {
+    const keys = normalizeSpireJwtKeys(await getRawSpireJWKS())
+    return createLocalJWKSet({ keys })(
+      protectedHeader as Parameters<ReturnType<typeof createLocalJWKSet>>[0],
+      token as Parameters<ReturnType<typeof createLocalJWKSet>>[1]
+    )
+  }
   return _spireJWKS
 }
 
-// Test injection: replace createRemoteJWKSet with a createLocalJWKSet-backed getter
+// Test injection: replace SPIRE key resolution with a createLocalJWKSet-backed getter.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function _setSpireJWKS(fn: any): void {
   _spireJWKS = fn
@@ -39,8 +51,7 @@ export function _resetSpireJWKSCache(): void {
   _rawSpireCache = null
 }
 
-// ── Raw SPIRE JWKS cache for thumbprint computation ───────────────
-// Separate from createRemoteJWKSet so we can inspect individual keys
+// ── Raw SPIRE JWKS cache for verification and thumbprint computation ─
 
 interface RawJWKSCache {
   keys:      JWK[]
@@ -58,10 +69,7 @@ async function getRawSpireJWKS(): Promise<JWK[]> {
   const endpoint = process.env['KAIF_SPIRE_BUNDLE_ENDPOINT']
   if (!endpoint) throw new Error('KAIF_SPIRE_BUNDLE_ENDPOINT is not set')
 
-  const resp = await fetch(endpoint)
-  if (!resp.ok) throw new Error(`Failed to fetch SPIRE bundle: HTTP ${resp.status}`)
-
-  const body = (await resp.json()) as { keys: JWK[] }
+  const body = await fetchSpireBundle(endpoint)
   _rawSpireCache = { keys: body.keys, fetchedAt: now }
   return body.keys
 }

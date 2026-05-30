@@ -1,9 +1,13 @@
 # Governance Redis Integration Plan
 
-Status: integration contract draft
+Status: integration contract accepted for current dev integration
 Date: 2026-05-21
 
 KAIF is the external receiver for the agentic handshake. The governance engine can decide policy, trust scoring, and tenant posture, but KAIF must remain the component that validates the SPIRE-attested actor, redeems the human delegation grant, and issues the bounded access token.
+
+Current Adaptive governance repo:
+
+- `/Users/geofflundholm/Documents/adaptive_layer`
 
 ## Production Boundary
 
@@ -22,14 +26,19 @@ Current implementation status:
 
 - `loadConfig()` accepts optional `KAIF_TENANT_ADDRESS`.
 - Day 7b evidence reports include the tenant address when set.
-- The exact production value is pending from the governance-engine repo/config.
+- Current dev integration uses `KAIF_TENANT_ADDRESS=tenant-dev`.
+- Production should keep the same tenant-slug model, for example `acme-prod`.
+
+The Adaptive evidence stream for the current tenant is:
+
+- `audit:auth:tenant-dev:<yyyy-mm-dd>`
 
 ## Integration Pattern
 
 Preferred production pattern:
 
-1. Governance engine emits tenant policy/trust signals through an API or a dedicated bridge.
-2. KAIF consumes only the specific signals needed for token issuance, revocation, and trust-tier decisions.
+1. KAIF posts auth-layer evidence to Adaptive through `POST /v1/audit/append`.
+2. KAIF sets `layer = "auth"` and `envelope.tenant_id = KAIF_TENANT_ADDRESS`.
 3. KAIF stores derived runtime state in its own Redis under `kaif:*`.
 4. Audit evidence records the governance signal version or decision ID, not raw cross-system secrets.
 5. Redis credentials are never shared between KAIF and the governance engine in production.
@@ -40,20 +49,53 @@ Avoid this production pattern:
 - Governance engine directly mutating KAIF token, revocation, audit, or lock keys.
 - Sharing a Redis instance and relying only on logical DB numbers for isolation.
 
-## Signal Contract To Finalize
+## Adaptive Auth Evidence Contract
 
-The governance integration needs a small explicit contract before implementation:
+Endpoint:
 
-- Governance repo path.
-- Exact `KAIF_TENANT_ADDRESS` value.
-- Trust signal schema and versioning.
-- Redis stream/key names, if a stream bridge is selected.
-- Expected failure policy when governance signals are unavailable.
-- Whether KAIF should use API pull, stream subscribe, or a one-way replication bridge.
-- Tenant-specific retention and audit export requirements.
+- `POST /v1/audit/append`
+
+Canonical payload:
+
+```json
+{
+  "request_id": "kaif-<uuid>",
+  "layer": "auth",
+  "envelope": {
+    "envelope_version": "v1",
+    "tenant_id": "tenant-dev",
+    "workspace_id": "ws-kaif",
+    "project_id": "kaif",
+    "run_id": "run-...",
+    "principal_id": "kaif-server",
+    "principal_type": "service",
+    "ui_instance_id": "ui-kaif"
+  },
+  "event": {
+    "event_type": "kaif.token.issue|kaif.token.deny|kaif.introspect.ok|kaif.introspect.degraded",
+    "executor": "kaif",
+    "command_hash": "<64-hex>",
+    "command_preview": "kaif auth decision",
+    "policy_decision": "allow|deny|halt",
+    "status": "success|rejected|error",
+    "source_system": "KAIF"
+  }
+}
+```
+
+KAIF uses `KAIF_GOVERNANCE_AUDIT_APPEND_URL` for the full Adaptive endpoint URL. `KAIF_GOVERNANCE_WORKSPACE_ID`, `KAIF_GOVERNANCE_PROJECT_ID`, and `KAIF_GOVERNANCE_UI_INSTANCE_ID` default to `ws-kaif`, `kaif`, and `ui-kaif`.
 
 ## Failure Policy
 
 KAIF token issuance should fail closed for Class A operations when required governance signals are unavailable. Lower-criticality Class C paths can use a documented degraded policy only if the relying party explicitly allows it and the Day 7b report marks the degraded decision.
 
-Day 7b `DAY7B-008` is reserved for this behavior. It remains incomplete until Class A and Class C relying-party failure-mode endpoints exist and are wired into the evidence runner.
+Day 7b `DAY7B-008` uses these KAIF test-surface relying-party endpoints:
+
+- `POST /relying/class-a/authorize`
+- `POST /relying/class-c/authorize`
+
+Required behavior when governance evidence append is unavailable:
+
+- Class A fails closed with `policy_decision=halt` and `status=rejected`.
+- Class C fails closed by default.
+- Class C may degraded-open only when `KAIF_CLASS_C_DEGRADED_OPEN=true`, and must return `evidence_marker=kaif.introspect.degraded`.

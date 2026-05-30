@@ -23,6 +23,16 @@ export function hasRequiredScopes(payload: Record<string, unknown>, requiredScop
   return requiredScopes.every(scope => scopes.has(scope))
 }
 
+function getConfirmationThumbprint(payload: Record<string, unknown>): string | null {
+  const cnf = payload['cnf']
+  if (typeof cnf !== 'object' || cnf === null) return null
+
+  const claims = cnf as Record<string, unknown>
+  if (typeof claims['jkt'] === 'string') return claims['jkt']
+  if (typeof claims['x5t#S256'] === 'string') return claims['x5t#S256']
+  return null
+}
+
 export function requireKAIFAuth(opts: RequireKAIFAuthOptions): preHandlerHookHandler {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     const authHeader = request.headers.authorization
@@ -57,6 +67,17 @@ export function requireKAIFAuth(opts: RequireKAIFAuthOptions): preHandlerHookHan
         error: 'invalid_client',
         error_description: 'Bearer token has been revoked',
       })
+    }
+
+    const presentedThumbprint = request.headers['x-client-cert-thumbprint']
+    if (typeof presentedThumbprint === 'string') {
+      const expectedThumbprint = getConfirmationThumbprint(payload)
+      if (!expectedThumbprint || presentedThumbprint !== expectedThumbprint) {
+        return void reply.status(401).send({
+          error: 'cnf_binding_mismatch',
+          error_description: 'Bearer token CNF binding does not match presented credential',
+        })
+      }
     }
 
     if (opts.requiredScopes && !hasRequiredScopes(payload, opts.requiredScopes)) {

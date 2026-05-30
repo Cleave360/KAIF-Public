@@ -4,15 +4,15 @@ import { MockRedis } from '../mock-redis.js'
 import { healthRoute } from '../../src/routes/health.js'
 
 const TEST_VERSION = '0.1.0-test'
-const SPIRE_ENDPOINT = 'http://spire.test:8081/bundles/jwt'
+const SPIRE_ENDPOINT = 'https://spire.test:8081/'
 
-function makeApp(redis: MockRedis, fetchImpl?: typeof fetch) {
+function makeApp(redis: MockRedis, fetchBundle?: () => Promise<unknown>) {
   const app = Fastify({ logger: false })
-  if (fetchImpl) vi.stubGlobal('fetch', fetchImpl)
   app.register(healthRoute, {
     redis: redis as any,
     spireEndpoint: SPIRE_ENDPOINT,
     version: TEST_VERSION,
+    ...(fetchBundle ? { fetchBundle } : {}),
   })
   return app
 }
@@ -31,7 +31,7 @@ describe('GET /health', () => {
   it('returns 200 with status ok when Redis and SPIRE reachable', async () => {
     const app = makeApp(
       redis,
-      async () => new Response(null, { status: 200 }) as Response
+      async () => ({ keys: [] })
     )
     const res = await app.inject({ method: 'GET', url: '/health' })
 
@@ -48,7 +48,7 @@ describe('GET /health', () => {
     redis.ping = async () => { throw new Error('ECONNREFUSED') }
     const app = makeApp(
       redis,
-      async () => new Response(null, { status: 200 }) as Response
+      async () => ({ keys: [] })
     )
     const res = await app.inject({ method: 'GET', url: '/health' })
 
@@ -76,7 +76,7 @@ describe('GET /health', () => {
   it('response shape matches schema exactly', async () => {
     const app = makeApp(
       redis,
-      async () => new Response(null, { status: 200 }) as Response
+      async () => ({ keys: [] })
     )
     const res = await app.inject({ method: 'GET', url: '/health' })
     const body = res.json()

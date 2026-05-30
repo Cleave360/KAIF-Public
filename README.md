@@ -79,8 +79,10 @@ The KAIF JWT binds three things in one credential: the human principal who autho
 
   actor: {
     sub:             "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra",
-    svid_thumbprint: "sha256:3a4b..."     // RFC 8705 cert binding
+    svid_thumbprint: "sha256:3a4b..."     // JWT-SVID signing JWK thumbprint
   },
+
+  cnf: { jkt: "sha256:3a4b..." },         // confirmation binding for replay checks
 
   may_act: { sub: "spiffe://kindred.systems/..." },
 
@@ -138,10 +140,18 @@ See `examples/mock-service/index.ts` for a complete relying-party implementation
 | `KAIF_PORT` | number | `8080` | HTTP listen port |
 | `KAIF_HOST` | string | `0.0.0.0` | HTTP listen host |
 | `KAIF_ISSUER` | string | required | JWT `iss` claim, e.g. `https://auth.kindred.systems` |
+| `KAIF_ALLOWED_AUDIENCES` | comma-separated strings | `KAIF_ISSUER` | Explicit token-exchange `audience` values KAIF may mint |
 | `KAIF_REDIS_URL` | string | required | Redis connection URL |
-| `KAIF_TENANT_ADDRESS` | string | — | Optional tenant address used by external governance/agent handoff integrations |
+| `KAIF_TENANT_ADDRESS` | string | `tenant-dev` in local examples | Tenant address used by Adaptive governance/agent handoff integrations |
 | `KAIF_ALLOW_INSECURE_REDIS` | boolean | `false` | Allows non-TLS Redis when `NODE_ENV=production`; only for controlled production-like tests |
-| `KAIF_SPIRE_BUNDLE_ENDPOINT` | string | required | SPIRE HTTP bundle endpoint for SVID validation |
+| `KAIF_GOVERNANCE_AUDIT_APPEND_URL` | string | — | Adaptive `POST /v1/audit/append` URL for auth-layer evidence |
+| `KAIF_GOVERNANCE_WORKSPACE_ID` | string | `ws-kaif` | Adaptive envelope workspace ID |
+| `KAIF_GOVERNANCE_PROJECT_ID` | string | `kaif` | Adaptive envelope project ID |
+| `KAIF_GOVERNANCE_UI_INSTANCE_ID` | string | `ui-kaif` | Adaptive envelope UI instance ID |
+| `KAIF_CLASS_C_DEGRADED_OPEN` | boolean | `false` | Allows Class C relying-party degraded-open behavior when governance evidence append is unavailable |
+| `KAIF_SPIRE_BUNDLE_ENDPOINT` | string | required | SPIRE HTTPS federation bundle endpoint for SVID validation |
+| `KAIF_SPIRE_BUNDLE_CA_PATH` | string | — | Optional CA bundle path for validating a private SPIRE HTTPS bundle endpoint |
+| `KAIF_SPIRE_BUNDLE_TLS_INSECURE` | boolean | `false` | Local development only; rejected when `NODE_ENV=production` |
 | `KAIF_SPIRE_TRUST_DOMAIN` | string | required | SPIFFE trust domain, e.g. `kindred.systems` |
 | `KAIF_IDP_JWKS_URL` | string | required* | OIDC IdP JWKS URL for `/provision` id_token validation |
 | `KAIF_IDP_ISSUER` | string | required* | OIDC IdP issuer claim |
@@ -153,7 +163,23 @@ See `examples/mock-service/index.ts` for a complete relying-party implementation
 
 *Not required when `KAIF_DEV_MODE=true`.
 
-For production and serious staging, give KAIF its own Redis host or managed instance with TLS, ACLs, and dedicated credentials. Sharing a Redis server with the governance engine is acceptable for local development only; a separate Redis DB/index is not enough isolation for production-grade retention, restart, and security policy boundaries.
+For local isolation, run KAIF Redis on host port `6380` and keep Adaptive on `6379`:
+
+```bash
+KAIF_REDIS_URL=redis://localhost:6380
+redis-cli -p 6380 PING
+```
+
+If `6380` is already occupied by another local stack, keep the Redis separation and choose another host port for KAIF:
+
+```bash
+KAIF_REDIS_HOST_PORT=6381 docker compose --env-file .env.example up -d redis
+redis-cli -p 6381 PING
+```
+
+For production and serious staging, give KAIF its own Redis host or managed instance with TLS, ACLs, and dedicated credentials. Sharing a Redis server with the governance engine is acceptable for local development only; a separate Redis DB/index is not enough isolation for production-grade retention, restart, and security policy boundaries. Keep KAIF keys under `kaif:*`.
+
+Adaptive governance integration is API-first: KAIF posts auth-layer evidence to Adaptive `POST /v1/audit/append` with `layer="auth"` and `envelope.tenant_id=KAIF_TENANT_ADDRESS`. KAIF must not directly mutate governance-engine Redis in production.
 
 ### Agent ACL (`agents.yaml`)
 

@@ -23,13 +23,14 @@ const originalEnv = { ...process.env }
 function setTestEnv(): void {
   process.env['KAIF_ISSUER'] = 'https://auth.test.example'
   process.env['KAIF_REDIS_URL'] = 'redis://localhost:6379'
-  process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'http://localhost:8081/bundles/jwt'
+  process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'https://localhost:8081/'
   process.env['KAIF_SPIRE_TRUST_DOMAIN'] = 'kindred.systems'
   process.env['KAIF_IDP_JWKS_URL'] = 'https://idp.example/.well-known/jwks.json'
   process.env['KAIF_IDP_ISSUER'] = 'https://idp.example'
   process.env['KAIF_AGENTS_CONFIG_PATH'] = AGENTS_CONFIG
   process.env['KAIF_STRICT_REVOCATION'] = 'false'
   delete process.env['KAIF_PRIVATE_KEY_PATH']
+  delete process.env['KAIF_ALLOWED_AUDIENCES']
   delete process.env['KAIF_PORT']
   delete process.env['KAIF_HOST']
   delete process.env['KAIF_LOG_LEVEL']
@@ -141,6 +142,9 @@ describe('token exchange — required cases', () => {
     expect(response.scope).toBe('vault:read:anthropic_key')
     expect(response.expires_in).toBeGreaterThan(0)
     expect(response.access_token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/)
+    const payload = JSON.parse(Buffer.from(response.access_token.split('.')[1]!, 'base64url').toString())
+    expect(payload.cnf).toMatchObject({ jkt: expect.any(String) })
+    expect(payload.cnf.jkt).toBe(payload.actor.svid_thumbprint)
 
     // Verify audit was written
     const auditLog = redis.lists.get('kaif:audit:global')
@@ -394,6 +398,51 @@ describe('token exchange — required cases', () => {
 	      })
 	    ).rejects.toMatchObject({ code: 'invalid_scope' })
 	  })
+
+  it('explicit unapproved audience returns access_denied', async () => {
+    const redis = new MockRedis()
+    const subjectToken = await makeSubjectToken({ scope: 'invoke:completion' })
+    const actorToken = await makeSVID(LYRA_SPIFFE)
+
+    await expect(
+      executeTokenExchange({
+        redis: redis as any,
+        request: {
+          grant_type:         'urn:ietf:params:oauth:grant-type:token-exchange',
+          subject_token:      subjectToken,
+          subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+          actor_token:        actorToken,
+          actor_token_type:   'urn:ietf:params:oauth:token-type:jwt',
+          scope:              'invoke:completion',
+          audience:           'https://nonexistent-audience.conformance.kaif.test/v1',
+        },
+      })
+    ).rejects.toMatchObject({ code: 'access_denied' })
+  })
+
+  it('explicit configured audience is accepted', async () => {
+    process.env['KAIF_ALLOWED_AUDIENCES'] = 'https://api.example.com'
+
+    const redis = new MockRedis()
+    const subjectToken = await makeSubjectToken({ scope: 'invoke:completion' })
+    const actorToken = await makeSVID(LYRA_SPIFFE)
+
+    const response = await executeTokenExchange({
+      redis: redis as any,
+      request: {
+        grant_type:         'urn:ietf:params:oauth:grant-type:token-exchange',
+        subject_token:      subjectToken,
+        subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+        actor_token:        actorToken,
+        actor_token_type:   'urn:ietf:params:oauth:token-type:jwt',
+        scope:              'invoke:completion',
+        audience:           'https://api.example.com',
+      },
+    })
+
+    const payload = JSON.parse(Buffer.from(response.access_token.split('.')[1]!, 'base64url').toString())
+    expect(payload.aud).toBe('https://api.example.com')
+  })
 
 	  it('revoked subject_token returns invalid_grant', async () => {
     const redis = new MockRedis()

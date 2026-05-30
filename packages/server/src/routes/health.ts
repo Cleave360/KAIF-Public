@@ -1,10 +1,12 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import type { Redis } from 'ioredis'
+import { fetchSpireBundle } from '../crypto/spire-bundle.js'
 
 interface HealthOpts extends FastifyPluginOptions {
   redis: Redis
   spireEndpoint: string
   version: string
+  fetchBundle?: (endpoint: string) => Promise<unknown>
 }
 
 export async function healthRoute(app: FastifyInstance, opts: HealthOpts): Promise<void> {
@@ -20,11 +22,8 @@ export async function healthRoute(app: FastifyInstance, opts: HealthOpts): Promi
     }
 
     try {
-      const resp = await fetch(opts.spireEndpoint, {
-        method: 'HEAD',
-        signal: AbortSignal.timeout(1000),
-      })
-      spireStatus = resp.ok ? 'reachable' : 'unreachable'
+      await (opts.fetchBundle ?? fetchSpireBundle)(opts.spireEndpoint)
+      spireStatus = 'reachable'
     } catch {
       spireStatus = 'unreachable'
     }

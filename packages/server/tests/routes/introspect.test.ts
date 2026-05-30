@@ -39,6 +39,7 @@ async function makeAuthToken(ttlSeconds = 300, scope = 'audit:read'): Promise<st
     jti:   crypto.randomUUID(),
 	    scope,
     actor: { sub: 'spiffe://test', svid_thumbprint: 'sha256:test' },
+    cnf: { jkt: 'sha256:test' },
     may_act: { sub: 'spiffe://test' },
     kaif: {
       trust_score: 0.6, trust_tier: 'STANDARD', delegation_depth: 1,
@@ -74,6 +75,26 @@ describe('POST /introspect', () => {
     expect(body.active).toBe(true)
     expect(body.sub).toBe('user@example.com')
     expect(typeof body.jti).toBe('string')
+  })
+
+  it('rejects mismatched CNF binding header before introspection', async () => {
+    const redis = new MockRedis()
+    const app = makeApp(redis)
+    const token = await makeAuthToken()
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/introspect',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+        'x-client-cert-thumbprint': 'sha256:' + '0'.repeat(64),
+      },
+      body: JSON.stringify({ token }),
+    })
+
+    expect(res.statusCode).toBe(401)
+    expect(res.json().error).toBe('cnf_binding_mismatch')
   })
 
   it('expired token returns { active: false }', async () => {

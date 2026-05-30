@@ -15,6 +15,10 @@ import {
   _setSpireJWKS,
   _setRawSpireKeys,
 } from '../src/crypto/jwt.js'
+import {
+  _resetSpireBundleFetcher,
+  _setSpireBundleFetcher,
+} from '../src/crypto/spire-bundle.js'
 import type { KAIFTokenClaims } from '../src/types/kaif.js'
 import {
   exportJWK,
@@ -208,6 +212,7 @@ describe('verifySVIDJWT', () => {
     spirePublicJWK = { ...spirePublicJWK, kid: spireKid }
 
     process.env['KAIF_SPIRE_TRUST_DOMAIN'] = 'kindred.systems'
+    process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'https://spire.test/'
 
     // Inject SPIRE JWKS directly — avoids HTTP fetch mocking problems with jose's
     // createRemoteJWKSet which captures the fetch reference at module load time.
@@ -276,5 +281,26 @@ describe('verifySVIDJWT', () => {
     const result = await verifySVIDJWT(svid)
     const expected = `sha256:${await calculateJwkThumbprint(spirePublicJWK, 'sha256')}`
     expect(result.thumbprint).toBe(expected)
+  })
+
+  it('accepts SPIRE JWT-SVID bundle keys marked with use jwt-svid', async () => {
+    _resetSpireJWKSCache()
+    _setSpireBundleFetcher(async () => ({
+      keys: [{ ...spirePublicJWK, use: 'jwt-svid' }],
+    }))
+
+    try {
+      const now = Math.floor(Date.now() / 1000)
+      const svid = await new SignJWT({ sub: 'spiffe://kindred.systems/ns/conformance/agent/test' } as Record<string, unknown>)
+        .setProtectedHeader({ alg: 'RS256', kid: spireKid })
+        .setIssuedAt(now)
+        .setExpirationTime(now + 600)
+        .sign(spirePrivateKey)
+
+      const result = await verifySVIDJWT(svid)
+      expect(result.spiffe_id).toBe('spiffe://kindred.systems/ns/conformance/agent/test')
+    } finally {
+      _resetSpireBundleFetcher()
+    }
   })
 })
