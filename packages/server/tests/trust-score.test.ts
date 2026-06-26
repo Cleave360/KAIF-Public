@@ -107,10 +107,10 @@ describe('getTrustScore / updateTrustScore', () => {
     expect(low.score).toBe(0.0)
   })
 
-  it('publishes to kaif:trust-score channel on update', async () => {
+  it('publishes to kaif:authorization-tier channel on update', async () => {
     await updateTrustScore(redis as any, 'spiffe://test', 0.7)
     expect(redis.published).toHaveLength(1)
-    expect(redis.published[0]!.channel).toBe('kaif:trust-score')
+    expect(redis.published[0]!.channel).toBe('kaif:authorization-tier')
   })
 
   it('stores optional signal_breakdown', async () => {

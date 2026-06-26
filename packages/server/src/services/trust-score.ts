@@ -3,10 +3,10 @@ import { TRUST_TIERS } from '../types/kaif.js'
 import type { TrustTierConfig, TrustTier, TrustScoreSignal } from '../types/kaif.js'
 import { KAIFError } from '../errors.js'
 
-const CHANNEL = 'kaif:trust-score'
+const CHANNEL = 'kaif:authorization-tier'
 
 function trustKey(spiffe_id: string): string {
-  return `kaif:trust:${spiffe_id}`
+  return `kaif:authorization-tier:${spiffe_id}`
 }
 
 function clamp(score: number): number {
@@ -27,7 +27,7 @@ export function assertTierMinimum(score: number, required: TrustTier): void {
   if (actual.minScore < requiredConfig.minScore) {
     throw new KAIFError(
       'insufficient_trust',
-      `Agent trust score ${score.toFixed(2)} is below the required tier ${required}`
+      `Operator-assigned authorization gate value ${score.toFixed(2)} is below the required tier ${required}`
     )
   }
 }

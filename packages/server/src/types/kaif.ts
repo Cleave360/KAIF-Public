@@ -20,8 +20,8 @@ export const TRUST_TIERS: TrustTierConfig[] = [
 // ── KAIF JWT Claims ───────────────────────────────────────────────
 
 export interface KAIFExtensionClaims {
-  trust_score:      number
-  trust_tier:       TrustTier
+  trust_score:      number  // operator-assigned authorization gate value; not behavioral scoring
+  trust_tier:       TrustTier  // resolved tier used for TTL and delegation-depth limits
   delegation_depth: number
   delegation_id:    string
   rollback_window:  string   // ISO 8601 duration e.g. "PT10M"
@@ -142,10 +142,10 @@ export interface DelegationGrant {
 
 export interface TrustScoreSignal {
   agent_spiffe_id:   string
-  score:             number  // 0.0–1.0
+  score:             number  // operator-assigned authorization gate value, 0.0–1.0
   updated_at:        number
   signal_breakdown?: {
-    behavioural:  number  // 0.0–1.0
+    behavioural:  number  // deferred future work; excluded from conformance scope
     audit_chain:  number
     credential:   number
     peer:         number

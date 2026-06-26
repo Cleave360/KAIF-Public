@@ -148,8 +148,8 @@ export async function provisionRoute(app: FastifyInstance, opts: ProvisionOpts):
         },
         may_act: { sub: agentACL.spiffe_id },
         kaif: {
-          trust_score:      0,
-          trust_tier:       'PROVISIONAL',
+          trust_score:      0, // operator-assigned bootstrap gate value; not behavioral scoring
+          trust_tier:       'PROVISIONAL', // direct human grant tier
           delegation_depth: 0,
           delegation_id:    delegationId,
           rollback_window:  'PT0S',

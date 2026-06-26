@@ -197,9 +197,9 @@ export async function executeTokenExchange(params: {
 
   // ── Step 4: Trust score check ──────────────────────────────────
 
-  const trustSignal = await getTrustScore(redis, svid.spiffe_id)
-  const tierConfig = resolveTier(trustSignal.score)
-  assertTierMinimum(trustSignal.score, agentACL.trust_tier_minimum)
+  const authorizationTierSignal = await getTrustScore(redis, svid.spiffe_id)
+  const tierConfig = resolveTier(authorizationTierSignal.score)
+  assertTierMinimum(authorizationTierSignal.score, agentACL.trust_tier_minimum)
 
   // ── Step 5: Compute delegation depth ──────────────────────────
 
@@ -259,7 +259,7 @@ export async function executeTokenExchange(params: {
     cnf: { jkt: svid.thumbprint },
     may_act: { sub: svid.spiffe_id },
     kaif: {
-      trust_score:      trustSignal.score,
+    trust_score:      authorizationTierSignal.score,
       trust_tier:       tierConfig.tier,
       delegation_depth: delegationDepth,
       delegation_id:    randomUUID(),

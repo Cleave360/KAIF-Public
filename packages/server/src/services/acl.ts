@@ -177,18 +177,18 @@ export async function assertAuthorised(params: {
   redis:            Redis
   agent_acl:        AgentACL
   requested_scopes: string[]
-  trust_score:      number
+  authorization_tier_value: number
   delegation_depth: number
 }): Promise<void> {
-  const { agent_acl, requested_scopes, trust_score, delegation_depth } = params
+  const { agent_acl, requested_scopes, authorization_tier_value, delegation_depth } = params
 
   // SPIFFE ID must be valid — verify it before any ACL lookup
   if (!validateSpiffeID(agent_acl.spiffe_id)) {
     throw new KAIFError('access_denied', 'Agent SPIFFE ID is malformed')
   }
 
-  // Trust tier check
-  assertTierMinimum(trust_score, agent_acl.trust_tier_minimum)
+  // Authorization tier check
+  assertTierMinimum(authorization_tier_value, agent_acl.trust_tier_minimum)
 
   // Delegation depth check
   if (delegation_depth > agent_acl.max_delegation_depth) {

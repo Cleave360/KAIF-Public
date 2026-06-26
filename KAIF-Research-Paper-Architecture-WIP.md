@@ -9,7 +9,7 @@
 
 ## Abstract
 
-We present KAIF, a composable protocol stack that provides autonomous AI agents with scoped, auditable, and revocable authority traceable to a human principal. KAIF combines RFC 8693 token exchange with SPIFFE/SPIRE workload identity, SHA-256 audit chaining, and trust-score-based authorization to enable secure delegation hierarchies. A reference implementation in TypeScript demonstrates key rotation, rolling verification, Azure Key Vault integration design, and SPIRE bootstrap patterns suitable for production.
+We present KAIF, a composable protocol stack that provides autonomous AI agents with scoped, auditable, and revocable authority traceable to a human principal. KAIF combines RFC 8693 token exchange with SPIFFE/SPIRE workload identity, SHA-256 audit chaining, and operator-defined authorization tiers to enable secure delegation hierarchies. A reference implementation in TypeScript demonstrates key rotation, rolling verification, Azure Key Vault integration design, and SPIRE bootstrap patterns suitable for production.
 
 **Keywords**: agent authorization, workload identity, token exchange, audit chain, zero-trust delegation, trust scoring
 
@@ -39,7 +39,7 @@ KAIF introduces four architectural advances:
 
 1. **Composable delegation stack**: Human → Agent → Sub-agent chains with depth limits and per-tier scopes
 2. **Audit chain via hash linking**: SHA-256 linked audit log detects tampering at any entry
-3. **Trust score integration**: Context-aware tier resolution (PROVISIONAL → STANDARD → VERIFIED → TRUSTED)
+3. **Operator-defined authorization tiers**: Context-aware tier resolution (PROVISIONAL → STANDARD → VERIFIED → TRUSTED)
 4. **Production-capable key rotation**: Rolling verification maintains service availability during key rollover
 
 ### 1.3 Scope & Assumptions
@@ -65,7 +65,7 @@ KAIF does **not** implement:
 - Docker Compose includes SPIRE for local development; production SPIRE deployment is external and operator-provided
 - Key rotation tests validate the protocol design; operational procedures for production rotation require external automation
 - No performance tests yet against production-scale loads (10k+ concurrent agents)
-- Behavioral trust scoring is documented but **not yet implemented**; current implementation uses static scores
+- Behavioral trust evaluation is intentionally out of scope; current implementation uses operator-assigned authorization tiers
 - This work is **ready for staging deployment** with external security review; production use requires additional hardening
 
 ---
@@ -86,7 +86,7 @@ KAIF does **not** implement:
 │ (delegation + SVID → scoped access token)              │
 ├─────────────────────────────────────────────────────────┤
 │ Layer 4: Audit & Revocation                             │
-│ (hash-chained log + JTI denylist + trust score)        │
+│ (hash-chained log + JTI denylist + operator-defined tier) │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -108,7 +108,7 @@ Each layer is cryptographically independent; failure in one layer does not compr
 - `token-exchange.ts` — RFC 8693 core logic (10-step validation flow)
 - `audit.ts` — SHA-256 hash-chained log with chain integrity verification
 - `revocation.ts` — JTI denylist with Redis pub/sub (O(1) check, sub-second propagation)
-- `trust-score.ts` — Context score → tier resolution (PROVISIONAL:0.0–0.49, STANDARD:0.50–0.69, VERIFIED:0.70–0.89, TRUSTED:0.90–1.0)
+- `trust-score.ts` — Operator-assigned authorization tier resolution (PROVISIONAL:0.0–0.49, STANDARD:0.50–0.69, VERIFIED:0.70–0.89, TRUSTED:0.90–1.0)
 - `acl.ts` — Agent ACL enforcement with glob-pattern scope matching
 - `svid.ts` — SPIRE JWT-SVID validation against trusted bundle
 - `keys.ts` — Pluggable key material sources (file, inline, Azure Key Vault, ephemeral)
@@ -128,7 +128,7 @@ Each layer is cryptographically independent; failure in one layer does not compr
 - `kaif:audit:global` — Append-only list of all audit entries (hash-chained)
 - `kaif:audit:<agent_id>` — Per-agent audit entries
 - `kaif:revoke:<jti>` — Revoked JTI set (value=revocation timestamp, TTL=token_exp)
-- `kaif:trust:<spiffe_id>` — Trust score (float 0.0–1.0, updated async)
+- `kaif:trust:<spiffe_id>` — Operator-defined authorization tier value (float 0.0–1.0, updated async)
 - `kaif:delegation:<delegation_id>` — Delegation grant state (TTL, scope, audience)
 
 #### SPIRE
@@ -158,7 +158,7 @@ Each layer is cryptographically independent; failure in one layer does not compr
 4. KAIF validates and computes trust tier
    ├─ Verifies subject_token (not expired, not revoked)
    ├─ Verifies actor_token SVID signature against SPIRE bundle
-   ├─ Fetches trust_score for lyra (e.g., 0.75 → VERIFIED tier)
+  ├─ Fetches operator-assigned authorization tier for lyra (e.g., 0.75 → VERIFIED tier)
    ├─ Resolves TTL from tier (VERIFIED → 900s)
    ├─ Computes delegation_depth (direct grant → 0)
    └─ Checks depth ≤ ACL max_depth (lyra:1, 0 ≤ 1 ✓)
@@ -197,21 +197,22 @@ Orion's token → Cipher (depth=2, max=3) ✓
 Cipher's token → Unknown (depth=3, max=3) ✗ DEPTH_EXCEEDED
 ```
 
-### 2.5 Trust Score Integration
+### 2.5 Operator-Assigned Authorization Tier
 
 **Purpose**: Context-aware authorization without per-operation human approval.
 
-**Score sources** (not implemented in v0.9.1, reserved for future):
-- Behavioral signals (agent action frequency, scope usage patterns)
-- Audit chain integrity (no tampering detected)
-- Credential freshness (SVID age, last rotation)
-- Peer reputation (sub-delegation chains from trusted agents)
+**Scope note**: This value is operator-assigned and reflects authorization policy, not observed agent behavior. Behavioral scoring is intentionally out of scope for this specification.
+
+**Current inputs** (not behavioral, manually managed by the operator):
+- Authorization policy state for the agent's SPIFFE identity
+- ACL minimum tier requirements
+- Delegation depth limits enforced by the tier
 
 **Current flow**:
-1. Operator sets `trust_score[agent_id] = float(0.0–1.0)` via async process
-2. Token exchange fetches score and resolves tier
+1. Operator sets the authorization tier value for the agent identity via async process
+2. Token exchange fetches the tier value and resolves the effective tier
 3. Tier determines TTL and max_depth
-4. Enforcement: score below tier minimum → 403 INSUFFICIENT_TRUST
+4. Enforcement: value below tier minimum → 403 INSUFFICIENT_TRUST
 
 **Example config**:
 ```
@@ -221,7 +222,7 @@ lyra: spiffe://kindred.systems/.../lyra
   permitted_scopes: [vault:read:anthropic_key, invoke:completion]
 ```
 
-If operator sets `trust_score[lyra] = 0.45`, next exchange fails: 403 INSUFFICIENT_TRUST (0.45 < 0.50 STANDARD minimum).
+If operator sets Lyra's authorization tier value to 0.45, next exchange fails: 403 INSUFFICIENT_TRUST (0.45 < 0.50 STANDARD minimum).
 
 ### 2.6 Key Rotation Architecture
 
@@ -359,13 +360,9 @@ Any action tied to access token can be traced back to human principal via audit 
 
 ## 5. Future Work
 
-### 5.1 Behavioral Trust Scoring
+### 5.1 Deferred Scope
 
-Implement dynamic trust score computation:
-- Agent scope usage patterns (narrow vs. broad)
-- Action frequency (bursty vs. steady)
-- Sub-delegation chains (single vs. cascading)
-- Audit anomalies (timestamp gaps, repeated failures)
+Behavioral trust evaluation is deferred to Appendix Z and is explicitly out of scope for this specification. The normative document stops at operator-defined authorization tiers, delegation enforcement, audit chaining, and revocation.
 
 ### 5.2 Multi-Tenant Isolation
 
@@ -613,7 +610,7 @@ Audit entries recorded for:
 | TOKEN_REVOKED | Per revocation | ✅ Revocation test suite (8 tests) |
 | DELEGATION_PROVISIONED | Per /provision | ✅ Provision route test (7 tests) |
 | AUTH_FAILED | On validation error | ✅ Error path tests |
-| TRUST_SCORE_UPDATED | On score change | ✅ Trust score tests (18 tests) |
+| TRUST_SCORE_UPDATED (legacy event name) | On tier update | ✅ Operator tier tests (18 tests) |
 
 **Audit log per agent**:
 - Separate Redis list per SPIFFE ID for efficient agent-scoped queries
@@ -670,9 +667,10 @@ Result: Full chain of custody established
 | Scope-based (not role) | ✅ Scopes | ❌ No | ✅ Scopes | ❌ Roles | ✅ Policies |
 
 **KAIF unique properties**:
-- Combines human delegation + workload identity in single cryptographic chain
+- Combines human delegation + workload identity in a single cryptographic chain
 - Hash-linked audit enables post-hoc forensics without performance cost
 - Rolling key verification eliminates key rotation operational burden
+- Operator-defined authorization tiers provide a policy gate without claiming behavioral reputation inference
 
 ### 6.7 Production Readiness Metrics
 
@@ -724,7 +722,7 @@ Result: Full chain of custody established
 
 ## 7. Conclusion
 
-KAIF demonstrates that autonomous agent authorization can combine human traceability, workload authenticity, and operational safety through a composable protocol stack. The reference implementation in TypeScript with production-capable Azure integration architecture validates the design's suitability for enterprise deployments.
+KAIF demonstrates that autonomous agent authorization can combine human traceability, workload authenticity, and operational safety through a composable protocol stack. The reference implementation in TypeScript with production-capable Azure integration architecture validates the design's suitability for enterprise deployments, while behavioral evaluation remains explicitly out of scope.
 
 ### 7.1 Key Findings
 
@@ -769,7 +767,7 @@ KAIF demonstrates that autonomous agent authorization can combine human traceabi
 - SPIRE integration tested against mocks; production SPIRE validation required
 - Redis pub/sub latencies measured in local environment; production network latencies unknown
 - No load testing yet; performance SLAs validated at unit/integration scale only
-- Behavioral trust scoring not yet implemented (placeholder static scores used in tests)
+- Behavioral trust evaluation is deferred and excluded from conformance scope; tests use operator-assigned tier values only
 
 ### 7.3 Impact & Adoption
 
@@ -792,19 +790,19 @@ KAIF demonstrates that autonomous agent authorization can combine human traceabi
 1. **Composability matters**: RFC 8693 foundation allowed straightforward extension to multi-tier delegation
 2. **Hash linking is cheap**: Audit chain adds <5ms/entry; worth the post-hoc forensics benefit
 3. **Rolling verification works**: Zero-downtime key rotation validated; production-ready pattern
-4. **Trust scores are operational**: Dynamic tier resolution enables practical authorization without per-action approval
+4. **Operator-defined tiers are operational**: Dynamic tier resolution enables practical authorization without per-action approval
 5. **Type safety pays off**: TypeScript strict mode caught 3 classes of bugs during refactoring
 
 ### 7.5 Limitations & Future Work
 
 **Current Limitations** (v0.9.1 reference implementation):
 - **Single trust domain** (multi-tenant future work, not critical for initial deployments)
-- **Trust scores static** (behavioral computation not yet implemented; uses operator-provided fixture values)
+- **Operator-assigned tier values are static** (behavioral computation not implemented; uses operator-provided fixture values)
 - **Lightweight profile not available** (consumer deployments to follow; target Q4 2026)
 - **No OpenTelemetry tracing** (observability roadmap item; logging via pino only)
 - **SPIRE integration tested against mocks only** (real SPIRE validation pending)
 - **No performance testing at production scale** (>10k concurrent agents untested)
-- **Behavioral scoring not implemented** (reserved for v0.10 and later)
+- **Behavioral scoring not implemented** (reserved for Appendix Z and later work)
 - **No database encryption** (Redis audit log stored in cleartext; encryption can be added at Redis layer)
 - **Testing limited to unit/integration scale** (load testing, chaos engineering deferred)
 
@@ -814,8 +812,8 @@ KAIF demonstrates that autonomous agent authorization can combine human traceabi
 - Multi-region failover or disaster recovery
 - Kubernetes operators or Helm charts
 
-**Planned Extensions** (see Section 5):
-1. **Behavioral trust scoring** (Q3 2026): Agent action patterns inform dynamic tier
+**Planned Extensions** (see Appendix Z):
+1. **Behavioral trust evaluation** (Q3 2026): Agent action patterns may inform a separate future policy system
 2. **Multi-tenant isolation** (Q3 2026): Per-tenant SPIRE bundles, ACLs, audit logs
 3. **Consumer-grade profile** (Q4 2026): Embedded SQLite, no SPIRE required, for edge/IoT
 4. **OpenTelemetry integration** (Q4 2026): Distributed tracing across KAIF + services
@@ -839,7 +837,7 @@ KAIF demonstrates that autonomous agent authorization can combine human traceabi
 
 **OIDC Delegation**: Limited to top-level grants. KAIF enables n-tier chains with per-tier scope control.
 
-**ABAC (Attribute-Based Access Control)**: Policy-driven authorization. KAIF adds trust-score integration for dynamic tier resolution.
+**ABAC (Attribute-Based Access Control)**: Policy-driven authorization. KAIF adds operator-defined tier gating for dynamic authorization.
 
 **Zero Trust Architecture** (NIST SP 800-207): Assumes verification at every step. KAIF operationalizes via RFC 8693 token exchange + audit chaining.
 
@@ -923,7 +921,7 @@ KAIF_AZURE_RETAINED_KEY_SECRETS=kaif-signing-key-old@v1
     "sub": "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra"
   },
   "kaif": {
-    "trust_score": 0.85,
+    "authorization_tier": 0.85,
     "trust_tier": "VERIFIED",
     "delegation_depth": 0,
     "delegation_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -1136,7 +1134,7 @@ Human (geoff@kindred.systems)
 2. Lyra exchanges delegation_token + SVID → access_token_lyra
    Scope: [vault:read:anthropic_key, invoke:completion]
    Depth: 0 (direct from human)
-   Trust score: 0.75 → VERIFIED tier → 15 min TTL
+  Authorization tier value: 0.75 → VERIFIED tier → 15 min TTL
   ↓
 3. Lyra calls downstream service: Authorization: Bearer access_token_lyra
    Service validates via /introspect → ✅ active, correct scope
@@ -1150,7 +1148,7 @@ Human (geoff@kindred.systems)
    ├─ Lyra ACL: may_sub_delegate=true, max_depth=2 ✓
    ├─ Parent depth 0 + 1 = depth 1 ≤ max 2 ✓
    ├─ Requested scope [invoke:completion] ⊆ parent [vault:read:..., invoke:completion] ✓
-   └─ Trust score 0.80 ≥ VERIFIED minimum 0.70 ✓
+  └─ Authorization tier value 0.80 ≥ VERIFIED minimum 0.70 ✓
    ↓
 6. Orion receives access_token_orion
    Scope: [invoke:completion]
@@ -1216,6 +1214,39 @@ Entry 3: TOKEN_ISSUED | orion exchange | hash3 (depends on hash2)
 - Revocation pub/sub synchronizes all instances
 - No state shared; stateless design
 - Redis becomes bottleneck at ~10k concurrent users (upgrade to Redis cluster)
+
+---
+
+## Appendix Z: Deferred / Out of Scope — Behavioral Trust Evaluation
+
+This appendix describes a separate, future concern (evaluating the reliability of EXTERNAL counterparties based on observed outcomes). It is explicitly NOT part of this specification's normative content and should not be implemented as part of conformance testing.
+
+### Z.1 Behavioral Signals
+
+Deferred ideas for future work only:
+- Agent action frequency (bursty vs. steady)
+- Scope usage patterns (narrow vs. broad)
+- Audit anomalies (timestamp gaps, repeated failures)
+- Sub-delegation chains (single vs. cascading)
+- Peer reputation from external counterparties
+- Credential freshness as an observation signal, not a policy gate
+
+### Z.2 Why It Is Out of Scope
+
+KAIF v0.9.1 is a narrow admission and delegation gate for agents under operator control. It does not claim to measure reputation, trustworthiness, or behavioral reliability of external systems or counterparties.
+
+### Z.3 Non-Normative Research Notes
+
+Future work might explore separate scoring models, benchmark datasets, and policy feedback loops. Any such work would require its own specification, test suite, and conformance criteria.
+
+---
+
+## 12. Change Log
+
+- Renamed the main-body concept from trust-score framing to operator-defined authorization tiers where the gate is manually assigned rather than behaviorally inferred.
+- Moved behavioral trust evaluation into Appendix Z and marked it explicitly out of scope for conformance and normative use.
+- Clarified that Azure Key Vault, SPIRE, and key-rotation claims in this document are validated in controlled tests or design artifacts, not production-deployed.
+- Kept RFC 8693 token exchange, SPIRE attestation, audit chaining, delegation depth, and revocation logic unchanged.
 
 ---
 
