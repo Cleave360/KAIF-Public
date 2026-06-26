@@ -9,9 +9,11 @@
 
 ## Abstract
 
-We present KAIF, a composable protocol stack that provides autonomous AI agents with scoped, auditable, and revocable authority traceable to a human principal. KAIF combines RFC 8693 token exchange with SPIFFE/SPIRE workload identity, SHA-256 audit chaining, and trust-score-based authorization to enable secure delegation hierarchies. A reference implementation in TypeScript demonstrates key rotation, rolling verification, Azure Key Vault integration, and production-grade SPIRE bootstrap.
+We present KAIF, a composable protocol stack that provides autonomous AI agents with scoped, auditable, and revocable authority traceable to a human principal. KAIF combines RFC 8693 token exchange with SPIFFE/SPIRE workload identity, SHA-256 audit chaining, and trust-score-based authorization to enable secure delegation hierarchies. A reference implementation in TypeScript demonstrates key rotation, rolling verification, Azure Key Vault integration design, and SPIRE bootstrap patterns suitable for production.
 
 **Keywords**: agent authorization, workload identity, token exchange, audit chain, zero-trust delegation, trust scoring
+
+**Implementation Status**: This is a reference prototype (v0.9.1, staging-ready) validated through 198 unit and integration tests in controlled environments. See Section 1.4 for testing scope and limitations.
 
 ---
 
@@ -38,7 +40,7 @@ KAIF introduces four architectural advances:
 1. **Composable delegation stack**: Human → Agent → Sub-agent chains with depth limits and per-tier scopes
 2. **Audit chain via hash linking**: SHA-256 linked audit log detects tampering at any entry
 3. **Trust score integration**: Context-aware tier resolution (PROVISIONAL → STANDARD → VERIFIED → TRUSTED)
-4. **Production-grade key rotation**: Rolling verification maintains service availability during key rollover
+4. **Production-capable key rotation**: Rolling verification maintains service availability during key rollover
 
 ### 1.3 Scope & Assumptions
 
@@ -53,6 +55,18 @@ KAIF does **not** implement:
 - Secret encryption at rest (offloaded to Key Vault)
 - SPIRE bootstrap or server administration
 - Multi-tenant isolation (single trust domain per deployment)
+
+### 1.4 Testing & Implementation Status
+
+**Important Caveats**:
+- This implementation is a **reference prototype** (v0.9.1), not production-deployed
+- All 198 tests pass in controlled test environments with mocked SPIRE and Redis
+- Azure Key Vault integration is **mocked** in unit tests; real credential handling requires Azure credential provider
+- Docker Compose includes SPIRE for local development; production SPIRE deployment is external and operator-provided
+- Key rotation tests validate the protocol design; operational procedures for production rotation require external automation
+- No performance tests yet against production-scale loads (10k+ concurrent agents)
+- Behavioral trust scoring is documented but **not yet implemented**; current implementation uses static scores
+- This work is **ready for staging deployment** with external security review; production use requires additional hardening
 
 ---
 
@@ -498,18 +512,18 @@ Introspect via Server B:
 
 #### 6.3.1 Key Source Abstraction Testing
 
-Tested all four key material sources with mocked and real credentials:
+Tested four key material sources in controlled test environments:
 
 | Source | Test Scenario | Status | Notes |
 |--------|---------------|--------|-------|
-| File | Load PEM from disk | ✅ Pass | `KAIF_PRIVATE_KEY_PATH` |
-| Inline | Parse PEM from env var | ✅ Pass | `KAIF_PRIVATE_KEY_PEM` |
-| Azure KV | Mock secret client | ✅ Pass | Uses `DefaultAzureCredential` |
+| File | Load PEM from disk | ✅ Pass | `KAIF_PRIVATE_KEY_PATH` (unit tests) |
+| Inline | Parse PEM from env var | ✅ Pass | `KAIF_PRIVATE_KEY_PEM` (unit tests) |
+| Azure KV | Mock secret client | ✅ Pass | Mocked `DefaultAzureCredential` (no live Azure) |
 | Ephemeral | Generate on startup | ✅ Pass | Dev/test fallback |
-| Retained (File) | Load public keys from paths | ✅ Pass | `KAIF_RETAINED_KEY_PATHS` |
-| Retained (Inline) | Parse PEM list from env | ✅ Pass | `KAIF_RETAINED_KEY_PEMS` |
+| Retained (File) | Load public keys from paths | ✅ Pass | `KAIF_RETAINED_KEY_PATHS` (unit tests) |
+| Retained (Inline) | Parse PEM list from env | ✅ Pass | `KAIF_RETAINED_KEY_PEMS` (unit tests) |
 
-**Azure Key Vault Integration** (mocked in unit tests):
+**Azure Key Vault Integration** (mocked in unit tests; design validated, not live-deployed):
 ```typescript
 // Config:
 process.env['KAIF_AZURE_KEY_VAULT_URL'] = 'https://kaif-kv.vault.azure.net/'
@@ -710,7 +724,7 @@ Result: Full chain of custody established
 
 ## 7. Conclusion
 
-KAIF demonstrates that autonomous agent authorization can combine human traceability, workload authenticity, and operational safety through a composable protocol stack. The reference implementation in TypeScript with production-grade Azure integration validates the architecture for enterprise deployments.
+KAIF demonstrates that autonomous agent authorization can combine human traceability, workload authenticity, and operational safety through a composable protocol stack. The reference implementation in TypeScript with production-capable Azure integration architecture validates the design's suitability for enterprise deployments.
 
 ### 7.1 Key Findings
 
@@ -722,10 +736,10 @@ KAIF demonstrates that autonomous agent authorization can combine human traceabi
 - **RFC 8693 composition** naturally extends token exchange to multi-tier delegation
 
 **Operational Insights**:
-- Zero-downtime key rotation is achievable with JWKS dual-key publishing
-- Azure Managed Identity eliminates static credential burden in cloud deployments
+- Zero-downtime key rotation is achievable with JWKS dual-key publishing (validated in 3 integration tests)
+- Azure Managed Identity eliminates static credential burden (design documented, not yet deployed)
 - Conformance-first design (7 RFC-based fixtures) ensures protocol interoperability
-- 198 passing tests with 90% coverage demonstrates production readiness
+- 198 passing tests with 90% coverage validates core architecture (staging-ready; production requires external security review)
 
 **Security Properties Verified**:
 - 100% attack mitigation coverage across threat model (scope escalation, revoked token reuse, audit tampering)
@@ -738,15 +752,24 @@ KAIF demonstrates that autonomous agent authorization can combine human traceabi
 **Go/No-Go Status**: ✅ **READY FOR STAGING**
 
 **Evidence**:
-- All 198 tests passing (2.58s total)
+- All 198 tests passing in controlled test environment (2.58s total)
 - TypeScript strict mode: 0 errors
-- Key rotation validated end-to-end
-- Azure deployment path documented and staged
-- Security protocol with 7 objectives defined and verified
-- Audit chain integrity confirmed
-- Revocation latency meets SLA
+- Key rotation protocol validated in integration tests (not yet operationally deployed)
+- Azure deployment path documented and ready for staging (requires external SPIRE + Redis)
+- Security protocol with 7 objectives defined and verified (pending external security review)
+- Audit chain integrity confirmed in tests
+- Revocation latency meets SLA in isolated tests (real-world validation pending)
 
-**Deployment path**: Immediate to Azure staging; production within 2–4 weeks.
+**Deployment path**: 
+- Immediate: Docker Compose with mocked SPIRE for development/testing
+- Week 1: Azure staging with external SPIRE + Managed Redis
+- Week 3-4: Production after security review and operational hardening
+
+**Caveats**:
+- SPIRE integration tested against mocks; production SPIRE validation required
+- Redis pub/sub latencies measured in local environment; production network latencies unknown
+- No load testing yet; performance SLAs validated at unit/integration scale only
+- Behavioral trust scoring not yet implemented (placeholder static scores used in tests)
 
 ### 7.3 Impact & Adoption
 
@@ -774,11 +797,22 @@ KAIF demonstrates that autonomous agent authorization can combine human traceabi
 
 ### 7.5 Limitations & Future Work
 
-**Current Limitations**:
-- Single trust domain (multi-tenant future work)
-- Trust scores static (behavioral computation not yet implemented)
-- Lightweight profile not yet available (consumer deployments to follow)
-- No OpenTelemetry tracing (observability roadmap item)
+**Current Limitations** (v0.9.1 reference implementation):
+- **Single trust domain** (multi-tenant future work, not critical for initial deployments)
+- **Trust scores static** (behavioral computation not yet implemented; uses operator-provided fixture values)
+- **Lightweight profile not available** (consumer deployments to follow; target Q4 2026)
+- **No OpenTelemetry tracing** (observability roadmap item; logging via pino only)
+- **SPIRE integration tested against mocks only** (real SPIRE validation pending)
+- **No performance testing at production scale** (>10k concurrent agents untested)
+- **Behavioral scoring not implemented** (reserved for v0.10 and later)
+- **No database encryption** (Redis audit log stored in cleartext; encryption can be added at Redis layer)
+- **Testing limited to unit/integration scale** (load testing, chaos engineering deferred)
+
+**What is NOT in scope for v0.9.1**:
+- Production SPIRE deployment or administration
+- Key Vault integration testing (design complete, mocked tests only)
+- Multi-region failover or disaster recovery
+- Kubernetes operators or Helm charts
 
 **Planned Extensions** (see Section 5):
 1. **Behavioral trust scoring** (Q3 2026): Agent action patterns inform dynamic tier
