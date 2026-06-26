@@ -84,6 +84,11 @@ This brings up:
 
 `KAIF_DEV_MODE=true` is for local demos only. It lets `/provision` accept `dev-mock-token` instead of requiring a real OIDC provider.
 
+For production SPIRE bootstrap and trusted bundle guidance, use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/SPIRE_PRODUCTION_DEPLOYMENT.md:1).
+For Azure Key Vault-backed signing keys, use [security/AZURE_KEY_VAULT_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/AZURE_KEY_VAULT_DEPLOYMENT.md:1).
+For the Azure-hosted managed-identity deployment shape, use [security/AZURE_CONTAINER_APPS_MANAGED_IDENTITY.md](/Users/geofflundholm/Documents/KAIF/security/AZURE_CONTAINER_APPS_MANAGED_IDENTITY.md:1).
+For a production-like local overlay, use [.env.production.example](/Users/geofflundholm/Documents/KAIF/.env.production.example:1) and [docker-compose.production.yml](/Users/geofflundholm/Documents/KAIF/docker-compose.production.yml:1).
+
 **Verify health:**
 ```bash
 # Wait ~10 sec for services to start, then:

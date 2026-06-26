@@ -21,7 +21,7 @@ services:
       - spire-server-data:/run/spire/data
       - spire-server-socket:/run/spire/server-sockets
     ports:
-      - "8081:8081"   # bundle endpoint (HTTP) consumed by kaif-server
+      - "8081:8081"   # bundle endpoint (HTTPS) consumed by kaif-server
       - "8443:8443"   # agent API (gRPC)
     healthcheck:
       test:

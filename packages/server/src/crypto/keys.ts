@@ -4,37 +4,22 @@ import {
   importPKCS8,
   calculateJwkThumbprint,
 } from 'jose'
+import { createPrivateKey, createPublicKey } from 'node:crypto'
 import { randomUUID } from 'crypto'
-import { readFile } from 'fs/promises'
 import type { JWK, KeyLike } from 'jose'
+import { loadConfiguredKeyMaterial } from './key-source.js'
+
+type PublicJWK = JWK & { kid: string; alg: string; use: string }
 
 interface KeyCache {
   privateKey: KeyLike
-  publicJWK:  JWK & { kid: string; alg: string; use: string }
+  publicJWK:  PublicJWK
+  jwks:       { keys: PublicJWK[] }
   kid:        string
 }
 
 // Promise-cache: concurrent callers share one buildEphemeral/buildFromFile call.
 let _cachePromise: Promise<KeyCache> | null = null
-
-async function buildFromFile(keyPath: string): Promise<KeyCache> {
-  const pem = await readFile(keyPath, 'utf8')
-  const privateKey = await importPKCS8(pem, 'RS256')
-
-  // Derive public JWK by stripping private components from the exported JWK
-  const fullJWK = await exportJWK(privateKey)
-  const { d: _d, p: _p, q: _q, dp: _dp, dq: _dq, qi: _qi, ...publicFields } = fullJWK
-  const publicJWK = publicFields as JWK
-
-  // kid derived from public key thumbprint — stable across restarts
-  const kid = await calculateJwkThumbprint(publicJWK, 'sha256')
-
-  return {
-    privateKey,
-    publicJWK: { ...publicJWK, kid, alg: 'RS256', use: 'sig' },
-    kid,
-  }
-}
 
 async function buildEphemeral(): Promise<KeyCache> {
   const { privateKey, publicKey } = await joseGenerateKeyPair('RS256', { modulusLength: 2048 })
@@ -45,19 +30,46 @@ async function buildEphemeral(): Promise<KeyCache> {
   return {
     privateKey,
     publicJWK: { ...publicJWK, kid, alg: 'RS256', use: 'sig' },
+    jwks: { keys: [{ ...publicJWK, kid, alg: 'RS256', use: 'sig' }] },
     kid,
   }
+}
+
+async function toPublicJWK(pem: string): Promise<PublicJWK> {
+  const keyObject = pem.includes('BEGIN PUBLIC KEY')
+    ? createPublicKey(pem)
+    : createPublicKey(createPrivateKey(pem))
+  const publicJWK = await exportJWK(keyObject)
+  const kid = await calculateJwkThumbprint(publicJWK, 'sha256')
+  return { ...publicJWK, kid, alg: 'RS256', use: 'sig' }
 }
 
 function getCache(): Promise<KeyCache> {
   if (_cachePromise) return _cachePromise
 
-  const keyPath = process.env['KAIF_PRIVATE_KEY_PATH'] || undefined
-  _cachePromise = (keyPath ? buildFromFile(keyPath) : buildEphemeral()).catch(err => {
+  _cachePromise = loadConfiguredKeyMaterial()
+    .then((material) => material.privatePem
+      ? buildFromPem(material.privatePem, material.retainedPublicPems)
+      : buildEphemeral())
+    .catch(err => {
     _cachePromise = null  // allow retry after error
     throw err
   })
   return _cachePromise
+}
+
+async function buildFromPem(pem: string, retainedPublicPems: string[] = []): Promise<KeyCache> {
+  const privateKey = await importPKCS8(pem, 'RS256')
+  const publicJWK = await toPublicJWK(pem)
+  const kid = publicJWK.kid
+  const retainedPublicJWKs = await Promise.all(retainedPublicPems.map((retainedPem) => toPublicJWK(retainedPem)))
+
+  return {
+    privateKey,
+    publicJWK,
+    jwks: { keys: [publicJWK, ...retainedPublicJWKs.filter(key => key.kid !== kid)] },
+    kid,
+  }
 }
 
 // Exposed for testing — allows resetting the in-process key cache
@@ -74,7 +86,7 @@ export async function getPublicJWK(): Promise<JWK> {
 }
 
 export async function getJWKS(): Promise<{ keys: JWK[] }> {
-  return { keys: [await getPublicJWK()] }
+  return (await getCache()).jwks
 }
 
 export async function getKid(): Promise<string> {

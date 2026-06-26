@@ -31,6 +31,11 @@ function allowInsecureBundleTls(endpoint: URL): boolean {
 function getBundleAgent(endpoint: URL): https.Agent | undefined {
   if (endpoint.protocol !== 'https:') return undefined
 
+  const caPem = process.env['KAIF_SPIRE_BUNDLE_CA_PEM']
+  if (caPem) {
+    return new https.Agent({ ca: caPem })
+  }
+
   const caPath = process.env['KAIF_SPIRE_BUNDLE_CA_PATH']
   if (caPath) {
     return new https.Agent({ ca: readFileSync(caPath) })

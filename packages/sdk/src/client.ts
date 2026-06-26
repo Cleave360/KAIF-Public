@@ -4,7 +4,7 @@ import { TokenCache } from './token-cache.js'
 export interface KAIFClientConfig {
   server_url:       string   // e.g. http://kaif-server:8080
   spiffe_id:        string   // this agent's SPIFFE ID
-  svid_path?:       string   // path to JWT-SVID file (SPIRE writes this)
+  svid_path?:       string   // supported production mode today: SPIRE-managed JWT-SVID file path
   // Signed KAIF JWT returned by POST /provision as delegation_token.
   // This is the subject_token for RFC 8693 token exchange.
   // Passed from human principal to agent out-of-band after provisioning.
@@ -104,6 +104,7 @@ export class KAIFClient {
   }
 
   // Reads the JWT-SVID from svid_path. SPIRE rotates these — always re-read per exchange.
+  // Direct Workload API socket retrieval is not implemented in this SDK yet.
   private readSVID(): string {
     if (!this.config.svid_path) {
       throw new Error(

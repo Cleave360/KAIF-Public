@@ -1,0 +1,36 @@
+services:
+  spire-agent:
+    volumes:
+      - ./spire/agent.production.conf:/opt/spire/conf/agent/agent.conf:ro
+      - ./deploy/secrets/spire/bootstrap:/run/spire/bootstrap:ro
+
+  kaif-server:
+    environment:
+      NODE_ENV: "production"
+      KAIF_ISSUER: "https://localhost:18080"
+      KAIF_ALLOWED_AUDIENCES: "https://localhost:18080"
+      KAIF_REDIS_URL: "redis://redis:6379"
+      KAIF_ALLOW_INSECURE_REDIS: "true"
+      KAIF_IDP_JWKS_URL: "https://login.microsoftonline.com/<tenant>/discovery/v2.0/keys"
+      KAIF_IDP_ISSUER: "https://login.microsoftonline.com/<tenant>/v2.0"
+      KAIF_TENANT_ADDRESS: "tenant-prod-rehearsal"
+      KAIF_GOVERNANCE_AUDIT_APPEND_URL: ""
+      KAIF_GOVERNANCE_WORKSPACE_ID: "ws-kaif"
+      KAIF_GOVERNANCE_PROJECT_ID: "kaif"
+      KAIF_GOVERNANCE_UI_INSTANCE_ID: "ui-kaif"
+      KAIF_CLASS_C_DEGRADED_OPEN: "false"
+      KAIF_SPIRE_BUNDLE_ENDPOINT: "https://spire-server:8081/"
+      KAIF_PRIVATE_KEY_PATH: "${KAIF_PRIVATE_KEY_PATH:-}"
+      KAIF_PRIVATE_KEY_PEM: "${KAIF_PRIVATE_KEY_PEM:-}"
+      KAIF_AZURE_KEY_VAULT_URL: "${KAIF_AZURE_KEY_VAULT_URL:-}"
+      KAIF_AZURE_PRIVATE_KEY_SECRET_NAME: "${KAIF_AZURE_PRIVATE_KEY_SECRET_NAME:-}"
+      KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION: "${KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION:-}"
+      KAIF_AZURE_RETAINED_KEY_SECRETS: "${KAIF_AZURE_RETAINED_KEY_SECRETS:-}"
+      AZURE_TENANT_ID: "${AZURE_TENANT_ID:-}"
+      AZURE_CLIENT_ID: "${AZURE_CLIENT_ID:-}"
+      AZURE_CLIENT_SECRET: "${AZURE_CLIENT_SECRET:-}"
+      KAIF_SPIRE_BUNDLE_CA_PATH: "${KAIF_SPIRE_BUNDLE_CA_PATH:-}"
+      KAIF_SPIRE_BUNDLE_TLS_INSECURE: "false"
+      KAIF_DEV_MODE: "false"
+    volumes:
+      - ./deploy/secrets/kaif:/run/secrets:ro

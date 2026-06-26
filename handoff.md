@@ -517,3 +517,90 @@ Remaining production caveat:
 
 - Header-based CNF enforcement is suitable only behind a trusted proxy that sanitizes `X-Client-Cert-Thumbprint`.
 - Production-grade mTLS should prefer direct peer-certificate inspection or a trusted sidecar/proxy contract.
+
+---
+## 2026-06-02 — Codex — Workstream A Guardrails and Production SPIRE Path
+
+Implemented the next slice of Workstream A:
+
+- `loadConfig()` now validates `KAIF_SPIRE_BUNDLE_ENDPOINT` as a real URL and rejects non-`https://` bundle endpoints when `NODE_ENV=production`.
+- Added [spire/agent.production.conf](spire/agent.production.conf) as the baseline production SPIRE agent template with `trust_bundle_path` and no `insecure_bootstrap`.
+- Added [security/SPIRE_PRODUCTION_DEPLOYMENT.md](security/SPIRE_PRODUCTION_DEPLOYMENT.md) as the production source of truth for:
+  - trusted bundle endpoint requirements,
+  - private CA handling via `KAIF_SPIRE_BUNDLE_CA_PATH`,
+  - supported SPIRE bootstrap modes,
+  - the current supported SDK production SVID mode: file-based `svid_path`.
+- Updated README, Quick Start, and Troubleshooting so local-dev SPIRE guidance no longer stands in for production guidance.
+
+What this closes:
+
+- Production SPIRE path is no longer undocumented.
+- The supported production SDK SVID retrieval mode is now explicit instead of implied.
+
+What remains open in Workstream A:
+
+- Deploy the real trust bundle / CA file in staging and production.
+- Replace local compose SPIRE bootstrap with real environment-specific bootstrap.
+- Add direct SDK Workload API integration if we want to move beyond the documented SVIDStore path.
+
+Additional deployment wiring completed the same day:
+
+- Added [.env.production.example](.env.production.example) for production-like config values.
+- Added [docker-compose.production.yml](docker-compose.production.yml) to swap in the production SPIRE agent config and mount secret material into `spire-agent` and `kaif-server`.
+- Added [scripts/export-spire-bootstrap-bundle.sh](scripts/export-spire-bootstrap-bundle.sh) to export a PEM trust bundle from a running SPIRE server for rehearsal/bootstrap workflows.
+
+Additional Workstream C slice completed:
+
+- KAIF signing-key verification no longer assumes a single current public key.
+- `verifyJWT()` now resolves against the local JWKS, allowing `kid`-based verification across:
+  - the active signing key from `KAIF_PRIVATE_KEY_PATH`
+  - retained verification keys listed in `KAIF_RETAINED_KEY_PATHS`
+- JWKS now publishes the active key plus retained keys, which allows rotation without immediately invalidating unexpired tokens.
+- Added regression coverage proving:
+  - retained keys appear in JWKS
+  - tokens signed by a retained key still verify
+
+Follow-up completed the same session:
+
+- Added [security/KEY_ROTATION_RUNBOOK.md](security/KEY_ROTATION_RUNBOOK.md) as the manual operator procedure for rotating keys while retaining previous verification material.
+- Added [packages/server/tests/key-rotation.integration.test.ts](packages/server/tests/key-rotation.integration.test.ts) proving a token signed before rotation still verifies after a server rebuild/restart with a new active key and retained old public key.
+
+Additional key-source abstraction completed:
+
+- Active signing keys can now come from `KAIF_PRIVATE_KEY_PATH`, `KAIF_PRIVATE_KEY_PEM`, or Azure Key Vault secrets.
+- Retained verification keys can now come from `KAIF_RETAINED_KEY_PATHS`, `KAIF_RETAINED_KEY_PEMS`, or Azure Key Vault secrets.
+- Azure Key Vault key material is configured with `KAIF_AZURE_KEY_VAULT_URL`, `KAIF_AZURE_PRIVATE_KEY_SECRET_NAME`, optional `KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION`, and `KAIF_AZURE_RETAINED_KEY_SECRETS`.
+- This does not add direct KMS/HSM integration yet, but it removes the assumption that production key material must be staged only as local files on disk.
+- Local container rehearsal now also supports Azure service-principal credentials via `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET`.
+- Validated on 2026-06-03 against Key Vault `kaif-kv-a4c02bd7` with `scripts/azure-keyvault-smoke.sh` returning `RESULT=PASS`.
+- `KAIF_SPIRE_BUNDLE_CA_PEM` is now supported for Azure-hosted deployments where mounting a CA file is awkward.
+- Azure Container Apps managed-identity deployment shape is documented in `security/AZURE_CONTAINER_APPS_MANAGED_IDENTITY.md` and scaffolded via `scripts/deploy-aca-managed-identity.sh`.
+- ACR `kaifacra4c02bd7.azurecr.io` is created and the KAIF server image is published as `kaifacra4c02bd7.azurecr.io/kaif/server:20260603-054625`.
+- End-to-end operator instructions now live in [how_to_run.md](how_to_run.md).
+
+## 2026-06-04 — Codex — KAIF issuer/audience standardization note
+
+Context:
+- Short diversion from the main demo track to prepare KAIF as a second demo surface.
+- Goal was only to standardize the canonical public issuer/audience values and leave infra-specific Redis/SPIRE values unresolved until later.
+
+Files touched:
+- `.env.production.example`
+- `how_to_run.md`
+- `README.md`
+- `security/AZURE_CONTAINER_APPS_MANAGED_IDENTITY.md`
+
+What changed:
+- Standardized `KAIF_ISSUER` to `https://kaif.kindredsystems.ai` in production-facing examples/docs.
+- Standardized `KAIF_ALLOWED_AUDIENCES` to `https://kaif.kindredsystems.ai` as the starting single-audience configuration.
+- Clarified that production Redis should be a dedicated Azure Managed Redis `rediss://` endpoint.
+
+What was intentionally not finalized:
+- `KAIF_REDIS_URL` remains infra-specific and should be filled with the real Azure Managed Redis hostname later.
+- `KAIF_SPIRE_BUNDLE_ENDPOINT` remains infra-specific and should be filled with the real reachable HTTPS SPIRE bundle endpoint later.
+- No Cloudflare-side DNS target was completed from Codex because direct DNS-record API calls were returning an authentication error even though zone lookup succeeded.
+
+Note for the next Codex:
+- Treat `kaif.kindredsystems.ai` as the canonical issuer hostname unless the user explicitly changes direction.
+- Do not assume the Redis or SPIRE hostnames are resolved yet.
+- This was documentation/example standardization only, not a full KAIF deployment pass.

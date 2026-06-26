@@ -29,6 +29,7 @@ out/
 .env
 .env.local
 .env.*.local
+.env.azure-sp.local
 .env.development.local
 .env.test.local
 .env.production.local

@@ -3,12 +3,11 @@ import {
   jwtVerify,
   createRemoteJWKSet,
   createLocalJWKSet,
-  importJWK,
   decodeProtectedHeader,
   calculateJwkThumbprint,
 } from 'jose'
-import type { JWTPayload, JWK, KeyLike } from 'jose'
-import { getSigningKey, getPublicJWK, getKid } from './keys.js'
+import type { JWTPayload, JWK } from 'jose'
+import { getSigningKey, getJWKS, getKid } from './keys.js'
 import { fetchSpireBundle } from './spire-bundle.js'
 import type { KAIFTokenClaims, ParsedSVID } from '../types/kaif.js'
 
@@ -111,11 +110,8 @@ export async function signKAIFToken(claims: KAIFTokenClaims): Promise<string> {
 }
 
 export async function verifyJWT(token: string): Promise<JWTPayload> {
-  // Import our public key directly — we have a single signing key in v0.1,
-  // so kid-based JWKS selection is not needed here.
-  const publicJWK = await getPublicJWK()
-  const key = (await importJWK(publicJWK, 'RS256')) as KeyLike
-  const { payload } = await jwtVerify(token, key, { algorithms: ['RS256'] })
+  const jwks = await getJWKS()
+  const { payload } = await jwtVerify(token, createLocalJWKSet(jwks), { algorithms: ['RS256'] })
   return payload
 }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   getSigningKey,
   getPublicJWK,
@@ -26,8 +26,14 @@ import {
   SignJWT,
   calculateJwkThumbprint,
   createLocalJWKSet,
+  exportPKCS8,
 } from 'jose'
 import type { KeyLike, JWK } from 'jose'
+import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { createPublicKey } from 'node:crypto'
+import { _setAzureSecretResolver } from '../src/crypto/key-source.js'
 
 // ── keys.ts ───────────────────────────────────────────────────────
 
@@ -35,6 +41,14 @@ describe('keys', () => {
   beforeEach(() => {
     _resetKeyCache()
     delete process.env['KAIF_PRIVATE_KEY_PATH']
+    delete process.env['KAIF_PRIVATE_KEY_PEM']
+    delete process.env['KAIF_RETAINED_KEY_PATHS']
+    delete process.env['KAIF_RETAINED_KEY_PEMS']
+    delete process.env['KAIF_AZURE_KEY_VAULT_URL']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION']
+    delete process.env['KAIF_AZURE_RETAINED_KEY_SECRETS']
+    _setAzureSecretResolver(null)
   })
 
   it('generates an ephemeral RSA keypair on first call', async () => {
@@ -73,6 +87,62 @@ describe('keys', () => {
     const kid = await getKid()
     expect(kid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
   })
+
+  it('publishes retained verification keys in JWKS', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kaif-retained-'))
+    try {
+      const { privateKey: activePrivateKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+      const { publicKey: retainedPublicKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+
+      const activePath = join(dir, 'active.pem')
+      const retainedPath = join(dir, 'retained.pem')
+      await writeFile(activePath, await exportPKCS8(activePrivateKey, 'RS256'))
+      await writeFile(retainedPath, createPublicKeyPem(await exportJWK(retainedPublicKey)))
+
+      process.env['KAIF_PRIVATE_KEY_PATH'] = activePath
+      process.env['KAIF_RETAINED_KEY_PATHS'] = retainedPath
+      _resetKeyCache()
+
+      const jwks = await getJWKS()
+      expect(jwks.keys).toHaveLength(2)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('loads active key and retained keys from inline PEM env vars', async () => {
+    const { privateKey: activePrivateKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+    const { publicKey: retainedPublicKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+
+    process.env['KAIF_PRIVATE_KEY_PEM'] = await exportPKCS8(activePrivateKey, 'RS256')
+    process.env['KAIF_RETAINED_KEY_PEMS'] = createPublicKeyPem(await exportJWK(retainedPublicKey))
+    _resetKeyCache()
+
+    const jwks = await getJWKS()
+    expect(jwks.keys).toHaveLength(2)
+  })
+
+  it('loads active key and retained keys from Azure Key Vault secrets', async () => {
+    const { privateKey: activePrivateKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+    const { publicKey: retainedPublicKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+
+    process.env['KAIF_AZURE_KEY_VAULT_URL'] = 'https://kaif-kv.vault.azure.net'
+    process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME'] = 'kaif-signing-key'
+    process.env['KAIF_AZURE_RETAINED_KEY_SECRETS'] = 'kaif-signing-key-v1-public@v1'
+
+    const activePem = await exportPKCS8(activePrivateKey, 'RS256')
+    const retainedPem = createPublicKeyPem(await exportJWK(retainedPublicKey))
+
+    _setAzureSecretResolver(async ({ name, version }) => {
+      if (name === 'kaif-signing-key') return activePem
+      if (name === 'kaif-signing-key-v1-public' && version === 'v1') return retainedPem
+      throw new Error(`unexpected Azure secret lookup: ${name}@${version ?? 'latest'}`)
+    })
+
+    _resetKeyCache()
+    const jwks = await getJWKS()
+    expect(jwks.keys).toHaveLength(2)
+  })
 })
 
 // ── jwt.ts ────────────────────────────────────────────────────────
@@ -107,6 +177,27 @@ function makeTestClaims(overrides?: Partial<KAIFTokenClaims>): KAIFTokenClaims {
 describe('signKAIFToken + verifyJWT', () => {
   beforeEach(() => {
     _resetKeyCache()
+    delete process.env['KAIF_PRIVATE_KEY_PATH']
+    delete process.env['KAIF_PRIVATE_KEY_PEM']
+    delete process.env['KAIF_RETAINED_KEY_PATHS']
+    delete process.env['KAIF_RETAINED_KEY_PEMS']
+    delete process.env['KAIF_AZURE_KEY_VAULT_URL']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION']
+    delete process.env['KAIF_AZURE_RETAINED_KEY_SECRETS']
+    _setAzureSecretResolver(null)
+  })
+
+  afterEach(() => {
+    delete process.env['KAIF_PRIVATE_KEY_PATH']
+    delete process.env['KAIF_PRIVATE_KEY_PEM']
+    delete process.env['KAIF_RETAINED_KEY_PATHS']
+    delete process.env['KAIF_RETAINED_KEY_PEMS']
+    delete process.env['KAIF_AZURE_KEY_VAULT_URL']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION']
+    delete process.env['KAIF_AZURE_RETAINED_KEY_SECRETS']
+    _setAzureSecretResolver(null)
   })
 
   it('produces a compact JWT string', async () => {
@@ -158,7 +249,42 @@ describe('signKAIFToken + verifyJWT', () => {
     expect(kaif.delegation_depth).toBe(1)
     expect(kaif.principal_chain).toEqual(['alice@example.com'])
   })
+
+  it('verifyJWT accepts a token signed by a retained key', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kaif-rotation-'))
+    try {
+      const { privateKey: previousPrivateKey, publicKey: previousPublicKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+      const { privateKey: activePrivateKey } = await generateKeyPair('RS256', { modulusLength: 2048 })
+
+      const previousPath = join(dir, 'previous-public.pem')
+      const activePath = join(dir, 'active.pem')
+      await writeFile(previousPath, createPublicKeyPem(await exportJWK(previousPublicKey)))
+      await writeFile(activePath, await exportPKCS8(activePrivateKey, 'RS256'))
+
+      process.env['KAIF_PRIVATE_KEY_PATH'] = activePath
+      process.env['KAIF_RETAINED_KEY_PATHS'] = previousPath
+      _resetKeyCache()
+
+      const previousJwk = await exportJWK(previousPublicKey)
+      const previousKid = await calculateJwkThumbprint(previousJwk, 'sha256')
+      const token = await new SignJWT(makeTestClaims() as Record<string, unknown>)
+        .setProtectedHeader({ alg: 'RS256', kid: previousKid })
+        .sign(previousPrivateKey)
+
+      const payload = await verifyJWT(token)
+      expect(payload['sub']).toBe('alice@example.com')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })
+
+function createPublicKeyPem(jwk: JWK): string {
+  const entries = Object.entries(jwk).filter(([key]) => ['kty', 'n', 'e'].includes(key))
+  const obj = Object.fromEntries(entries) as JWK
+  const keyObject = createPublicKey({ key: obj, format: 'jwk' })
+  return keyObject.export({ format: 'pem', type: 'spki' }).toString()
+}
 
 // ── computeThumbprint ─────────────────────────────────────────────
 

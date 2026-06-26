@@ -6,7 +6,7 @@
 
 ## Overall status: 🟡 IMPLEMENTATION COMPLETE — NOT PRODUCTION READY
 
-All current workspace suites are built and tested (181 tests, 0 failures, TypeScript strict clean). Day 7b strict production-attestation evidence now passes locally. The reference implementation is still not production ready: SPIRE production bootstrap, signing-key lifecycle, per-agent audit integrity, direct mTLS peer-certificate binding, and production deployment evidence remain open.
+All current workspace suites are built and tested (181 tests, 0 failures, TypeScript strict clean). Day 7b strict production-attestation evidence now passes locally. The reference implementation is still not production ready: SPIRE production bootstrap rollout, signing-key lifecycle, per-agent audit integrity, direct mTLS peer-certificate binding, and production deployment evidence remain open.
 
 ---
 
@@ -15,6 +15,11 @@ All current workspace suites are built and tested (181 tests, 0 failures, TypeSc
 ### Crypto foundation (`src/crypto/`) — 🟢 REVIEWED
 - RSA-2048 with RS256 for JWT signing — compliant
 - `kid` derived from JWK thumbprint for file-based keys (stable, deterministic) — compliant
+- Active signing key plus retained verification keys now published in JWKS — partial production rotation support
+- Manual rotation runbook and restart-safe retained-key verification test now implemented
+- Active and retained keys can now load from file paths, injected PEM material, or Azure Key Vault secrets — partial secret-store readiness
+- Local container rehearsal with Azure service-principal credentials now passes against a live Key Vault-backed signing key
+- Managed-identity Azure deployment shape now exists for Azure Container Apps, with `KAIF_SPIRE_BUNDLE_CA_PEM` removing the CA-file-only assumption
 - Ephemeral keys use random UUID for kid — acceptable for dev/test
 - `_cachePromise` pattern prevents key-generation race — **fixed GAP-001**
 - SPIRE JWT-SVID bundle keys cached at 5-minute TTL, normalized from SPIRE `use="jwt-svid"` to JOSE signing keys — compliant
@@ -22,7 +27,7 @@ All current workspace suites are built and tested (181 tests, 0 failures, TypeSc
 - Private key never leaves process memory — compliant with Security Rule 4
 - No third-party crypto primitives — compliant with Security Rule 3
 
-**Partial:** GAP-004 (CA-backed SPIRE bundle retrieval implemented; production CA provisioning and deployment guide remain)
+**Partial:** GAP-004 (CA-backed SPIRE bundle retrieval implemented; production deployment guide added, rollout still pending)
 
 ---
 
@@ -138,12 +143,14 @@ All current workspace suites are built and tested (181 tests, 0 failures, TypeSc
 - `packages/server/Dockerfile` — multi-stage builder/runtime, alpine base
 - `spire/server.conf` — bundle endpoint on 8081, Unix socket API
 - `spire/agent.conf` — Unix workload attestor, `insecure_bootstrap = true` (dev only)
+- `spire/agent.production.conf` — production template with `trust_bundle_path`, no insecure bootstrap
+- `docker-compose.production.yml` + `.env.production.example` — production-like SPIRE/KAIF overlay and secret mounts
 - `scripts/setup-spire.sh` — join token generation + 4 workload entry registrations
 - `scripts/demo.sh` — end-to-end demo with `KAIF_DEV_MODE=true`, signed `delegation_token`, and SPIRE CLI SVID fetch
 - `examples/mock-agent/` — SDK usage demonstration
 - `examples/mock-service/` — relying party JWT validation via jose
 
-**Open:** GAP-009 — `insecure_bootstrap = true` in agent.conf (dev only; production requires trust bundle)
+**Partial:** GAP-009 — dev config still uses `insecure_bootstrap = true`, but production template, secret overlay, and deployment guide now require `trust_bundle_path`
 **Tracked:** Production hardening plan lives in `security/PRODUCTION_ATTESTATION_PROTOCOL_PLAN.md`.
 
 ---
@@ -187,9 +194,9 @@ All current workspace suites are built and tested (181 tests, 0 failures, TypeSc
 |-----|----------|---------|--------|
 | GAP-002 | Medium | `audit.ts` — non-atomic append | Open — v0.2 |
 | GAP-003 | Low | `audit.ts` — per-agent chain not independently verifiable | Open — v0.2 |
-| GAP-004 | High (prod) | SPIRE bundle trust path | Partial — CA path support added; deployment guide/prod CA provisioning pending |
+| GAP-004 | High (prod) | SPIRE bundle trust path | Partial — CA path support and deployment guide added; production CA rollout pending |
 | GAP-006 | Low | `acl.ts` — micromatch with `/` separator scopes | Open — monitoring |
 | GAP-008 | High | `/provision` → `/oauth/token` flow broken (UUID vs JWT) | **CLOSED 2026-05-20** |
-| GAP-009 | High (prod) | `insecure_bootstrap` in SPIRE agent config | Documented (compose + README) |
+| GAP-009 | High (prod) | `insecure_bootstrap` in SPIRE agent config | Partial — production template added; local compose remains dev-only |
 
-*Last updated: 2026-05-23 by Codex — Phase 1 Day 7b strict evidence passed locally*
+*Last updated: 2026-06-02 by Codex — Workstream A rehearsal completed; Workstream C added manual rotation and injected-PEM key sources*

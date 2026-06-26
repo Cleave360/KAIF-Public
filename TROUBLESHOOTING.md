@@ -633,6 +633,11 @@ docker exec spire-server ls -la /run/spire/data/
 | No socket file | Check SPIRE agent is running: `docker compose up -d spire-agent` |
 | `certificate signed by unknown authority` after SPIRE config changes | Reset the local SPIRE agent trust cache and re-attest |
 
+Production note:
+- Do not fix production SPIRE trust errors with `KAIF_SPIRE_BUNDLE_TLS_INSECURE=true`.
+- Use a trusted `https://` bundle endpoint and set `KAIF_SPIRE_BUNDLE_CA_PATH` when the SPIRE endpoint is signed by a private CA.
+- Use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/SPIRE_PRODUCTION_DEPLOYMENT.md:1) as the source of truth.
+
 ```bash
 # Reset stale local SPIRE agent trust cache only
 docker compose stop spire-agent kaif-server

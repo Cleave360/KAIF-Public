@@ -13,6 +13,7 @@ describe('SPIRE bundle JWKS transport options', () => {
   beforeEach(() => {
     process.env = { ...originalEnv }
     delete process.env['KAIF_SPIRE_BUNDLE_CA_PATH']
+    delete process.env['KAIF_SPIRE_BUNDLE_CA_PEM']
     delete process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE']
   })
 
@@ -28,6 +29,14 @@ describe('SPIRE bundle JWKS transport options', () => {
 
   it('uses the configured CA file for private HTTPS bundle endpoints', () => {
     process.env['KAIF_SPIRE_BUNDLE_CA_PATH'] = caPath
+
+    const options = getSpireJwksOptions('https://spire.test/bundle') as OptionsWithAgent
+
+    expect(options.agent).toBeInstanceOf(https.Agent)
+  })
+
+  it('uses the configured CA PEM for private HTTPS bundle endpoints', () => {
+    process.env['KAIF_SPIRE_BUNDLE_CA_PEM'] = '-----BEGIN CERTIFICATE-----\nmock\n-----END CERTIFICATE-----'
 
     const options = getSpireJwksOptions('https://spire.test/bundle') as OptionsWithAgent
 

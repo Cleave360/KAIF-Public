@@ -20,9 +20,15 @@ describe('loadConfig production guardrails', () => {
     delete process.env['NODE_ENV']
     delete process.env['KAIF_DEV_MODE']
     delete process.env['KAIF_PRIVATE_KEY_PATH']
+    delete process.env['KAIF_PRIVATE_KEY_PEM']
+    delete process.env['KAIF_AZURE_KEY_VAULT_URL']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME']
+    delete process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION']
+    delete process.env['KAIF_AZURE_RETAINED_KEY_SECRETS']
     delete process.env['KAIF_ALLOW_INSECURE_REDIS']
     delete process.env['KAIF_ALLOWED_AUDIENCES']
     delete process.env['KAIF_SPIRE_BUNDLE_CA_PATH']
+    delete process.env['KAIF_SPIRE_BUNDLE_CA_PEM']
     delete process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE']
     delete process.env['KAIF_TENANT_ADDRESS']
     delete process.env['KAIF_GOVERNANCE_AUDIT_APPEND_URL']
@@ -55,7 +61,54 @@ describe('loadConfig production guardrails', () => {
     process.env['NODE_ENV'] = 'production'
     process.env['KAIF_REDIS_URL'] = 'rediss://kaif.redis:6380'
 
-    expect(() => loadConfig()).toThrow(/KAIF_PRIVATE_KEY_PATH is required/)
+    expect(() => loadConfig()).toThrow(/KAIF_PRIVATE_KEY_PATH, KAIF_PRIVATE_KEY_PEM, or Azure Key Vault key source is required/)
+  })
+
+  it('accepts inline private key material in production', () => {
+    process.env['NODE_ENV'] = 'production'
+    process.env['KAIF_PRIVATE_KEY_PEM'] = '-----BEGIN PRIVATE KEY-----\nmock\n-----END PRIVATE KEY-----'
+    process.env['KAIF_REDIS_URL'] = 'rediss://kaif.redis:6380'
+
+    const config = loadConfig()
+    expect(config.private_key_pem).toContain('BEGIN PRIVATE KEY')
+  })
+
+  it('rejects conflicting private key path and inline key material', () => {
+    process.env['KAIF_PRIVATE_KEY_PATH'] = '/run/secrets/kaif.pem'
+    process.env['KAIF_PRIVATE_KEY_PEM'] = '-----BEGIN PRIVATE KEY-----\nmock\n-----END PRIVATE KEY-----'
+
+    expect(() => loadConfig()).toThrow(/cannot both be set/)
+  })
+
+  it('accepts Azure Key Vault key source in production', () => {
+    process.env['NODE_ENV'] = 'production'
+    process.env['KAIF_AZURE_KEY_VAULT_URL'] = 'https://kaif-kv.vault.azure.net'
+    process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME'] = 'kaif-signing-key'
+    process.env['KAIF_AZURE_RETAINED_KEY_SECRETS'] = 'kaif-signing-key-v1-public,kaif-signing-key-v2-public@abcd1234'
+    process.env['KAIF_REDIS_URL'] = 'rediss://kaif.redis:6380'
+
+    const config = loadConfig()
+
+    expect(config.azure_key_vault_url).toBe('https://kaif-kv.vault.azure.net')
+    expect(config.azure_private_key_secret_name).toBe('kaif-signing-key')
+    expect(config.azure_retained_key_secrets).toEqual([
+      'kaif-signing-key-v1-public',
+      'kaif-signing-key-v2-public@abcd1234',
+    ])
+  })
+
+  it('rejects conflicting local and Azure key sources', () => {
+    process.env['KAIF_PRIVATE_KEY_PATH'] = '/run/secrets/kaif.pem'
+    process.env['KAIF_AZURE_KEY_VAULT_URL'] = 'https://kaif-kv.vault.azure.net'
+    process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME'] = 'kaif-signing-key'
+
+    expect(() => loadConfig()).toThrow(/Local key material and Azure Key Vault key sources cannot both be set/)
+  })
+
+  it('rejects partial Azure key source configuration', () => {
+    process.env['KAIF_AZURE_PRIVATE_KEY_SECRET_NAME'] = 'kaif-signing-key'
+
+    expect(() => loadConfig()).toThrow(/KAIF_AZURE_KEY_VAULT_URL is required/)
   })
 
   it('requires TLS Redis URL in production by default', () => {
@@ -83,6 +136,21 @@ describe('loadConfig production guardrails', () => {
     expect(() => loadConfig()).toThrow(/KAIF_SPIRE_BUNDLE_TLS_INSECURE=true/)
   })
 
+  it('requires a valid SPIRE bundle URL', () => {
+    process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'not-a-url'
+
+    expect(() => loadConfig()).toThrow(/KAIF_SPIRE_BUNDLE_ENDPOINT must be a valid URL/)
+  })
+
+  it('requires https SPIRE bundle endpoint in production', () => {
+    process.env['NODE_ENV'] = 'production'
+    process.env['KAIF_PRIVATE_KEY_PATH'] = '/run/secrets/kaif.pem'
+    process.env['KAIF_REDIS_URL'] = 'rediss://kaif.redis:6380'
+    process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'http://spire.test:8081/'
+
+    expect(() => loadConfig()).toThrow(/KAIF_SPIRE_BUNDLE_ENDPOINT must use https:\/\//)
+  })
+
   it('captures insecure SPIRE bundle TLS for local development', () => {
     process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE'] = 'true'
 
@@ -98,6 +166,13 @@ describe('loadConfig production guardrails', () => {
     expect(config.spire_bundle_ca_path).toBe(caPath)
   })
 
+  it('captures SPIRE bundle CA PEM when provided', () => {
+    process.env['KAIF_SPIRE_BUNDLE_CA_PEM'] = '-----BEGIN CERTIFICATE-----\nmock\n-----END CERTIFICATE-----'
+
+    const config = loadConfig()
+    expect(config.spire_bundle_ca_pem).toContain('BEGIN CERTIFICATE')
+  })
+
   it('rejects missing SPIRE bundle CA path', () => {
     process.env['KAIF_SPIRE_BUNDLE_CA_PATH'] = '/definitely/missing/spire-ca.pem'
 
@@ -109,6 +184,13 @@ describe('loadConfig production guardrails', () => {
     process.env['KAIF_SPIRE_BUNDLE_TLS_INSECURE'] = 'true'
 
     expect(() => loadConfig()).toThrow(/cannot both be set/)
+  })
+
+  it('rejects conflicting SPIRE bundle CA path and inline PEM', () => {
+    process.env['KAIF_SPIRE_BUNDLE_CA_PATH'] = new URL('../config/agents.yaml', import.meta.url).pathname
+    process.env['KAIF_SPIRE_BUNDLE_CA_PEM'] = '-----BEGIN CERTIFICATE-----\nmock\n-----END CERTIFICATE-----'
+
+    expect(() => loadConfig()).toThrow(/KAIF_SPIRE_BUNDLE_CA_PATH and KAIF_SPIRE_BUNDLE_CA_PEM cannot both be set/)
   })
 
   it('captures KAIF tenant address when provided', () => {

@@ -26,7 +26,7 @@ Four commands. Working demo. Decoded JWT on screen.
 
 > **Note:** `demo.sh` sets `KAIF_DEV_MODE=true` so no real OIDC IdP is required locally. Never enable `KAIF_DEV_MODE` in production — the server refuses to start if `NODE_ENV=production` and `KAIF_DEV_MODE=true`.
 
-> ⚠️ The default SPIRE config uses `insecure_bootstrap = true`. This is safe for local development only. See `spire/agent.conf` before any non-local deployment.
+> ⚠️ The default SPIRE config uses `insecure_bootstrap = true`. This is safe for local development only. For production, use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/SPIRE_PRODUCTION_DEPLOYMENT.md:1) and [spire/agent.production.conf](/Users/geofflundholm/Documents/KAIF/spire/agent.production.conf:1).
 
 ---
 
@@ -139,8 +139,8 @@ See `examples/mock-service/index.ts` for a complete relying-party implementation
 |---|---|---|---|
 | `KAIF_PORT` | number | `8080` | HTTP listen port |
 | `KAIF_HOST` | string | `0.0.0.0` | HTTP listen host |
-| `KAIF_ISSUER` | string | required | JWT `iss` claim, e.g. `https://auth.kindred.systems` |
-| `KAIF_ALLOWED_AUDIENCES` | comma-separated strings | `KAIF_ISSUER` | Explicit token-exchange `audience` values KAIF may mint |
+| `KAIF_ISSUER` | string | required | JWT `iss` claim, e.g. `https://kaif.kindredsystems.ai` |
+| `KAIF_ALLOWED_AUDIENCES` | comma-separated strings | `KAIF_ISSUER` | Explicit token-exchange `audience` values KAIF may mint; start with `https://kaif.kindredsystems.ai` |
 | `KAIF_REDIS_URL` | string | required | Redis connection URL |
 | `KAIF_TENANT_ADDRESS` | string | `tenant-dev` in local examples | Tenant address used by Adaptive governance/agent handoff integrations |
 | `KAIF_ALLOW_INSECURE_REDIS` | boolean | `false` | Allows non-TLS Redis when `NODE_ENV=production`; only for controlled production-like tests |
@@ -151,11 +151,19 @@ See `examples/mock-service/index.ts` for a complete relying-party implementation
 | `KAIF_CLASS_C_DEGRADED_OPEN` | boolean | `false` | Allows Class C relying-party degraded-open behavior when governance evidence append is unavailable |
 | `KAIF_SPIRE_BUNDLE_ENDPOINT` | string | required | SPIRE HTTPS federation bundle endpoint for SVID validation |
 | `KAIF_SPIRE_BUNDLE_CA_PATH` | string | — | Optional CA bundle path for validating a private SPIRE HTTPS bundle endpoint |
+| `KAIF_SPIRE_BUNDLE_CA_PEM` | string | — | Optional inline CA PEM for validating a private SPIRE HTTPS bundle endpoint without a mounted file |
 | `KAIF_SPIRE_BUNDLE_TLS_INSECURE` | boolean | `false` | Local development only; rejected when `NODE_ENV=production` |
 | `KAIF_SPIRE_TRUST_DOMAIN` | string | required | SPIFFE trust domain, e.g. `kindred.systems` |
 | `KAIF_IDP_JWKS_URL` | string | required* | OIDC IdP JWKS URL for `/provision` id_token validation |
 | `KAIF_IDP_ISSUER` | string | required* | OIDC IdP issuer claim |
 | `KAIF_PRIVATE_KEY_PATH` | string | — | RSA private key PEM path; generates ephemeral key if unset |
+| `KAIF_PRIVATE_KEY_PEM` | string | — | Inline RSA private key PEM for secret-store or env injection workflows |
+| `KAIF_RETAINED_KEY_PATHS` | comma-separated strings | — | Optional retained PEM key paths published in JWKS for verification during key rotation |
+| `KAIF_RETAINED_KEY_PEMS` | PEM blocks separated by `\n---\n` | — | Optional retained public-key PEM material published in JWKS without filesystem staging |
+| `KAIF_AZURE_KEY_VAULT_URL` | string | — | Azure Key Vault URL when loading key material from Key Vault secrets |
+| `KAIF_AZURE_PRIVATE_KEY_SECRET_NAME` | string | — | Azure Key Vault secret name containing the active RSA private key PEM |
+| `KAIF_AZURE_PRIVATE_KEY_SECRET_VERSION` | string | — | Optional Azure Key Vault secret version for the active private key |
+| `KAIF_AZURE_RETAINED_KEY_SECRETS` | comma-separated strings | — | Optional retained public-key secrets from Azure Key Vault, each as `name` or `name@version` |
 | `KAIF_AGENTS_CONFIG_PATH` | string | required | Path to `agents.yaml` |
 | `KAIF_LOG_LEVEL` | string | `info` | Pino log level |
 | `KAIF_STRICT_REVOCATION` | boolean | `false` | If `true`, every token use calls `/introspect` |
@@ -181,6 +189,17 @@ For production and serious staging, give KAIF its own Redis host or managed inst
 
 Adaptive governance integration is API-first: KAIF posts auth-layer evidence to Adaptive `POST /v1/audit/append` with `layer="auth"` and `envelope.tenant_id=KAIF_TENANT_ADDRESS`. KAIF must not directly mutate governance-engine Redis in production.
 
+For production SPIRE deployment:
+- `KAIF_SPIRE_BUNDLE_ENDPOINT` must use `https://`
+- `KAIF_SPIRE_BUNDLE_TLS_INSECURE` must remain unset or `false`
+- private CA deployments should set `KAIF_SPIRE_BUNDLE_CA_PATH`
+- the current supported SDK production SVID mode is file-based `svid_path`, not direct Workload API integration
+
+See [security/SPIRE_PRODUCTION_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/SPIRE_PRODUCTION_DEPLOYMENT.md:1).
+For manual signing-key rotation, use [security/KEY_ROTATION_RUNBOOK.md](/Users/geofflundholm/Documents/KAIF/security/KEY_ROTATION_RUNBOOK.md:1).
+
+For a production-like local rehearsal, use [.env.production.example](/Users/geofflundholm/Documents/KAIF/.env.production.example:1) with [docker-compose.production.yml](/Users/geofflundholm/Documents/KAIF/docker-compose.production.yml:1).
+
 ### Agent ACL (`agents.yaml`)
 
 | Field | Type | Description |
@@ -203,7 +222,7 @@ import { KAIFClient } from '@kaif/sdk'
 const client = new KAIFClient({
   server_url:          'http://kaif-server:8080',
   spiffe_id:           'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
-  svid_path:           '/run/spire/sockets/svid.jwt',   // SPIRE writes this
+  svid_path:           '/run/spire/sockets/svid.jwt',   // supported production mode today
   delegation_token:    delegationTokenJWT,               // from POST /provision
 })
 

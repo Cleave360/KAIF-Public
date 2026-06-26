@@ -81,12 +81,12 @@ Every relying party must verify:
 Addresses: GAP-004, GAP-009, quick-start/runtime mismatch.
 
 - Replace unauthenticated SPIRE bundle fetches with HTTPS or mTLS.
-- Add `KAIF_SPIRE_BUNDLE_CA_PATH` or equivalent trust bundle configuration. Implemented for Node HTTPS bundle fetches on 2026-05-22; production deployment must still provide the CA file.
-- Remove `insecure_bootstrap = true` from production agent configs.
+- Add `KAIF_SPIRE_BUNDLE_CA_PATH` or equivalent trust bundle configuration. Implemented for Node HTTPS bundle fetches on 2026-05-22; production deployment guide added on 2026-06-02, production rollout must still provide the CA file where needed.
+- Remove `insecure_bootstrap = true` from production agent configs. Baseline template added in `spire/agent.production.conf` on 2026-06-02.
 - Require `trust_bundle_path` or upstream authority bootstrap for production SPIRE agents.
 - Decide one production SVID retrieval path:
   - Workload API socket integration in SDK, or
-  - SVIDStore file path with documented rotation behavior.
+  - SVIDStore file path with documented rotation behavior. Current supported production mode is SVIDStore via `svid_path`.
 - Add an integration test that exercises the selected SVID path.
 
 Release gate: no production deployment guide may reference `insecure_bootstrap` or HTTP SPIRE bundle URLs except as explicit local-development warnings.
@@ -110,13 +110,16 @@ Release gate: concurrent token issuance must not break global or per-agent audit
 
 Addresses: key-management production requirements and compromise runbooks.
 
-- Require persistent signing keys in production. Startup guard implemented: `NODE_ENV=production` requires `KAIF_PRIVATE_KEY_PATH`.
-- Store private keys in KMS/HSM or a secret store with strict access policy.
+- Require persistent signing keys in production. Startup guard implemented: `NODE_ENV=production` requires `KAIF_PRIVATE_KEY_PATH`, `KAIF_PRIVATE_KEY_PEM`, or Azure Key Vault key-source configuration.
+- Store private keys in KMS/HSM or a secret store with strict access policy. File-path and injected-PEM key sources are implemented; direct KMS/HSM integrations remain open.
+- Azure Key Vault secret loading is implemented and validated both for a host KAIF process using Azure CLI login and for a local container rehearsal using service-principal env credentials.
+- Managed-identity deployment shape for Azure Container Apps is now scaffolded; remaining work is image publishing and live Azure deployment evidence.
 - Add key rotation support:
   - active signing key,
   - previous verification keys retained until all tokens expire,
   - JWKS exposes active and retained public keys.
-- Add `kid` selection in `verifyJWT`.
+- Add `kid` selection in `verifyJWT`. Implemented on 2026-06-02 using local JWKS selection across the active key plus `KAIF_RETAINED_KEY_PATHS`.
+- Add a restart/rotation verification test. Implemented on 2026-06-02 in `tests/key-rotation.integration.test.ts`.
 - Keep ephemeral keys dev-only and fail startup in production if no production key source is configured.
 
 Release gate: a rolling restart or key rotation cannot invalidate unexpired tokens unexpectedly.
@@ -186,12 +189,12 @@ Release gate: a release candidate cannot pass CI if conformance relies on unauth
 | Sub-delegation | Parent actor must allow `may_sub_delegate` | Implemented for access-token subjects |
 | Protected routes | Bearer token revocation and route authorization enforced | Implemented |
 | Direct grant depth | Direct human grants issue depth `0` | Implemented |
-| SPIRE bundle security | No unauthenticated HTTP bundle fetch in production | CA path support implemented; production CA provisioning and deployment guide pending |
-| SPIRE bootstrap | No `insecure_bootstrap = true` in production | Open |
+| SPIRE bundle security | No unauthenticated HTTP bundle fetch in production | CA path support and deployment guide implemented; production CA provisioning pending |
+| SPIRE bootstrap | No `insecure_bootstrap = true` in production | Production template and compose overlay added; rollout open |
 | Audit atomicity | Redis Lua or equivalent atomic append | Implemented for global chain with Redis lock |
 | Per-agent audit chain | Independently verifiable per-agent chain | Open |
 | Signing key guard | Production cannot boot with ephemeral signing key | Implemented |
-| Signing key lifecycle | KMS/HSM-backed keys and JWKS rotation | Open |
+| Signing key lifecycle | KMS/HSM-backed keys and JWKS rotation | Partial — retained verification keys, kid-based verify, manual rotation runbook/test, and injected-PEM key sources implemented; direct KMS/HSM remain open |
 | Redis isolation | Dedicated TLS Redis for production/staging | Startup TLS guard implemented; local Docker isolation uses host port 6380 when available |
 | Governance tenant | Tenant address and governance signal contract | Dev contract implemented for Adaptive auth evidence |
 | Failure-mode endpoints | Class A fail-closed and Class C degraded policy | Implemented in KAIF test surface |
@@ -202,9 +205,9 @@ Release gate: a release candidate cannot pass CI if conformance relies on unauth
 
 ## Immediate Implementation Order
 
-1. Replace production SPIRE bootstrap and bundle retrieval defaults.
+1. Roll out the production SPIRE bootstrap template and CA/trust-bundle wiring to the actual deployment environment.
 2. Implement JWKS key rotation on top of the production signing-key guard.
-3. Implement SDK Workload API SVID retrieval or document SVIDStore as the only supported production path.
+3. Implement SDK Workload API SVID retrieval or keep SVIDStore as the explicit supported production path.
 4. Add CNF enforcement to relying-party examples and conformance.
 5. Add independent per-agent audit chains.
 6. Add production Adaptive endpoint deployment config and CI Day 7b evidence upload.
