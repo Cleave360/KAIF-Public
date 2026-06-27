@@ -283,7 +283,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 ```json
 {
   "access_token": "eyJhbGc...",
-  "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+"issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
   "token_type": "Bearer",
   "expires_in": 600,
   "scope": "invoke:completion"
@@ -399,7 +399,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 ```json
 {
   "issuer": "https://auth.example.com",
-  "authorization_endpoint": "https://auth.example.com/oauth/authorize",
+"authorization_endpoint": "https://auth.example.com/oauth/authorize",
   "token_endpoint": "https://auth.example.com/oauth/token",
   "introspection_endpoint": "https://auth.example.com/introspect",
   "revocation_endpoint": "https://auth.example.com/revoke",
@@ -510,16 +510,19 @@ An agent MAY create a delegation chain by using its access token as the subject_
 **Example**:
 
 ```
-1. Operator authorizes Agent1 (depth 0, may_sub_delegate: true, scope: invoke:*)
-   → get token T1 with delegation_depth: 0
+1. Operator authorizes Agent1
+  (depth 0, may_sub_delegate: true, scope: invoke:*)
+  -> token T1 with delegation_depth: 0
 
 2. Agent1 uses T1 as subject_token to request sub-delegation for Agent2
-   → KAIF verifies: T1.may_sub_delegate = true, T1.delegation_depth + 1 ≤ ACL max
-   → issue token T2 with delegation_depth: 1, principal_chain: [operator, agent1]
+  -> verify T1.may_sub_delegate = true
+  -> verify T1.delegation_depth + 1 <= ACL max
+  -> issue token T2 with delegation_depth: 1
+    principal_chain: [operator, agent1]
 
 3. Agent2 attempts to sub-delegate to Agent3
-   → KAIF checks: T2.delegation_depth + 1 ≤ ACL max (if 1 < max_depth, allowed)
-   → issue token T3 with delegation_depth: 2
+  -> check T2.delegation_depth + 1 <= ACL max
+  -> issue token T3 with delegation_depth: 2
 ```
 
 ## 7. Audit and Non-Repudiation
@@ -530,7 +533,11 @@ Every KAIF operation appends an immutable audit entry using SHA-256 hash chainin
 entry = {
   id: UUID v4,
   ts: ISO 8601,
-  action: "DELEGATION_PROVISIONED" | "TOKEN_ISSUED" | "TOKEN_REVOKED" | ...,
+  action:
+    "DELEGATION_PROVISIONED" |
+    "TOKEN_ISSUED" |
+    "TOKEN_REVOKED" |
+    ...,
   agent_id: SPIFFE ID,
   human_id: operator email,
   detail: JSON,
