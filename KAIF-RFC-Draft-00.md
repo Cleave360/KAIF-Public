@@ -719,7 +719,8 @@ Conformance is verified by passing the test fixtures in [kaif-conformance-kit] (
 
 Geoffrey Lundholm  
 Kindred Systems  
-Email: geoff@kindred.systems
+London, United Kingdom  
+Email: kindred@kindredsystems.ai
 
 ---
 

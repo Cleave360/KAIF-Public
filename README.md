@@ -33,7 +33,7 @@ Four commands. Working demo. Decoded JWT on screen.
 ## How It Works
 
 ```
-Human Principal (geoff@kindred.systems)
+Human Principal (kindred@kindredsystems.ai)
           │
           │ POST /provision  (OIDC id_token)
           ▼
@@ -69,7 +69,7 @@ The KAIF JWT binds three things in one credential: the human principal who autho
 ```typescript
 {
   iss:  "https://auth.kindred.systems",   // KAIF server
-  sub:  "geoff@kindred.systems",          // human principal — always present
+  sub:  "kindred@kindredsystems.ai",          // human principal — always present
   aud:  "urn:kaif:target-service",
   iat:  1716220800,
   exp:  1716221700,                       // iat + tier TTL (300–900s)
@@ -92,7 +92,7 @@ The KAIF JWT binds three things in one credential: the human principal who autho
     delegation_depth: 0,                 // 0 = direct human grant
     delegation_id:    "uuid-v4",
     rollback_window:  "PT15M",           // ISO 8601 duration
-    principal_chain:  ["geoff@kindred.systems"]
+    principal_chain:  ["kindred@kindredsystems.ai"]
   }
 }
 ```

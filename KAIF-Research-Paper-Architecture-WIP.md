@@ -155,7 +155,7 @@ Each layer is cryptographically independent; failure in one layer does not compr
 ### 2.3 Data Flow: Happy Path
 
 ```
-1. Human (geoff@kindred.systems) logs into Entra ID
+1. Human (kindred@kindredsystems.ai) logs into Entra ID
    ↓
 2. KAIF receives OIDC token at /provision
    ├─ Validates issuer, signature, expiry
@@ -497,7 +497,7 @@ Introspect via Server B:
     "active": true ✅,
     "scope": "invoke:completion audit:read",
     "exp": 1719375336,
-    "sub": "geoff@kindred.systems"
+    "sub": "kindred@kindredsystems.ai"
   }
   
 Timing: <50ms ✅ (in-memory JWKS verification)
@@ -672,13 +672,13 @@ Audit entries recorded for:
 **Test scenario**: Trace action back to human principal
 
 ```
-1. Human provision (geoff@kindred.systems) → delegation JWT signed with KAIF key
+1. Human provision (kindred@kindredsystems.ai) → delegation JWT signed with KAIF key
 2. Agent exchange (lyra SPIFFE) + delegation → access token
 3. Downstream call with access token
 4. Audit investigation:
    access_token.jti → audit log entry TOKEN_ISSUED
    entry.delegation_id → delegation grant (Redis)
-   grant.human_principal → geoff@kindred.systems ✅
+   grant.human_principal → kindred@kindredsystems.ai ✅
    
 Result: Full chain of custody established
 ```
@@ -925,7 +925,7 @@ KAIF_AZURE_RETAINED_KEY_SECRETS=kaif-signing-key-old@v1
 ```json
 {
   "iss": "https://auth.example.internal",
-  "sub": "geoff@kindred.systems",
+  "sub": "kindred@kindredsystems.ai",
   "aud": "kaif-server",
   "iat": 1719374436,
   "exp": 1719375336,
@@ -941,7 +941,7 @@ KAIF_AZURE_RETAINED_KEY_SECRETS=kaif-signing-key-old@v1
 ```json
 {
   "iss": "https://auth.example.internal",
-  "sub": "geoff@kindred.systems",
+  "sub": "kindred@kindredsystems.ai",
   "aud": "https://downstream-service.example.internal",
   "iat": 1719374436,
   "exp": 1719375336,
@@ -960,7 +960,7 @@ KAIF_AZURE_RETAINED_KEY_SECRETS=kaif-signing-key-old@v1
     "delegation_depth": 0,
     "delegation_id": "550e8400-e29b-41d4-a716-446655440000",
     "rollback_window": "PT15M",
-    "principal_chain": ["geoff@kindred.systems"]
+    "principal_chain": ["kindred@kindredsystems.ai"]
   }
 }
 ```
@@ -1158,7 +1158,7 @@ KAIF-007: Delegation depth exceeded
 **Authorization Flow**:
 
 ```
-Human (geoff@kindred.systems)
+Human (kindred@kindredsystems.ai)
   ↓
 1. Provision → delegation_token for Lyra
    Scope: [vault:read:anthropic_key, invoke:completion]
@@ -1187,7 +1187,7 @@ Human (geoff@kindred.systems)
 6. Orion receives access_token_orion
    Scope: [invoke:completion]
    Depth: 1
-   Principal chain: [geoff@kindred.systems] (preserved)
+   Principal chain: [kindred@kindredsystems.ai] (preserved)
    ↓
 7. Orion calls service with access_token_orion
    Service validates → ✅ active, scoped correctly

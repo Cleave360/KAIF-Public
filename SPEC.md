@@ -75,7 +75,7 @@ For token exchange, the validated JWT-SVID `sub` MUST match the subject token's 
   "delegation_depth": 0,
   "delegation_id":    "550e8400-e29b-41d4-a716-446655440000",
   "rollback_window":  "PT15M",
-  "principal_chain":  ["geoff@kindred.systems"]
+  "principal_chain":  ["kindred@kindredsystems.ai"]
 }
 ```
 
