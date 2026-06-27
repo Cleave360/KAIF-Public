@@ -1,60 +1,78 @@
 # KAIF Governance
 
+Version: 1.1
+Status: Active
+Last updated: 2026-06-27
+
 ## Project Roles
 
-**Maintainer** — merge authority, protocol decisions, release sign-off. Responsible for SPEC.md changes and the RFC process.
+Maintainer:
+Owns repository health, protocol integrity, releases, and security response coordination. Maintainers have merge rights.
 
-**Contributor** — PR author, issue reporter, documentation contributor. No merge authority.
+Contributor:
+Proposes and implements code, test, and documentation changes through issues and pull requests. Contributors do not have merge rights.
 
-**Adopter** — production user of the KAIF protocol. Invited to share integration feedback and conformance results.
+Adopter:
+Runs KAIF in pre-production or production and provides interoperability, operability, and security feedback.
 
-**Current maintainers:** Geoff (Kindred Systems OS)
-
----
+Current maintainers:
+- Geoff Lundholm (Kindred Systems OS)
 
 ## Decision Making
 
-**Routine code changes** — one maintainer approval required. "Routine" means: no protocol changes, no new dependencies, no security-sensitive files.
+Code changes:
+- Pull requests require at least one maintainer approval.
+- Security-sensitive changes always require maintainer review, regardless of size.
 
-**Protocol changes (SPEC.md)** — require a KAIF-RFC document in `/rfcs`, a 7-day public comment period, and maintainer consensus. Consensus means no maintainer objects; silence is consent.
+Protocol changes:
+- Any normative change to [SPEC.md](SPEC.md) requires a KAIF RFC document in [rfcs](rfcs) and maintainer consensus.
+- Maintainer consensus means no explicit maintainer objection at decision time.
 
-**New dependencies** — require maintainer approval before a PR is opened. This is a security project; every dependency is an attack surface.
+Dependency changes:
+- New runtime dependencies require maintainer approval before merge.
 
-**New maintainers** — nominated by an existing maintainer, seconded by one contributor, 14-day objection period. Nomination requires demonstrated sustained contribution.
-
-**Security-sensitive changes** — any change to `packages/server/src/crypto/`, `services/token-exchange.ts`, or `services/audit.ts` requires maintainer code review regardless of PR size.
-
----
+Maintainer onboarding:
+- Nominated by a maintainer and seconded by a contributor.
+- 14-day public objection window before appointment.
 
 ## RFC Process
 
-1. Open a GitHub issue with the prefix `[RFC]` and a one-line summary
-2. Create `rfcs/KAIF-RFC-<number>-<slug>.md` using the template in `rfcs/TEMPLATE.md`
-3. 7-day comment period — all feedback must be addressed or explicitly declined with reasoning
-4. Maintainer decision: **accept** / **reject** / **revise**
-5. Accepted RFCs are merged; the corresponding SPEC.md change is made in the same PR
+1. Open an issue prefixed with [RFC] and summarize the proposed change.
+2. Submit an RFC document at [rfcs](rfcs) using the naming pattern KAIF-RFC-NNNN-slug.md.
+3. Keep the RFC open for at least 7 days for review and comments.
+4. Address feedback or record rationale for declined suggestions.
+5. Maintainers decide: accept, revise, or reject.
+6. If accepted, merge RFC and related spec or implementation changes.
 
-Protocol changes require a MAJOR version bump to the spec version header. Implementation semver follows independently.
+## Versioning Policy
 
----
+Specification versioning:
+- Protocol version is declared in [SPEC.md](SPEC.md) and is versioned independently.
+- MAJOR for breaking normative changes.
+- MINOR for backward-compatible normative additions.
+- PATCH for clarifications and editorial corrections.
 
-## Versioning
+Implementation versioning:
+- Runtime and packages follow SemVer in [package.json](package.json).
+- Implementation and protocol versions are related but not required to be lockstep.
 
-**Spec:** The `KAIF Core Profile vX.Y` header in `SPEC.md` is the spec version. Breaking changes to normative claims require a MAJOR bump. Additive normative changes require a MINOR bump. Clarifications require a PATCH bump.
+Deprecation:
+- Breaking protocol changes must include a deprecation notice and migration guidance.
 
-**Implementation:** Semver in `package.json`. The implementation version tracks the spec it implements, not necessarily in lockstep.
+## Security-Sensitive Areas
 
-Breaking changes to the Core claims (`sub`, `actor`, `kaif.*`) require both a MAJOR spec bump and a deprecation notice published at least 30 days before the change takes effect.
-
----
+The following areas require explicit maintainer security review:
+- [packages/server/src/crypto](packages/server/src/crypto)
+- [packages/server/src/services/token-exchange.ts](packages/server/src/services/token-exchange.ts)
+- [packages/server/src/services/audit.ts](packages/server/src/services/audit.ts)
+- [SPEC.md](SPEC.md)
 
 ## CNCF Intent
 
-KAIF intends to apply for CNCF Sandbox status once:
+KAIF intends to pursue CNCF Sandbox once the project demonstrates:
+- At least two independent conformant implementations.
+- Publicly reproducible conformance results.
+- Active open governance in this repository.
+- Ongoing public community discussion.
 
-- Two independent conforming implementations exist (verified by the conformance kit)
-- The conformance kit is publicly reproducible from a clean clone
-- This governance model has been operational for at least 90 days
-- A public mailing list or discussion forum is established
-
-CNCF candidacy is subject to the CNCF TOC review process and is not guaranteed.
+Sandbox and later Incubation outcomes depend on CNCF TOC review and are not guaranteed.

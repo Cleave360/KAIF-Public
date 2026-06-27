@@ -1,81 +1,78 @@
 # Contributing to KAIF
 
+Thanks for helping improve KAIF.
+
 ## Development Setup
 
-**Prerequisites:** Node.js 20 LTS, pnpm 8+, Docker, Docker Compose v2.
+Prerequisites:
+- Node.js 20 LTS
+- pnpm 8+
+- Docker and Docker Compose v2
+
+Clone and install:
 
 ```bash
-git clone https://github.com/kindred-systems/kaif
-cd kaif
+git clone https://github.com/Cleave360/KAIF.git
+cd KAIF
 pnpm install
-pnpm test          # must pass before any changes
 ```
 
-`pnpm test` runs `vitest run` across all packages. All 128 tests must pass before submitting a PR.
+Run checks before opening a pull request:
 
----
-
-## Making Changes
-
-1. Open a GitHub issue describing the change — get alignment before writing code
-2. Fork the repo and create a branch: `feat/<slug>` or `fix/<slug>`
-3. Write tests first for any new behaviour
-4. Run `pnpm test` — 0 failures required
-5. Run `pnpm exec tsc --noEmit` in each modified package — 0 TypeScript errors required
-6. Open a PR against `main`
-
-For new dependencies: get maintainer approval before adding to `package.json`. See [GOVERNANCE.md](GOVERNANCE.md).
-
----
+```bash
+pnpm test
+pnpm exec tsc --noEmit
+```
 
 ## Commit Format
 
-[Conventional Commits](https://www.conventionalcommits.org/):
+Use Conventional Commits.
 
+Examples:
+
+```text
+feat: add delegation depth guard for sub-delegation flow
+fix: enforce 10-second skew tolerance in SVID validation
+docs: clarify relying-party revocation modes
+test: add revoked-subject-token conformance fixture
+chore: bump spire container image version
 ```
-feat: add GNAP grant negotiation endpoint
-fix: correct clock skew tolerance in svid.ts (was 30s, must be 10s)
-docs: clarify cnf/jkt normative statement in SPEC.md
-test: add scope overreach fixture to conformance kit
-chore: update SPIRE to 1.9.1
-refactor: extract scope glob matching to shared utility
-```
 
-Breaking changes: append `!` after the type (`feat!:`) and add a `BREAKING CHANGE:` footer.
+For breaking changes, use the bang form and include a BREAKING CHANGE footer.
 
----
+## Pull Request Requirements
 
-## PR Requirements
-
-- Tests pass (`pnpm test`) — 0 failures
-- TypeScript strict mode — 0 errors (`pnpm exec tsc --noEmit`)
-- No new dependencies without prior maintainer approval
-- Security review required for changes to security-sensitive files (see below)
-- Protocol changes require an accepted RFC (see [GOVERNANCE.md](GOVERNANCE.md))
-
----
-
-## Security-Sensitive Files
-
-Changes to these files require maintainer code review regardless of PR size:
-
-| File | Why |
-|---|---|
-| `packages/server/src/crypto/` | Key generation and JWT signing primitives |
-| `packages/server/src/services/token-exchange.ts` | Core RFC 8693 flow — all auth paths |
-| `packages/server/src/services/audit.ts` | SHA-256 hash chain — tamper detection |
-| `SPEC.md` | Normative protocol specification — changes require RFC |
-
-When modifying `crypto/keys.ts`: read the `_cachePromise` comment in `SECURITY.md` before touching key loading logic. The race it prevents is non-obvious and the failure mode is silent.
-
----
+- Tests pass with no failures.
+- Type checking passes with no errors.
+- New dependencies are discussed and approved before merge.
+- Security-sensitive changes include explicit maintainer review.
+- Protocol changes include an accepted RFC and corresponding spec update.
 
 ## Code Style
 
-- TypeScript strict mode — `strict: true`, `exactOptionalPropertyTypes: true`, `noUncheckedIndexedAccess: true`
-- No comments unless the *why* is non-obvious. Never comment what the code does.
-- No new abstractions unless three concrete call sites exist. Duplication over premature abstraction.
-- All Redis keys MUST use KAIF prefixes: `kaif:audit:`, `kaif:trust:`, `kaif:delegation:`, `kaif:revoke:`
-- Never log token values. Log `jti` only.
+- TypeScript strict mode is required.
+- Use ESLint and Prettier config from the repository.
+- Keep code clear and explicit; avoid unnecessary abstraction.
+- Never log token values; log token identifiers such as jti only.
+- Keep Redis keys namespaced with KAIF prefixes.
 
-ESLint and Prettier configs live in the repo root. Run `pnpm lint` and `pnpm format` before submitting.
+Useful commands:
+
+```bash
+pnpm lint
+pnpm format
+```
+
+## Security-Sensitive Areas
+
+Changes in the following areas require maintainer security review:
+- [packages/server/src/crypto](packages/server/src/crypto)
+- [packages/server/src/services/token-exchange.ts](packages/server/src/services/token-exchange.ts)
+- [packages/server/src/services/audit.ts](packages/server/src/services/audit.ts)
+- [SPEC.md](SPEC.md)
+
+When submitting security-impacting changes, include threat model notes and regression tests.
+
+## Protocol Changes
+
+Normative protocol changes require an RFC document in [rfcs](rfcs) and maintainer consensus. See [GOVERNANCE.md](GOVERNANCE.md).

@@ -269,6 +269,8 @@ See [`conformance/README.md`](conformance/README.md) for setup and fixture detai
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+Governance model: [GOVERNANCE.md](GOVERNANCE.md).
+Adopter directory: [ADOPTERS.md](ADOPTERS.md).
 
 ---
 
