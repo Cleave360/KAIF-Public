@@ -6,9 +6,10 @@
 | | |
 |---|---|
 | **Intended Status** | Standards Track |
-| **Author** | Kindred Systems |
+| **Author** | Geoffrey Lundholm |
+| **Organization** | Kindred Systems |
 | **Date** | 27 June 2026 |
-| **IPR Disclosure** | BSD 2-Clause (see CONTRIBUTING) |
+| **IPR Disclosure** | IETF Trust Legal Provisions (BCP 78) |
 
 ## Abstract
 
@@ -22,7 +23,7 @@ This Internet-Draft is submitted in full conformance with the provisions of BCP 
 
 Internet-Drafts are working documents of the Internet Engineering Task Force (IETF), its areas, and its working groups. Note that other groups may also distribute working documents as Internet-Drafts. The list of current Internet-Drafts is at https://datatracker.ietf.org/drafts/current/.
 
-Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time. It is inappropriate to use Internet-Drafts as reference material or to cite them except as a reference to "this work" in progress."
+Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time. It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress".
 
 ## 1. Introduction
 
@@ -58,7 +59,7 @@ KAIF is designed for operator-initiated, agent-executed, boundary-crossing trans
 
 ### 1.3 Conventions and Terminology
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in RFC 2119.
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all capitals, as shown here.
 
 **KAIF-specific terms:**
 
@@ -716,9 +717,9 @@ Conformance is verified by passing the test fixtures in [kaif-conformance-kit] (
 
 **Author's Address**
 
+Geoffrey Lundholm  
 Kindred Systems  
-kindred.systems  
-[Contact TBD]
+Email: geoff@kindred.systems
 
 ---
 
