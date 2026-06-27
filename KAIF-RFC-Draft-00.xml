@@ -1,0 +1,815 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.miek.nl" -->
+
+<section anchor="kaif-kindred-agent-identity-framework"><name>KAIF: Kindred Agent Identity Framework</name>
+<t><strong>Internet-Draft</strong><br />
+<strong>Expires: 27 December 2026</strong></t>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td><strong>Intended Status</strong></td>
+<td>Standards Track</td>
+</tr>
+
+<tr>
+<td><strong>Author</strong></td>
+<td>Kindred Systems</td>
+</tr>
+
+<tr>
+<td><strong>Date</strong></td>
+<td>27 June 2026</td>
+</tr>
+
+<tr>
+<td><strong>IPR Disclosure</strong></td>
+<td>BSD 2-Clause (see CONTRIBUTING)</td>
+</tr>
+</tbody>
+</table>
+<section anchor="abstract"><name>Abstract</name>
+<t>The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token exchange mechanism for delegated agent-to-service authorization, combining RFC 8693 token exchange with SPIFFE workload identity attestation and operator-defined authorization tiers.</t>
+<t>This document specifies KAIF's protocol mechanics, deployment profiles, and interoperability requirements for systems implementing agent authorization with audit accountability. KAIF is intended for scenarios where an operator (human principal) provisionally authorizes an agent (automated workload) to perform bounded actions on their behalf, with cryptographic proof of authorization, delegation depth tracking, and real-time revocation.</t>
+<t><strong>Status of This Memo</strong></t>
+<t>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</t>
+<t>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF), its areas, and its working groups. Note that other groups may also distribute working documents as Internet-Drafts. The list of current Internet-Drafts is at <eref target="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</eref>.</t>
+<t>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time. It is inappropriate to use Internet-Drafts as reference material or to cite them except as a reference to &quot;this work&quot; in progress.&quot;</t>
+</section>
+
+<section anchor="1-introduction"><name>1. Introduction</name>
+
+<section anchor="1-1-problem-statement"><name>1.1 Problem Statement</name>
+<t>Contemporary system architectures increasingly rely on autonomous agents—both AI-driven and workflow-based—to execute actions on behalf of human operators in complex, distributed environments. Current authorization models present several challenges:</t>
+
+<ol spacing="compact">
+<li><strong>Coarse-grained control</strong>: Traditional API keys or static tokens provide no granularity on what actions an agent may perform.</li>
+<li><strong>Limited auditability</strong>: It is difficult to correlate which agent executed which action, especially in delegated scenarios.</li>
+<li><strong>Revocation latency</strong>: Certificate-based models suffer from multi-minute revocation propagation delays.</li>
+<li><strong>Workload identity opacity</strong>: There is no standardized way for an authorization service to verify which workload is requesting access.</li>
+</ol>
+<t>KAIF addresses these challenges by composing three existing standards:</t>
+
+<ul spacing="compact">
+<li><strong>RFC 8693</strong>: OAuth 2.0 Token Exchange for subject-actor separation</li>
+<li><strong>SPIFFE/SPIRE</strong>: Cryptographic workload identity and JWT-SVID attestation</li>
+<li><strong>Operator-defined tiers</strong>: A flexible authorization model that avoids hard-coded trust assumptions</li>
+</ul>
+</section>
+
+<section anchor="1-2-scope-and-intended-deployment"><name>1.2 Scope and Intended Deployment</name>
+<t>KAIF is designed for operator-initiated, agent-executed, boundary-crossing transactions. A &quot;boundary-crossing transaction&quot; is any action where:</t>
+
+<ul spacing="compact">
+<li>The agent is acting on behalf of a human principal (operator)</li>
+<li>The action modifies state in an external system (payment, API mutation, purchase)</li>
+<li>Regulatory, financial, or security audit requirements require proof of authorization</li>
+</ul>
+<t><strong>Not in scope for v1.0:</strong></t>
+
+<ul spacing="compact">
+<li>Behavioral trust scoring (agent action pattern analysis)</li>
+<li>Peer reputation models</li>
+<li>Long-running streaming delegations</li>
+<li>Cross-operator federation (see v2.0 roadmap)</li>
+</ul>
+</section>
+
+<section anchor="1-3-conventions-and-terminology"><name>1.3 Conventions and Terminology</name>
+<t>The key words &quot;MUST&quot;, &quot;MUST NOT&quot;, &quot;REQUIRED&quot;, &quot;SHALL&quot;, &quot;SHALL NOT&quot;, &quot;SHOULD&quot;, &quot;SHOULD NOT&quot;, &quot;RECOMMENDED&quot;, &quot;MAY&quot;, and &quot;OPTIONAL&quot; in this document are to be interpreted as described in RFC 2119.</t>
+<t><strong>KAIF-specific terms:</strong></t>
+
+<ul spacing="compact">
+<li><strong>Operator</strong>: A human principal (person) who authorizes an agent to act on their behalf.</li>
+<li><strong>Agent</strong>: An automated workload (software) with a SPIFFE identity that executes actions on behalf of an operator.</li>
+<li><strong>Boundary Crossing</strong>: An action that crosses a trust boundary—e.g., calling an external API, initiating a payment, or writing to a regulated log.</li>
+<li><strong>Authorization Tier</strong>: An operator-assigned permission level (PROVISIONAL, STANDARD, VERIFIED, TRUSTED) that determines token TTL and delegation depth.</li>
+<li><strong>Delegation Depth</strong>: The count of intermediate agents in a delegation chain (depth 0 = direct operator→agent, depth 1 = operator→agent1→agent2).</li>
+<li><strong>Revocation</strong>: Immediate invalidation of a token via JTI (JWT ID) denylist.</li>
+<li><strong>Relying Party</strong>: A third-party service that validates KAIF tokens without running a KAIF server instance.</li>
+</ul>
+</section>
+</section>
+
+<section anchor="2-protocol-overview"><name>2. Protocol Overview</name>
+
+<section anchor="2-1-three-party-model"><name>2.1 Three-Party Model</name>
+
+<artwork><![CDATA[┌────────────┐
+│  Operator  │ (human, OIDC-authenticated)
+│ (John@co)  │
+└──────┬─────┘
+       │
+       │ 1. Provision delegation grant
+       │ (OIDC id_token → delegation JWT)
+       ▼
+┌──────────────────────┐
+│   KAIF Server        │
+│   (Authorization     │
+│    Authority)        │
+└─────────────────────┬┘
+       ▲               │
+       │               │ 2. Token Exchange (RFC 8693)
+       │               │ (delegation JWT + SVID → access token)
+       │               ▼
+       │         ┌──────────────┐
+       │         │   Agent      │
+       │         │  (SPIFFE     │
+       │         │   identity)  │
+       │         └──────┬───────┘
+       │                │
+       │                │ 3. Use token at relying party
+       │                │
+       │                ▼
+       │         ┌──────────────┐
+       │         │ Relying      │
+       │         │ Party        │
+       └────────-│ (e.g.,       │
+                 │  Payment API)│
+                 └──────────────┘
+]]></artwork>
+</section>
+
+<section anchor="2-2-delegation-grant-subject-token"><name>2.2 Delegation Grant (Subject Token)</name>
+<t>An operator provisions a delegation grant—a signed JWT that authorizes an agent to request access tokens. The grant is issued by the KAIF server and contains:</t>
+
+<artwork><![CDATA[{
+  "iss": "https://auth.example.com",
+  "sub": "operator@example.com",
+  "aud": "spiffe://example.com/agent/lyra",
+  "iat": 1719489600,
+  "exp": 1719493200,
+  "jti": "550e8400-e29b-41d4-a716-446655440000",
+  "scope": "invoke:completion vault:read:anthropic_key",
+  "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
+  "may_act": {
+    "sub": "spiffe://example.com/agent/lyra"
+  }
+}
+]]></artwork>
+</section>
+
+<section anchor="2-3-token-exchange-request-rfc-8693"><name>2.3 Token Exchange Request (RFC 8693)</name>
+<t>The agent exchanges the delegation grant (subject_token) and its SPIFFE identity JWT-SVID (actor_token) for an access token:</t>
+
+<artwork><![CDATA[POST /oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+&subject_token=<delegation-grant-jwt>
+&subject_token_type=urn:ietf:params:oauth:token-type:access_token
+&actor_token=<svid-jwt>
+&actor_token_type=urn:ietf:params:oauth:token-type:jwt
+&scope=invoke:completion
+&audience=urn:example:payment-api
+]]></artwork>
+</section>
+
+<section anchor="2-4-kaif-access-token-response"><name>2.4 KAIF Access Token (Response)</name>
+<t>The server responds with a signed JWT containing both operator and agent identity, delegation depth, tier, and scope:</t>
+
+<artwork><![CDATA[{
+  "iss": "https://auth.example.com",
+  "sub": "operator@example.com",
+  "aud": "urn:example:payment-api",
+  "iat": 1719489600,
+  "exp": 1719493200,
+  "jti": "650e8400-e29b-41d4-a716-446655440001",
+  "scope": "invoke:completion",
+  "actor": {
+    "sub": "spiffe://example.com/agent/lyra",
+    "svid_thumbprint": "sha256:a1b2c3d4..."
+  },
+  "may_act": {
+    "sub": "spiffe://example.com/agent/lyra"
+  },
+  "kaif": {
+    "authorization_tier": "STANDARD",
+    "authorization_tier_value": 0.65,
+    "delegation_depth": 0,
+    "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
+    "rollback_window": "PT10M",
+    "principal_chain": ["operator@example.com"]
+  }
+}
+]]></artwork>
+</section>
+
+<section anchor="2-5-validation-flow"><name>2.5 Validation Flow</name>
+<t>When an agent uses the access token at a relying party:</t>
+
+<artwork><![CDATA[Agent → Relying Party: "Use this token to execute transaction"
+        ↓
+        Relying Party checks:
+        1. Token signature valid against KAIF issuer JWKS ✓
+        2. Token not expired ✓
+        3. Token not in revocation denylist (call KAIF /introspect) ✓
+        4. Scope permits requested action ✓
+        5. Delegation depth within policy ✓
+        ↓
+        Relying Party: "AUTHORIZED" → execute transaction
+        ↓
+        Relying Party → KAIF Server: Log receipt/audit event
+]]></artwork>
+</section>
+</section>
+
+<section anchor="3-detailed-protocol-specification"><name>3. Detailed Protocol Specification</name>
+
+<section anchor="3-1-endpoint-post-provision"><name>3.1 Endpoint: POST /provision</name>
+<t><strong>Purpose</strong>: Operator provisions a delegation grant to an agent.</t>
+<t><strong>Request</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "id_token": "eyJhbGc...",
+  "agent_id": "lyra",
+  "scope": "invoke:completion vault:read:anthropic_key",
+  "ttl_seconds": 600
+}
+]]></sourcecode>
+<t><strong>Validation</strong>:
+- <tt>id_token</tt> MUST be a valid OIDC token from configured IdP
+- <tt>agent_id</tt> MUST be registered in operator's ACL
+- <tt>scope</tt> MUST be a subset of agent's permitted scopes
+- <tt>ttl_seconds</tt> MUST be between 60 and 86400</t>
+<t><strong>Response</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
+  "delegation_token": "eyJhbGc...",
+  "expires_at": 1719493200,
+  "agent_id": "lyra",
+  "scope": "invoke:completion vault:read:anthropic_key"
+}
+]]></sourcecode>
+<t><strong>Errors</strong>:
+- <tt>invalid_request</tt> (400): Missing required fields
+- <tt>invalid_grant</tt> (400): id_token invalid or expired
+- <tt>access_denied</tt> (403): Operator not authorized for agent or scope</t>
+</section>
+
+<section anchor="3-2-endpoint-post-oauth-token"><name>3.2 Endpoint: POST /oauth/token</name>
+<t><strong>Purpose</strong>: RFC 8693 token exchange (agent requests access token).</t>
+<t><strong>Request</strong>:</t>
+
+<artwork><![CDATA[grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+&subject_token=<delegation-jwt>
+&subject_token_type=urn:ietf:params:oauth:token-type:access_token
+&actor_token=<svid-jwt>
+&actor_token_type=urn:ietf:params:oauth:token-type:jwt
+&scope=invoke:completion
+&audience=urn:example:payment-api
+]]></artwork>
+<t><strong>Validation Steps</strong> (in order):</t>
+
+<ol>
+<li><t>Parse and validate subject_token (delegation grant)</t>
+
+<ul spacing="compact">
+<li>MUST have valid signature from KAIF issuer</li>
+<li>MUST not be expired (with 10s clock skew tolerance)</li>
+<li>MUST not be in JTI revocation denylist</li>
+</ul></li>
+<li><t>Parse and validate actor_token (JWT-SVID)</t>
+
+<ul spacing="compact">
+<li>MUST have valid signature from SPIRE bundle</li>
+<li>MUST not be expired</li>
+<li>SPIFFE ID MUST be registered in ACL</li>
+</ul></li>
+<li><t>Validate scope</t>
+
+<ul spacing="compact">
+<li>MUST be subset of subject_token scope</li>
+<li>MUST be subset of actor's permitted scopes (ACL)</li>
+<li>MUST use glob matching (e.g., &quot;vault:read:*&quot; matches &quot;vault:read:key&quot;)</li>
+</ul></li>
+<li><t>Check authorization tier</t>
+
+<ul spacing="compact">
+<li>Fetch operator-assigned authorization tier (default 0.5 = STANDARD)</li>
+<li>MUST meet agent's minimum tier requirement</li>
+<li>Determine token TTL based on tier</li>
+</ul></li>
+<li><t>Compute delegation depth</t>
+
+<ul spacing="compact">
+<li>If subject_token is direct provision: depth = 0</li>
+<li>If subject_token is access token from prior exchange: depth = subject.kaif.delegation_depth + 1</li>
+<li>MUST not exceed: min(actor ACL depth limit, tier depth limit)</li>
+</ul></li>
+<li><t>Mint access token with RS256 signature</t>
+</li>
+</ol>
+<t><strong>Response</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "access_token": "eyJhbGc...",
+  "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "token_type": "Bearer",
+  "expires_in": 600,
+  "scope": "invoke:completion"
+}
+]]></sourcecode>
+<t><strong>Errors</strong>:
+- <tt>invalid_request</tt> (400): Malformed request
+- <tt>invalid_grant</tt> (400): subject_token invalid/expired/revoked
+- <tt>invalid_scope</tt> (400): Scope not permitted
+- <tt>invalid_client</tt> (401): actor_token invalid
+- <tt>insufficient_trust</tt> (403): Authorization tier below minimum
+- <tt>delegation_depth_exceeded</tt> (403): Depth would exceed limit</t>
+</section>
+
+<section anchor="3-3-endpoint-post-introspect"><name>3.3 Endpoint: POST /introspect</name>
+<t><strong>Purpose</strong>: RFC 7662 token introspection (for relying parties to verify tokens in real-time).</t>
+<t><strong>Request</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "token": "eyJhbGc..."
+}
+]]></sourcecode>
+<t><strong>Response</strong> (if active):</t>
+
+<sourcecode type="json"><![CDATA[{
+  "active": true,
+  "sub": "operator@example.com",
+  "aud": "urn:example:payment-api",
+  "iat": 1719489600,
+  "exp": 1719493200,
+  "scope": "invoke:completion",
+  "actor": {
+    "sub": "spiffe://example.com/agent/lyra"
+  },
+  "kaif": {
+    "authorization_tier": "STANDARD",
+    "delegation_depth": 0
+  }
+}
+]]></sourcecode>
+<t><strong>Response</strong> (if revoked or invalid):</t>
+
+<sourcecode type="json"><![CDATA[{
+  "active": false
+}
+]]></sourcecode>
+</section>
+
+<section anchor="3-4-endpoint-post-revoke"><name>3.4 Endpoint: POST /revoke</name>
+<t><strong>Purpose</strong>: Operator revokes a token immediately.</t>
+<t><strong>Request</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "token": "eyJhbGc...",
+  "reason": "operator_request"
+}
+]]></sourcecode>
+<t><strong>Response</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "revoked": true,
+  "jti": "650e8400-e29b-41d4-a716-446655440001"
+}
+]]></sourcecode>
+<t><strong>Mechanics</strong>:
+- Extract JTI from token
+- Add to Redis denylist with TTL = token.exp
+- Publish to revocation channel for multi-instance sync
+- Write audit entry</t>
+</section>
+
+<section anchor="3-5-endpoint-get-well-known-jwks-json"><name>3.5 Endpoint: GET /.well-known/jwks.json</name>
+<t><strong>Purpose</strong>: Public JWKS for external relying parties.</t>
+<t><strong>Response</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "2024-06-27-primary",
+      "n": "0vx7agoebGcQ...",
+      "e": "AQAB",
+      "alg": "RS256"
+    },
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "2024-06-15-retained",
+      "n": "xjlCRBfn...",
+      "e": "AQAB",
+      "alg": "RS256"
+    }
+  ]
+}
+]]></sourcecode>
+<t><strong>Caching</strong>: MUST set <tt>Cache-Control: max-age=3600</tt></t>
+</section>
+
+<section anchor="3-6-endpoint-get-well-known-kaif-metadata-json"><name>3.6 Endpoint: GET /.well-known/kaif-metadata.json</name>
+<t><strong>Purpose</strong>: Operator-provided metadata for relying parties (KAIF v1.1+).</t>
+<t><strong>Response</strong>:</t>
+
+<sourcecode type="json"><![CDATA[{
+  "issuer": "https://auth.example.com",
+  "authorization_endpoint": "https://auth.example.com/oauth/authorize",
+  "token_endpoint": "https://auth.example.com/oauth/token",
+  "introspection_endpoint": "https://auth.example.com/introspect",
+  "revocation_endpoint": "https://auth.example.com/revoke",
+  "jwks_uri": "https://auth.example.com/.well-known/jwks.json",
+  "supported_grant_types": [
+    "urn:ietf:params:oauth:grant-type:token-exchange"
+  ],
+  "token_endpoint_auth_methods_supported": ["none"],
+  "response_types_supported": [],
+  "scopes_supported": [
+    "invoke:completion",
+    "vault:read",
+    "admin:revoke"
+  ],
+  "token_endpoint_auth_methods": ["none"],
+  "kaif": {
+    "authorization_tiers": [
+      {
+        "tier": "PROVISIONAL",
+        "min_value": 0.0,
+        "max_value": 0.49,
+        "token_ttl": 300,
+        "max_delegation_depth": 0
+      },
+      {
+        "tier": "STANDARD",
+        "min_value": 0.5,
+        "max_value": 0.69,
+        "token_ttl": 600,
+        "max_delegation_depth": 1
+      },
+      {
+        "tier": "VERIFIED",
+        "min_value": 0.7,
+        "max_value": 0.89,
+        "token_ttl": 900,
+        "max_delegation_depth": 2
+      },
+      {
+        "tier": "TRUSTED",
+        "min_value": 0.9,
+        "max_value": 1.0,
+        "token_ttl": 900,
+        "max_delegation_depth": 3
+      }
+    ],
+    "revocation_propagation_sla_ms": 100,
+    "audit_log_retention_days": 90
+  }
+}
+]]></sourcecode>
+</section>
+</section>
+
+<section anchor="4-authorization-tier-model"><name>4. Authorization Tier Model</name>
+<t>KAIF uses operator-assigned authorization tier values (0.0–1.0) to determine access permissions:</t>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Range</th>
+<th>Token TTL</th>
+<th>Max Depth</th>
+<th>Use Case</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>PROVISIONAL</td>
+<td>0.0–0.49</td>
+<td>300s</td>
+<td>0</td>
+<td>New agents, limited trust</td>
+</tr>
+
+<tr>
+<td>STANDARD</td>
+<td>0.5–0.69</td>
+<td>600s</td>
+<td>1</td>
+<td>Established agents</td>
+</tr>
+
+<tr>
+<td>VERIFIED</td>
+<td>0.7–0.89</td>
+<td>900s</td>
+<td>2</td>
+<td>High-confidence agents</td>
+</tr>
+
+<tr>
+<td>TRUSTED</td>
+<td>0.9–1.0</td>
+<td>900s</td>
+<td>3</td>
+<td>Critical operators, full delegation</td>
+</tr>
+</tbody>
+</table><t><strong>Setting tier values</strong>:</t>
+<t>Operators assign tier values to agents based on their operational context (not automated behavioral scoring in v1.0). For example:</t>
+
+<ul spacing="compact">
+<li>New agent: 0.3 (PROVISIONAL, untested)</li>
+<li>Stable agent with 6 months history: 0.6 (STANDARD)</li>
+<li>Agent in production payment path: 0.85 (VERIFIED)</li>
+<li>Root operator with full authority: 1.0 (TRUSTED)</li>
+</ul>
+</section>
+
+<section anchor="5-scope-model"><name>5. Scope Model</name>
+<t>KAIF scopes follow OAuth 2.0 conventions with glob-pattern support:</t>
+
+<artwork><![CDATA[scope ::= scope-name ( ":" scope-name )*
+scope-name ::= identifier | "*"
+]]></artwork>
+<t><strong>Examples</strong>:</t>
+
+<ul spacing="compact">
+<li><tt>invoke:completion</tt> — Invoke a specific completion (exact match)</li>
+<li><tt>vault:read:*</tt> — Read any vault key (glob)</li>
+<li><tt>admin:*</tt> — All admin operations (glob)</li>
+<li><tt>vault:read:anthropic_key</tt> — Read one specific key (exact match)</li>
+</ul>
+<t><strong>Validation</strong>: Use micromatch library for glob pattern matching. Exact matches take precedence.</t>
+</section>
+
+<section anchor="6-delegation-depth-and-sub-delegation"><name>6. Delegation Depth and Sub-Delegation</name>
+<t>An agent MAY create a delegation chain by using its access token as the subject_token in a second token exchange, creating a sub-delegated token.</t>
+<t><strong>Rules</strong>:</t>
+
+<ul spacing="compact">
+<li>Depth 0: Operator → Agent (direct)</li>
+<li>Depth 1: Operator → Agent1 → Agent2 (sub-delegation)</li>
+<li>Depth N: Limited by min(ACL max_depth, authorization_tier max_depth)</li>
+</ul>
+<t><strong>Restrictions</strong>:</t>
+
+<ul spacing="compact">
+<li>Parent token's <tt>may_sub_delegate</tt> flag MUST be true</li>
+<li>Parent token MUST be in VERIFIED or TRUSTED tier</li>
+<li>Sub-delegated token scope MUST be subset of parent scope</li>
+<li>Depth MUST be strictly increasing (no cycles)</li>
+</ul>
+<t><strong>Example</strong>:</t>
+
+<artwork><![CDATA[1. Operator authorizes Agent1 (depth 0, may_sub_delegate: true, scope: invoke:*)
+   → get token T1 with delegation_depth: 0
+
+2. Agent1 uses T1 as subject_token to request sub-delegation for Agent2
+   → KAIF verifies: T1.may_sub_delegate = true, T1.delegation_depth + 1 ≤ ACL max
+   → issue token T2 with delegation_depth: 1, principal_chain: [operator, agent1]
+
+3. Agent2 attempts to sub-delegate to Agent3
+   → KAIF checks: T2.delegation_depth + 1 ≤ ACL max (if 1 < max_depth, allowed)
+   → issue token T3 with delegation_depth: 2
+]]></artwork>
+</section>
+
+<section anchor="7-audit-and-non-repudiation"><name>7. Audit and Non-Repudiation</name>
+<t>Every KAIF operation appends an immutable audit entry using SHA-256 hash chaining:</t>
+
+<artwork><![CDATA[entry = {
+  id: UUID v4,
+  ts: ISO 8601,
+  action: "DELEGATION_PROVISIONED" | "TOKEN_ISSUED" | "TOKEN_REVOKED" | ...,
+  agent_id: SPIFFE ID,
+  human_id: operator email,
+  detail: JSON,
+  hash: SHA256(prev_hash | ts | action | detail),
+  prev_hash: hash of previous entry
+}
+]]></artwork>
+<t><strong>Verification</strong>:</t>
+<t>External parties can verify audit chain integrity by replaying the hash computation:</t>
+
+<artwork><![CDATA[expected_hash = SHA256(prev_hash | ts | action | detail)
+assert actual_hash == expected_hash
+]]></artwork>
+</section>
+
+<section anchor="8-revocation-and-propagation"><name>8. Revocation and Propagation</name>
+<t>KAIF provides two revocation models:</t>
+
+<section anchor="8-1-lazy-revocation-default"><name>8.1 Lazy Revocation (Default)</name>
+<t>Relying parties cache tokens and check expiry locally. Revocation is eventual—denylist is checked on next refresh.</t>
+<t><strong>Latency</strong>: Minutes (depends on token cache TTL)</t>
+</section>
+
+<section anchor="8-2-strict-revocation"><name>8.2 Strict Revocation</name>
+<t>Relying parties call <tt>/introspect</tt> on every token use to check real-time revocation status.</t>
+<t><strong>Latency</strong>: &lt;100ms (Redis denylist lookup)</t>
+<t>Operators choose strict vs. lazy based on their risk tolerance and throughput requirements.</t>
+</section>
+</section>
+
+<section anchor="9-security-considerations"><name>9. Security Considerations</name>
+
+<section anchor="9-1-token-binding-rfc-8705"><name>9.1 Token Binding (RFC 8705)</name>
+<t>KAIF SHOULD support mutual TLS (mTLS) token binding. When an agent presents a client certificate, KAIF MUST include:</t>
+
+<sourcecode type="json"><![CDATA["cnf": {
+  "x5t#S256": "sha256:a1b2c3d4..."
+}
+]]></sourcecode>
+<t>The relying party MUST verify that the mTLS handshake certificate thumbprint matches the token's <tt>cnf</tt> value.</t>
+</section>
+
+<section anchor="9-2-clock-skew"><name>9.2 Clock Skew</name>
+<t>All timestamp validation MUST use 10-second clock skew tolerance (not configurable).</t>
+</section>
+
+<section anchor="9-3-key-rotation"><name>9.3 Key Rotation</name>
+<t>KAIF MUST support zero-downtime key rotation by maintaining both active and retained keys in the JWKS. Relying parties MUST accept tokens signed with either key for a retention period (recommended: 7 days).</t>
+</section>
+
+<section anchor="9-4-spiffe-trust-domain-validation"><name>9.4 SPIFFE Trust Domain Validation</name>
+<t>KAIF MUST validate that actor_token SPIFFE ID matches the configured SPIRE trust domain. Mismatched trust domains MUST be rejected with <tt>invalid_client</tt>.</t>
+</section>
+
+<section anchor="9-5-scope-validation"><name>9.5 Scope Validation</name>
+<t>Scope validation MUST use exact-match-first, then glob matching. Substring matching MUST NOT be used (e.g., &quot;vault:read&quot; does NOT match &quot;vault:read:key&quot;).</t>
+</section>
+
+<section anchor="9-6-logging-and-redaction"><name>9.6 Logging and Redaction</name>
+<t>KAIF implementations MUST:
+- Log JTI (not token values)
+- Redact <tt>subject_token</tt>, <tt>actor_token</tt>, <tt>authorization</tt> headers in HTTP logs
+- Never log private key material
+- Include request ID for tracing</t>
+</section>
+</section>
+
+<section anchor="10-relying-party-profile-normative"><name>10. Relying Party Profile (Normative)</name>
+<t>A third-party service that accepts KAIF tokens MUST implement:</t>
+
+<section anchor="10-1-token-validation"><name>10.1 Token Validation</name>
+
+<artwork><![CDATA[1. Fetch JWKS from issuer's /.well-known/jwks.json (cache 3600s)
+2. Verify token signature using KID matching (try each key)
+3. Verify exp > now (with 10s clock skew)
+4. If lazy revocation: done
+5. If strict revocation: POST /introspect to check JTI denylist
+6. Extract scope, verify requested action is permitted
+7. Extract actor.sub (SPIFFE ID), log for audit trail
+]]></artwork>
+</section>
+
+<section anchor="10-2-error-handling"><name>10.2 Error Handling</name>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Action</th>
+<th>HTTP Status</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>Signature invalid</td>
+<td>Reject</td>
+<td>401 Unauthorized</td>
+</tr>
+
+<tr>
+<td>Expired</td>
+<td>Reject</td>
+<td>401 Unauthorized</td>
+</tr>
+
+<tr>
+<td>Revoked (strict mode)</td>
+<td>Reject</td>
+<td>401 Unauthorized</td>
+</tr>
+
+<tr>
+<td>Scope insufficient</td>
+<td>Reject</td>
+<td>403 Forbidden</td>
+</tr>
+
+<tr>
+<td>Introspect unreachable (strict mode)</td>
+<td>Degrade or reject (policy choice)</td>
+<td>503 Service Unavailable</td>
+</tr>
+</tbody>
+</table></section>
+
+<section anchor="10-3-audit-trail"><name>10.3 Audit Trail</name>
+<t>Relying parties SHOULD log:
+- Timestamp of token use
+- JTI
+- Actor SPIFFE ID
+- Scope used
+- Action executed
+- Result (success/failure)</t>
+<t>This enables cross-party forensics if a token is misused.</t>
+</section>
+</section>
+
+<section anchor="11-backward-compatibility"><name>11. Backward Compatibility</name>
+<t>This is KAIF v1.0 (initial standards track). Future versions:</t>
+
+<ul spacing="compact">
+<li><strong>v1.1</strong>: Issuer metadata endpoint (<tt>.well-known/kaif-metadata.json</tt>)</li>
+<li><strong>v2.0</strong>: Multi-issuer federation, cross-operator delegation</li>
+<li><strong>v3.0</strong>: Behavioral trust signals (optional, opt-in per operator)</li>
+</ul>
+<t>Implementations MUST gracefully ignore unrecognized claims in KAIF tokens to allow forward compatibility.</t>
+</section>
+
+<section anchor="12-iana-considerations"><name>12. IANA Considerations</name>
+<t>This document registers the following with IANA:</t>
+
+<section anchor="12-1-oauth-2-0-grant-type"><name>12.1 OAuth 2.0 Grant Type</name>
+<t><strong>Type</strong>: urn:ietf:params:oauth:grant-type:token-exchange (RFC 8693)</t>
+<t><strong>Description</strong>: Token exchange grant (already registered, KAIF profiles its use)</t>
+</section>
+
+<section anchor="12-2-jwt-claims"><name>12.2 JWT Claims</name>
+<t><strong>Claim name</strong>: <tt>kaif</tt><br />
+<strong>Claim description</strong>: Container for KAIF-specific claims (authorization_tier, delegation_depth, principal_chain)<br />
+<strong>JWT claims registry</strong>: Requested</t>
+</section>
+</section>
+
+<section anchor="13-conformance"><name>13. Conformance</name>
+<t>An implementation claims KAIF v1.0 conformance if it:</t>
+
+<ol spacing="compact">
+<li>✅ Implements POST /oauth/token with RFC 8693 semantics</li>
+<li>✅ Implements POST /introspect with RFC 7662 semantics</li>
+<li>✅ Validates actor_token as JWT-SVID from SPIRE bundle</li>
+<li>✅ Enforces scope glob matching (via micromatch or equivalent)</li>
+<li>✅ Supports delegation depth tracking and enforcement</li>
+<li>✅ Publishes JWKS with active + retained keys</li>
+<li>✅ Maintains audit trail with SHA-256 hashing</li>
+<li>✅ Supports JTI revocation with sub-second propagation</li>
+<li>✅ Validates 10-second clock skew (no more)</li>
+<li>✅ Passes KAIF conformance test suite</li>
+</ol>
+<t>Conformance is verified by passing the test fixtures in <eref target="TBD">kaif-conformance-kit</eref>.</t>
+</section>
+
+<section anchor="14-references"><name>14. References</name>
+
+<section anchor="normative-references"><name>Normative References</name>
+
+<ul>
+<li><t>[RFC2119] Bradner, S., &quot;Key words for use in Protocols to Indicate Requirement Levels&quot;, BCP 14, RFC 2119, DOI 10.17487/RFC2119, March 1997, <eref target="https://www.rfc-editor.org/rfc/rfc2119.html">https://www.rfc-editor.org/rfc/rfc2119.html</eref>.</t>
+</li>
+<li><t>[RFC6234] Eastlake 3rd, D. and T. Hansen, &quot;US Secure Hash and HMAC: SHA and SHA-based HMAC and HKDF&quot;, RFC 6234, DOI 10.17487/RFC6234, May 2011, <eref target="https://www.rfc-editor.org/rfc/rfc6234.html">https://www.rfc-editor.org/rfc/rfc6234.html</eref>.</t>
+</li>
+<li><t>[RFC7231] Fielding, R. and J. Reschke, &quot;Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content&quot;, RFC 7231, DOI 10.17487/RFC7231, June 2014, <eref target="https://www.rfc-editor.org/rfc/rfc7231.html">https://www.rfc-editor.org/rfc/rfc7231.html</eref>.</t>
+</li>
+<li><t>[RFC7517] Jones, M., &quot;JSON Web Key (JWK)&quot;, STD 81, RFC 7517, DOI 10.17487/RFC7517, May 2015, <eref target="https://www.rfc-editor.org/rfc/rfc7517.html">https://www.rfc-editor.org/rfc/rfc7517.html</eref>.</t>
+</li>
+<li><t>[RFC7662] Richer, J., Ed., &quot;OAuth 2.0 Token Introspection&quot;, RFC 7662, DOI 10.17487/RFC7662, October 2015, <eref target="https://www.rfc-editor.org/rfc/rfc7662.html">https://www.rfc-editor.org/rfc/rfc7662.html</eref>.</t>
+</li>
+<li><t>[RFC8174] Leiba, B., &quot;Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words&quot;, BCP 14, RFC 8174, DOI 10.17487/RFC8174, May 2018, <eref target="https://www.rfc-editor.org/rfc/rfc8174.html">https://www.rfc-editor.org/rfc/rfc8174.html</eref>.</t>
+</li>
+<li><t>[RFC8693] Jones, M., Denniss, F., and B. Campbell, &quot;OAuth 2.0 Token Exchange&quot;, STD 96, RFC 8693, DOI 10.17487/RFC8693, August 2020, <eref target="https://www.rfc-editor.org/rfc/rfc8693.html">https://www.rfc-editor.org/rfc/rfc8693.html</eref>.</t>
+</li>
+</ul>
+</section>
+
+<section anchor="informative-references"><name>Informative References</name>
+
+<ul>
+<li><t>[RFC7636] Sakimura, N., Bradley, J., and N. Agarwal, &quot;Proof Key for Public OAuth 2.0 Authorization Code Exchange (PKCE)&quot;, RFC 7636, DOI 10.17487/RFC7636, September 2015, <eref target="https://www.rfc-editor.org/rfc/rfc7636.html">https://www.rfc-editor.org/rfc/rfc7636.html</eref>.</t>
+</li>
+<li><t>[RFC8705] Campbell, B., Bradley, J., Sakimura, N., and T. Lodderstedt, &quot;OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens&quot;, RFC 8705, DOI 10.17487/RFC8705, February 2020, <eref target="https://www.rfc-editor.org/rfc/rfc8705.html">https://www.rfc-editor.org/rfc/rfc8705.html</eref>.</t>
+</li>
+<li><t>[SPIFFE] CNCF, &quot;Secure Production Identity Framework for Everyone&quot;, <eref target="https://spiffe.io/">https://spiffe.io/</eref>.</t>
+</li>
+<li><t>[SPIRE] CNCF, &quot;SPIFFE Runtime Environment&quot;, <eref target="https://spiffe.io/docs/latest/spire/">https://spiffe.io/docs/latest/spire/</eref>.</t>
+</li>
+</ul>
+<t><strong>Author's Address</strong></t>
+<t>Kindred Systems<br />
+kindred.systems<br />
+[Contact TBD]</t>
+<t><strong>Version History</strong></t>
+
+<ul spacing="compact">
+<li>v0.0 (2026-06-27): Initial draft, WIP for standardization feedback</li>
+</ul>
+</section>
+</section>
+</section>
+
