@@ -9,7 +9,7 @@ KAIF is an open protocol for authorising autonomous AI agents. It composes SPIFF
 - No existing standard provides workload-attested agent identity + human-principal-traced delegation + adaptive revocation as a unified protocol.
 - Service accounts authenticate with static secrets. KAIF agents authenticate with ephemeral SVIDs.
 - OAuth tokens assert what a caller *claims* to be. KAIF tokens *prove* what a workload is, attested by SPIRE.
-- Current auth systems treat trust as binary. KAIF gates token authority on a continuous trust score.
+- Current auth systems treat trust as binary or internal-only. KAIF gates token authority on operator-assigned authorization tiers with precise revocation control.
 
 ---
 
@@ -26,7 +26,7 @@ Four commands. Working demo. Decoded JWT on screen.
 
 > **Note:** `demo.sh` sets `KAIF_DEV_MODE=true` so no real OIDC IdP is required locally. Never enable `KAIF_DEV_MODE` in production — the server refuses to start if `NODE_ENV=production` and `KAIF_DEV_MODE=true`.
 
-> ⚠️ The default SPIRE config uses `insecure_bootstrap = true`. This is safe for local development only. For production, use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/SPIRE_PRODUCTION_DEPLOYMENT.md:1) and [spire/agent.production.conf](/Users/geofflundholm/Documents/KAIF/spire/agent.production.conf:1).
+> ⚠️ The default SPIRE config uses `insecure_bootstrap = true`. This is safe for local development only. For production, use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](security/SPIRE_PRODUCTION_DEPLOYMENT.md) and [spire/agent.production.conf](spire/agent.production.conf).
 
 ---
 
@@ -87,8 +87,8 @@ The KAIF JWT binds three things in one credential: the human principal who autho
   may_act: { sub: "spiffe://kindred.systems/..." },
 
   kaif: {
-    trust_score:      0.82,              // 0.0–1.0 continuous
-    trust_tier:       "VERIFIED",        // PROVISIONAL | STANDARD | VERIFIED | TRUSTED
+    authorization_tier_value: 0.82,   // 0.0–1.0, operator-assigned
+    authorization_tier:        "VERIFIED",        // PROVISIONAL | STANDARD | VERIFIED | TRUSTED
     delegation_depth: 0,                 // 0 = direct human grant
     delegation_id:    "uuid-v4",
     rollback_window:  "PT15M",           // ISO 8601 duration
@@ -97,7 +97,7 @@ The KAIF JWT binds three things in one credential: the human principal who autho
 }
 ```
 
-`sub` is always the human who authorised the chain. `actor.sub` is the SPIRE-attested workload identity of the executing agent. `kaif.trust_score` determines token TTL and maximum scope. `kaif.delegation_depth` enforces sub-delegation limits.
+`sub` is always the human who authorised the chain. `actor.sub` is the SPIRE-attested workload identity of the executing agent. `kaif.authorization_tier_value` (operator-assigned, not behavioral) determines token TTL and maximum scope. `kaif.delegation_depth` enforces sub-delegation limits.
 
 ---
 
@@ -124,7 +124,7 @@ const { payload } = await jwtVerify(token, JWKS, {
 })
 // payload.sub      → human principal
 // payload.actor.sub → SPIFFE ID of executing agent
-// payload.kaif.trust_tier → PROVISIONAL | STANDARD | VERIFIED | TRUSTED
+// payload.kaif.authorization_tier → PROVISIONAL | STANDARD | VERIFIED | TRUSTED (operator-assigned)
 ```
 
 See `examples/mock-service/index.ts` for a complete relying-party implementation.
@@ -195,10 +195,10 @@ For production SPIRE deployment:
 - private CA deployments should set `KAIF_SPIRE_BUNDLE_CA_PATH`
 - the current supported SDK production SVID mode is file-based `svid_path`, not direct Workload API integration
 
-See [security/SPIRE_PRODUCTION_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/SPIRE_PRODUCTION_DEPLOYMENT.md:1).
-For manual signing-key rotation, use [security/KEY_ROTATION_RUNBOOK.md](/Users/geofflundholm/Documents/KAIF/security/KEY_ROTATION_RUNBOOK.md:1).
+See [security/SPIRE_PRODUCTION_DEPLOYMENT.md](security/SPIRE_PRODUCTION_DEPLOYMENT.md).
+For manual signing-key rotation, use [security/KEY_ROTATION_RUNBOOK.md](security/KEY_ROTATION_RUNBOOK.md).
 
-For a production-like local rehearsal, use [.env.production.example](/Users/geofflundholm/Documents/KAIF/.env.production.example:1) with [docker-compose.production.yml](/Users/geofflundholm/Documents/KAIF/docker-compose.production.yml:1).
+For a production-like local rehearsal, use [.env.production.example](.env.production.example) with [docker-compose.production.yml](docker-compose.production.yml).
 
 ### Agent ACL (`agents.yaml`)
 

@@ -636,7 +636,7 @@ docker exec spire-server ls -la /run/spire/data/
 Production note:
 - Do not fix production SPIRE trust errors with `KAIF_SPIRE_BUNDLE_TLS_INSECURE=true`.
 - Use a trusted `https://` bundle endpoint and set `KAIF_SPIRE_BUNDLE_CA_PATH` when the SPIRE endpoint is signed by a private CA.
-- Use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/SPIRE_PRODUCTION_DEPLOYMENT.md:1) as the source of truth.
+- Use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](security/SPIRE_PRODUCTION_DEPLOYMENT.md) as the source of truth.
 
 ```bash
 # Reset stale local SPIRE agent trust cache only

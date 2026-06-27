@@ -6,9 +6,9 @@ Date: 2026-06-02
 This document defines the production SPIRE posture for KAIF. It replaces the local-development assumptions in `docker-compose.yml`, `spire/agent.conf`, and `.env.example`.
 
 For local production rehearsal in this repo, use:
-- [.env.production.example](/Users/geofflundholm/Documents/KAIF/.env.production.example:1)
-- [docker-compose.production.yml](/Users/geofflundholm/Documents/KAIF/docker-compose.production.yml:1)
-- [scripts/export-spire-bootstrap-bundle.sh](/Users/geofflundholm/Documents/KAIF/scripts/export-spire-bootstrap-bundle.sh:1)
+- [.env.production.example](../.env.production.example)
+- [docker-compose.production.yml](../docker-compose.production.yml)
+- [scripts/export-spire-bootstrap-bundle.sh](../scripts/export-spire-bootstrap-bundle.sh)
 
 The checked-in Compose overlay is deterministic on purpose:
 - it pins local rehearsal values such as `https://localhost:18080` and `https://spire-server:8081/`
@@ -44,7 +44,7 @@ Notes:
 
 ## Supported SPIRE agent configuration
 
-Use [spire/agent.production.conf](/Users/geofflundholm/Documents/KAIF/spire/agent.production.conf:1) as the baseline template.
+Use [spire/agent.production.conf](../spire/agent.production.conf) as the baseline template.
 
 Required differences from local development:
 - remove `insecure_bootstrap = true`
@@ -63,7 +63,7 @@ cp /path/to/kaif-signing-key.pem deploy/secrets/kaif/kaif-signing-key.pem
 cp /path/to/spire-bundle-ca.pem deploy/secrets/kaif/spire-bundle-ca.pem
 ```
 
-If you are using Azure Key Vault for KAIF signing material instead of local secret files, see [AZURE_KEY_VAULT_DEPLOYMENT.md](/Users/geofflundholm/Documents/KAIF/security/AZURE_KEY_VAULT_DEPLOYMENT.md:1). In that mode:
+If you are using Azure Key Vault for KAIF signing material instead of local secret files, see [AZURE_KEY_VAULT_DEPLOYMENT.md](AZURE_KEY_VAULT_DEPLOYMENT.md). In that mode:
 - keep SPIRE trust material on disk or from your platform trust store
 - unset `KAIF_PRIVATE_KEY_PATH`
 - set the `KAIF_AZURE_*` variables instead

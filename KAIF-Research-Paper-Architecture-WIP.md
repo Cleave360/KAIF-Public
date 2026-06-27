@@ -11,7 +11,7 @@
 
 We present KAIF, a composable protocol stack that provides autonomous AI agents with scoped, auditable, and revocable authority traceable to a human principal. KAIF combines RFC 8693 token exchange with SPIFFE/SPIRE workload identity, SHA-256 audit chaining, and operator-defined authorization tiers to enable secure delegation hierarchies. A reference implementation in TypeScript demonstrates key rotation, rolling verification, Azure Key Vault integration design, and SPIRE bootstrap patterns suitable for production.
 
-**Keywords**: agent authorization, workload identity, token exchange, audit chain, zero-trust delegation, trust scoring
+**Keywords**: agent authorization, workload identity, token exchange, audit chain, zero-trust delegation, external verification
 
 **Implementation Status**: This is a reference prototype (v0.9.1, staging-ready) validated through 198 unit and integration tests in controlled environments. See Section 1.4 for testing scope and limitations.
 
@@ -67,6 +67,20 @@ KAIF does **not** implement:
 - No performance tests yet against production-scale loads (10k+ concurrent agents)
 - Behavioral trust evaluation is intentionally out of scope; current implementation uses operator-assigned authorization tiers
 - This work is **ready for staging deployment** with external security review; production use requires additional hardening
+
+### 1.5 Intended Deployment Boundary (Normative)
+
+KAIF is intended to run as an **external verification check** before an agent is allowed to perform a boundary-crossing action on behalf of an operator (for example: payment initiation, purchase execution, or regulated external API mutation).
+
+Normative intent for boundary-crossing actions:
+- The agent MUST present a valid delegation chain and workload attestation to KAIF before external execution.
+- KAIF MUST verify scope, delegation depth, revocation status, and operator-defined tier constraints.
+- A relying boundary service (or gateway in front of an external integration) MUST reject actions that do not carry a currently valid KAIF authorization artifact.
+
+Scope clarification:
+- KAIF is the cryptographic admission/delegation verifier.
+- Workflow orchestration, routing, and internal execution governance remain outside KAIF's core scope.
+- Universal third-party acceptance is a deployment/integration concern and requires explicit relying-party trust configuration.
 
 ---
 
@@ -171,10 +185,30 @@ Each layer is cryptographically independent; failure in one layer does not compr
 6. Audit entry written (hash-chained)
    └─ hash = SHA256(prev_hash|ts|TOKEN_ISSUED|detail)
    ↓
-7. Agent uses access token to call downstream service
-   ├─ Authorization: Bearer <access_token>
-   └─ Service validates via /introspect (or local JWKS verification)
+7. Agent attempts boundary-crossing action (transaction/API mutation)
+  ├─ Authorization: Bearer <access_token>
+  ├─ Boundary verifier checks token via /introspect (or local JWKS verification)
+  └─ External call proceeds only if KAIF verification passes
+
+8. External system returns business response
+  ├─ Response may include third-party signature/receipt based on partner contract
+  └─ KAIF itself does not define a universal external receipt format in v0.9.1
 ```
+
+### 2.7 External Verification Gate Profile
+
+For operator-authorized external interactions, KAIF is deployed as a pre-flight verifier in front of boundary actions.
+
+Required verification checks before execution:
+- Token issuer and signature validity
+- Actor identity binding (SPIFFE-attested workload)
+- Scope and audience fit for the requested external action
+- Delegation depth and operator tier policy compliance
+- Revocation status (strict mode recommended for high-risk transactions)
+
+Execution rule:
+- If any check fails, the external interaction MUST NOT execute.
+- If all checks pass, execution MAY proceed under operator policy.
 
 ### 2.4 Delegation Depth Model
 
