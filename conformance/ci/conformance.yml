@@ -91,15 +91,7 @@ jobs:
           fi
 
           if [ -s /tmp/spire-fetch.out ]; then
-            python3 - <<'PY' >/tmp/svid.jwt
-import pathlib
-import re
-
-text = pathlib.Path("/tmp/spire-fetch.out").read_text()
-match = re.search(r'([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)', text)
-if match:
-    print(match.group(1), end="")
-PY
+            python3 -c 'import pathlib, re; text = pathlib.Path("/tmp/spire-fetch.out").read_text(); match = re.search(r"([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)", text); print(match.group(1) if match else "", end="")' > /tmp/svid.jwt
           fi
 
           if [ -s /tmp/svid.jwt ] && grep -Eq '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$' /tmp/svid.jwt; then
