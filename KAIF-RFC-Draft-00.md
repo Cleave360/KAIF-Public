@@ -11,6 +11,8 @@
 | **Date** | 27 June 2026 |
 | **IPR Disclosure** | IETF Trust Legal Provisions (BCP 78) |
 
+**Authoring note:** This markdown file is the source of truth for the draft. Generated preview artifacts (`KAIF-RFC-Draft-00.preview.xml`, `KAIF-RFC-Draft-00.preview.clean.xml`, `KAIF-RFC-Draft-00.preview.txt`) are proof outputs only and are not edited directly.
+
 ## Abstract
 
 The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token exchange mechanism for delegated agent-to-service authorization, combining RFC 8693 token exchange with SPIFFE workload identity attestation and operator-defined authorization tiers.
