@@ -154,6 +154,8 @@ jobs:
         run: |
           node scripts/redis_resilience_conformance.mjs | tee redis-resilience-summary.txt
         shell: bash
+        env:
+          KAIF_SERVER_URL: http://localhost:8080
 
       - name: Upload conformance result
         if: always()
