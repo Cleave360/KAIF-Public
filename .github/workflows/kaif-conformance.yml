@@ -14,10 +14,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -35,17 +35,20 @@ jobs:
 
       - name: Wait for KAIF server health
         run: |
+          set -euo pipefail
           echo "Waiting for KAIF server..."
-          for i in $(seq 1 30); do
+          for i in $(seq 1 45); do
             if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
               echo "Server healthy after $((i * 2))s"
               exit 0
             fi
             sleep 2
           done
-          echo "ERROR: KAIF server did not become healthy within 60s"
-          docker compose logs kaif-server
+          echo "ERROR: KAIF server did not become healthy within 90s"
+          docker compose ps
+          docker compose logs --tail=120 spire-server spire-init spire-agent kaif-server redis || true
           exit 1
+        shell: bash
 
       - name: Bootstrap test delegation grant
         run: |
@@ -74,26 +77,54 @@ jobs:
 
       - name: Fetch test JWT-SVID
         run: |
+          set -euo pipefail
           AGENT_CTR=$(docker compose ps -q spire-agent 2>/dev/null | head -1)
-          if [ -n "$AGENT_CTR" ] && \
-             docker exec "$AGENT_CTR" \
-               /opt/spire/bin/spire-agent api fetch jwt \
-               --spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
-               --audience kaif-conformance \
-               --socketPath /run/spire/sockets/agent.sock \
-               2>/dev/null | awk '/^\t/ { sub(/^\t/, ""); print; exit }' | tr -d '[:space:]' > /tmp/svid.jwt; then
-            echo "Using SPIRE-issued JWT-SVID"
-          else
-            echo "SPIRE not bootstrapped — using pre-generated test SVID"
-            echo "${CI_TEST_SVID_JWT:?CI_TEST_SVID_JWT must be set when SPIRE is unavailable}" \
-              > /tmp/svid.jwt
+          rm -f /tmp/svid.jwt /tmp/spire-fetch.out
+
+          if [ -n "${AGENT_CTR}" ]; then
+            docker exec "$AGENT_CTR" \
+              /opt/spire/bin/spire-agent api fetch jwt \
+              --spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
+              --audience kaif-conformance \
+              --socketPath /run/spire/sockets/agent.sock \
+              > /tmp/spire-fetch.out 2>/dev/null || true
           fi
+
+          if [ -s /tmp/spire-fetch.out ]; then
+            python3 - <<'PY' >/tmp/svid.jwt
+import pathlib
+import re
+
+text = pathlib.Path("/tmp/spire-fetch.out").read_text()
+match = re.search(r'([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)', text)
+if match:
+    print(match.group(1), end="")
+PY
+          fi
+
+          if [ -s /tmp/svid.jwt ] && grep -Eq '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$' /tmp/svid.jwt; then
+            echo "Using SPIRE-issued JWT-SVID"
+          elif [ -n "${CI_TEST_SVID_JWT:-}" ]; then
+            echo "SPIRE did not yield a valid JWT-SVID — using pre-generated test SVID"
+            printf '%s' "${CI_TEST_SVID_JWT}" > /tmp/svid.jwt
+          else
+            echo "ERROR: SPIRE did not yield a valid JWT-SVID and CI_TEST_SVID_JWT is not set"
+            docker compose ps
+            docker compose logs --tail=120 spire-server spire-init spire-agent || true
+            if [ -f /tmp/spire-fetch.out ]; then
+              echo "--- raw SPIRE fetch output ---"
+              sed -n '1,40p' /tmp/spire-fetch.out
+            fi
+            exit 1
+          fi
+
           if ! grep -Eq '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$' /tmp/svid.jwt; then
             echo "ERROR: /tmp/svid.jwt is not a clean JWT line"
             ls -l /tmp/svid.jwt
             sed -n '1,5p' /tmp/svid.jwt
             exit 1
           fi
+        shell: bash
         env:
           CI_TEST_SVID_JWT: ${{ secrets.CI_TEST_SVID_JWT }}
 
@@ -131,6 +162,7 @@ jobs:
         with:
           name: conformance-result-${{ github.sha }}
           path: conformance-result.json
+          if-no-files-found: warn
 
       - name: Upload Redis resilience evidence
         if: always()
@@ -138,6 +170,7 @@ jobs:
         with:
           name: redis-resilience-${{ github.sha }}
           path: reports/redis_resilience/
+          if-no-files-found: warn
 
       - name: Tear down stack
         if: always()
