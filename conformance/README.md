@@ -26,7 +26,7 @@ spire-agent api fetch jwt \
   --spiffeID spiffe://<trust-domain>/your/test/agent \
   --audience kaif-conformance \
   --socketPath /run/spire/sockets/agent.sock \
-  2>/dev/null | grep -v "^Received" | tr -d '[:space:]' > /tmp/svid.jwt
+  2>/dev/null | awk '/^\t/ { sub(/^\t/, ""); print; exit }' | tr -d '[:space:]' > /tmp/svid.jwt
 
 # Or use a pre-generated test SVID provided by your SPIRE administrator.
 ```

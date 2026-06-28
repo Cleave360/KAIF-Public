@@ -81,12 +81,18 @@ jobs:
                --spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
                --audience kaif-conformance \
                --socketPath /run/spire/sockets/agent.sock \
-               2>/dev/null | grep -v "^Received" | tr -d '[:space:]' > /tmp/svid.jwt; then
+               2>/dev/null | awk '/^\t/ { sub(/^\t/, ""); print; exit }' | tr -d '[:space:]' > /tmp/svid.jwt; then
             echo "Using SPIRE-issued JWT-SVID"
           else
             echo "SPIRE not bootstrapped — using pre-generated test SVID"
             echo "${CI_TEST_SVID_JWT:?CI_TEST_SVID_JWT must be set when SPIRE is unavailable}" \
               > /tmp/svid.jwt
+          fi
+          if ! grep -Eq '^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$' /tmp/svid.jwt; then
+            echo "ERROR: /tmp/svid.jwt is not a clean JWT line"
+            ls -l /tmp/svid.jwt
+            sed -n '1,5p' /tmp/svid.jwt
+            exit 1
           fi
         env:
           CI_TEST_SVID_JWT: ${{ secrets.CI_TEST_SVID_JWT }}

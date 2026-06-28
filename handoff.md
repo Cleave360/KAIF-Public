@@ -695,3 +695,15 @@ CI wiring completed the same session:
   - runs the core KAIF conformance suite
   - runs `node scripts/redis_resilience_conformance.mjs`
   - uploads both `conformance-result.json` and `reports/redis_resilience/` as artifacts
+
+CI correction applied immediately after first GitHub failure:
+- Root cause was not stale SPIRE bootstrap.
+- The GitHub workflow and conformance template were still extracting `/tmp/svid.jwt` with the old `grep -v "^Received" | tr -d '[:space:]'` path.
+- Current SPIRE `fetch jwt` output includes labeled sections (`token(...)`, `bundle(...)`), so the old parser produced a malformed SVID file and caused `invalid_client` failures across conformance fixtures.
+- Fixed in:
+  - [.github/workflows/kaif-conformance.yml](.github/workflows/kaif-conformance.yml)
+  - [conformance/ci/conformance.yml](conformance/ci/conformance.yml)
+  - [conformance/README.md](conformance/README.md)
+- New parser matches the real token line only:
+  - `awk '/^\t/ { sub(/^\t/, ""); print; exit }' | tr -d '[:space:]'`
+- Added a JWT-shape guard in CI so malformed `/tmp/svid.jwt` fails immediately with a clear error instead of misleading conformance failures later.
