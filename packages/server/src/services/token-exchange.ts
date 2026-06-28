@@ -7,13 +7,14 @@ import type {
   ParsedSVID,
 } from '../types/kaif.js'
 import { KAIFError } from '../errors.js'
-import { verifyJWT, verifySVIDJWT, signKAIFToken } from '../crypto/jwt.js'
+import { verifyJWT, signKAIFToken } from '../crypto/jwt.js'
 import { isRevoked } from './revocation.js'
 import { getTrustScore, resolveTier, assertTierMinimum } from './trust-score.js'
 import { getAgentACL, validateScopes } from './acl.js'
 import { validateSpiffeID } from './svid.js'
 import { appendAudit } from './audit.js'
 import { loadConfig } from '../config.js'
+import { validateSVID } from './svid.js'
 
 type JWTPayload = Record<string, unknown>
 
@@ -112,7 +113,7 @@ export async function executeTokenExchange(params: {
 
   let svid: ParsedSVID
   try {
-    svid = await verifySVIDJWT(request.actor_token)
+    svid = await validateSVID(request.actor_token)
   } catch {
     throw new KAIFError('invalid_client', 'actor_token (SVID) is invalid or expired')
   }

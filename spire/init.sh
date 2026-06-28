@@ -3,6 +3,12 @@ set -e
 CLI="/opt/spire/bin/spire-server"
 SOCK="/run/spire/server-sockets/api.sock"
 TD="kindred.systems"
+BUNDLE_OUT="/run/spire/bootstrap/bundle.pem"
+
+echo "→ Exporting bootstrap bundle..."
+mkdir -p "$(dirname "${BUNDLE_OUT}")"
+${CLI} bundle show -format pem -socketPath "${SOCK}" > "${BUNDLE_OUT}"
+test -s "${BUNDLE_OUT}"
 
 echo "→ Generating join token..."
 TOKEN=$(${CLI} token generate -socketPath "${SOCK}" | awk -F': ' '/^Token[[:space:]]*:/{print $2; exit}')

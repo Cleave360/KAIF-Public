@@ -604,3 +604,94 @@ Note for the next Codex:
 - Treat `kaif.kindredsystems.ai` as the canonical issuer hostname unless the user explicitly changes direction.
 - Do not assume the Redis or SPIRE hostnames are resolved yet.
 - This was documentation/example standardization only, not a full KAIF deployment pass.
+
+## 2026-06-28 — Codex — Local SPIRE bootstrap repair and demo verification
+
+Context:
+- The KAIF demo path had regressed after weeks of local Docker/SPIRE state churn.
+- Symptoms split into two layers:
+  - local SPIRE agent repeatedly crashed with `x509: certificate signed by unknown authority`
+  - `scripts/demo.sh` fell back to the dev mock SVID path even when SPIRE was healthy, then produced noisy conformance failures
+
+Root cause:
+- The hard SPIRE failure was stale persisted local SPIRE state across Docker volumes, not Azure Redis.
+- After a clean local reset, the remaining demo issue was script-level:
+  - `docker compose exec` TTY output made the JWT-SVID parser unreliable
+  - the parser itself extracted the wrong field from `spire-agent api fetch jwt`
+  - conformance invocation used an invalid `tsc --silent` pass-through and a brittle `/dev/fd/*` process-substitution path
+
+Verification and recovery that worked:
+- `docker compose down -v`
+- `./scripts/demo.sh`
+- After the clean reset, SPIRE attestation succeeded again and the demo completed with:
+  - real JWT-SVID fetch from `spire-agent`
+  - `/provision` success
+  - `/oauth/token` success
+  - conformance suite `PASS`
+
+Files updated:
+- [scripts/demo.sh](scripts/demo.sh)
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+Behavior changes:
+- `scripts/demo.sh` now retries briefly for the workload JWT-SVID before falling back to dev mock mode.
+- SPIRE JWT fetch now uses `docker compose exec -T` and extracts the actual token line correctly.
+- Conformance is skipped cleanly when the demo is forced onto the dev mock SVID path.
+- When a real SPIRE SVID is available, conformance uses a normal temp file instead of process substitution.
+
+Operational note:
+- If the local dev stack shows `certificate signed by unknown authority` from `spire-agent` after config churn, treat that as stale local SPIRE state first.
+- For this repo's local dev path, the fastest reliable recovery is `docker compose down -v` followed by a clean rebuild.
+
+## 2026-06-28 — Codex — Azure Redis resilience evidence runner
+
+Context:
+- Azure Managed Redis Enterprise on `Microsoft.Cache/redisEnterprise` does not expose customer-triggerable restart/failover operations for this profile.
+- We needed a standards-clean way to attest denylist persistence and audit continuity without pretending we could force a cluster failover.
+
+Files updated:
+- [scripts/redis_resilience_conformance.mjs](scripts/redis_resilience_conformance.mjs)
+- [README.md](README.md)
+- [conformance/README.md](conformance/README.md)
+- [KAIF-RFC-Draft-00.md](KAIF-RFC-Draft-00.md)
+
+What the runner does:
+- Resolves the active `KAIF_REDIS_URL` from the running `kaif-server`
+- Uses a real SPIRE JWT-SVID when available, with dev fallback only if SPIRE fetch is unavailable
+- Issues and revokes a token before reconnect
+- Restarts `kaif-server` to force Redis client reconnection
+- Verifies revoked-token denial and revocation-key persistence after reconnect
+- Issues and revokes a second token after reconnect
+- Verifies audit hash-chain continuity and resumed writes
+
+Command:
+- `node scripts/redis_resilience_conformance.mjs`
+
+Latest validated run:
+- `reports/redis_resilience/run-kaif-redis-resilience-20260628_113418`
+- Result: `OVERALL=PASS`
+- Checked against Redis host `KAIF.ukwest.redis.azure.net`
+- Actor mode: real SPIRE JWT-SVID
+
+Case summary from that run:
+- `REDIS-001` revoked token denied before reconnect: PASS
+- `REDIS-002` revocation key persisted before reconnect: PASS
+- `REDIS-003` KAIF recovered after reconnect: PASS
+- `REDIS-004` revoked token denied after reconnect: PASS
+- `REDIS-005` revocation key persisted after reconnect: PASS
+- `REDIS-006` audit chain remained valid after reconnect: PASS
+- `REDIS-007` writes resumed after reconnect: PASS
+- `REDIS-008` audit continuity preserved across reconnect: PASS
+- `REDIS-009` new revocation persisted after reconnect: PASS
+- `REDIS-010` final audit chain valid: PASS
+
+Research note- This is the authoritative evidence path for Redis HA behavior until or unless the platform exposes a supported customer failover API.
+
+CI wiring completed the same session:
+- Added real GitHub Actions workflow at [.github/workflows/kaif-conformance.yml](.github/workflows/kaif-conformance.yml)
+- Kept [conformance/ci/conformance.yml](conformance/ci/conformance.yml) aligned as the template/source copy
+- Workflow now:
+  - starts the KAIF Docker stack
+  - runs the core KAIF conformance suite
+  - runs `node scripts/redis_resilience_conformance.mjs`
+  - uploads both `conformance-result.json` and `reports/redis_resilience/` as artifacts

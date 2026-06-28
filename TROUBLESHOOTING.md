@@ -3,7 +3,7 @@
 Common issues, diagnostics, and solutions for KAIF deployment and development.
 
 **Audience:** Operators, developers, integrators  
-**Last updated:** 2026-05-20
+**Last updated:** 2026-06-28
 
 ---
 
@@ -631,7 +631,7 @@ docker exec spire-server ls -la /run/spire/data/
 | SPIRE healthcheck fails | Wait 30s and retry; SPIRE takes time to initialize |
 | Bundle endpoint 400/404 | Check that KAIF uses `https://spire-server:8081/`; `/bundles/jwt` is not served by SPIRE |
 | No socket file | Check SPIRE agent is running: `docker compose up -d spire-agent` |
-| `certificate signed by unknown authority` after SPIRE config changes | Reset the local SPIRE agent trust cache and re-attest |
+| `certificate signed by unknown authority` after SPIRE config changes | Reset the local SPIRE volumes and re-bootstrap; stale server/agent state can survive normal restarts |
 
 Production note:
 - Do not fix production SPIRE trust errors with `KAIF_SPIRE_BUNDLE_TLS_INSECURE=true`.
@@ -639,11 +639,9 @@ Production note:
 - Use [security/SPIRE_PRODUCTION_DEPLOYMENT.md](security/SPIRE_PRODUCTION_DEPLOYMENT.md) as the source of truth.
 
 ```bash
-# Reset stale local SPIRE agent trust cache only
-docker compose stop spire-agent kaif-server
-docker compose rm -f spire-agent
-docker volume rm kaif_spire-agent-data
-docker compose up -d spire-agent kaif-server
+# Reset local SPIRE state when the agent bundle/server cert chain is out of sync
+docker compose down -v
+docker compose up -d --build
 ```
 
 ---
@@ -658,12 +656,12 @@ docker compose up -d spire-agent kaif-server
 
 ```bash
 # 1. Fetch a JWT-SVID from the SPIRE agent
-SVID=$(docker compose exec spire-agent \
+SVID=$(docker compose exec -T spire-agent \
   /opt/spire/bin/spire-agent api fetch jwt \
   -spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
   -audience http://localhost:8080 \
   -socketPath /run/spire/sockets/agent.sock \
-  2>/dev/null | grep -v "^Received" | tr -d '[:space:]')
+  2>/dev/null | awk '/^\t/ { sub(/^\t/, ""); print; exit }' | tr -d '[:space:]')
 
 # 2. Inspect the JWT payload
 echo "$SVID" | cut -d. -f2 | base64 -d | jq .

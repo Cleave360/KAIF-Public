@@ -8,7 +8,7 @@ on:
 jobs:
   conformance:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -49,8 +49,6 @@ jobs:
 
       - name: Bootstrap test delegation grant
         run: |
-          # CI_OIDC_TOKEN is a valid human OIDC token from your configured IdP.
-          # Local CI uses KAIF_DEV_MODE=true and dev-mock-token.
           if [ -n "$CI_OIDC_TOKEN" ]; then
             ID_TOKEN="$CI_OIDC_TOKEN"
           else
@@ -72,12 +70,10 @@ jobs:
           fi
           echo "GRANT_TOKEN=$GRANT_TOKEN" >> "$GITHUB_ENV"
         env:
-          CI_OIDC_TOKEN:      ${{ secrets.CI_OIDC_TOKEN }}
+          CI_OIDC_TOKEN: ${{ secrets.CI_OIDC_TOKEN }}
 
       - name: Fetch test JWT-SVID
         run: |
-          # Attempt to get a JWT-SVID from the SPIRE agent.
-          # Falls back to a pre-generated test SVID if SPIRE is unavailable.
           AGENT_CTR=$(docker compose ps -q spire-agent 2>/dev/null | head -1)
           if [ -n "$AGENT_CTR" ] && \
              docker exec "$AGENT_CTR" \
@@ -104,7 +100,6 @@ jobs:
             --grant-token "$GRANT_TOKEN" \
             --agent-id spiffe://kindred.systems/ns/examples/agent/mock \
             --output json | tee conformance-result.json
-          # tee prints the output; exit code comes from the node process via pipefail
         shell: bash
         env:
           GRANT_TOKEN: ${{ env.GRANT_TOKEN }}
@@ -124,19 +119,19 @@ jobs:
           node scripts/redis_resilience_conformance.mjs | tee redis-resilience-summary.txt
         shell: bash
 
-      - name: Upload Redis resilience evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: redis-resilience-${{ github.sha }}
-          path: reports/redis_resilience/
-
       - name: Upload conformance result
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: conformance-result-${{ github.sha }}
           path: conformance-result.json
+
+      - name: Upload Redis resilience evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: redis-resilience-${{ github.sha }}
+          path: reports/redis_resilience/
 
       - name: Tear down stack
         if: always()

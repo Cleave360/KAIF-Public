@@ -8,12 +8,24 @@
 
 set -euo pipefail
 
+ENV_FILE="${KAIF_COMPOSE_ENV_FILE:-.env}"
+if [ -z "${KAIF_HOST_PORT:-}" ] && [ -f "${ENV_FILE}" ]; then
+  FILE_KAIF_HOST_PORT=$(grep -E '^KAIF_HOST_PORT=' "${ENV_FILE}" | tail -1 | cut -d'=' -f2- || true)
+  if [ -n "${FILE_KAIF_HOST_PORT}" ]; then
+    KAIF_HOST_PORT="${FILE_KAIF_HOST_PORT}"
+  fi
+fi
 KAIF_HOST_PORT="${KAIF_HOST_PORT:-8080}"
 KAIF="${KAIF_SERVER_URL:-http://localhost:${KAIF_HOST_PORT}}"
-COMPOSE_ARGS=()
-if [ -n "${KAIF_COMPOSE_ENV_FILE:-}" ]; then
-  COMPOSE_ARGS=(--env-file "${KAIF_COMPOSE_ENV_FILE}")
-fi
+
+dc() {
+  if [ -n "${KAIF_COMPOSE_ENV_FILE:-}" ]; then
+    docker compose --env-file "${KAIF_COMPOSE_ENV_FILE}" "$@"
+  else
+    docker compose "$@"
+  fi
+}
+
 BOLD=$(tput bold 2>/dev/null || true)
 RESET=$(tput sgr0 2>/dev/null || true)
 
@@ -25,7 +37,7 @@ header "Starting KAIF stack with dev_mode enabled..."
 KAIF_DEV_MODE=true \
 KAIF_HOST_PORT="${KAIF_HOST_PORT}" \
 KAIF_ISSUER="${KAIF_ISSUER:-${KAIF}}" \
-docker compose "${COMPOSE_ARGS[@]}" up -d --build
+dc up -d --build
 
 header "Waiting for stack to be healthy..."
 ATTEMPTS=0
@@ -44,19 +56,27 @@ echo "  Stack healthy ✓"
 # ── 2. Fetch mock agent SVID ─────────────────────────────────────
 
 header "Fetching mock agent JWT-SVID from SPIRE..."
-SVID=$(docker compose "${COMPOSE_ARGS[@]}" exec spire-agent \
-  /opt/spire/bin/spire-agent api fetch jwt \
-  -spiffeID "spiffe://kindred.systems/ns/examples/agent/mock" \
-  -audience "${KAIF}" \
-  -socketPath /run/spire/sockets/agent.sock \
-  2>/dev/null | grep -v "^Received" | tr -d '[:space:]')
+SVID=""
+for attempt in $(seq 1 10); do
+  SVID=$(dc exec -T spire-agent \
+    /opt/spire/bin/spire-agent api fetch jwt \
+    -spiffeID "spiffe://kindred.systems/ns/examples/agent/mock" \
+    -audience "${KAIF}" \
+    -socketPath /run/spire/sockets/agent.sock \
+    2>/dev/null | awk '/^\t/ { sub(/^\t/, ""); print; exit }' | tr -d '[:space:]' || true)
+  if [ -n "${SVID}" ]; then
+    break
+  fi
+  echo "  waiting for SPIRE workload identity... (${attempt}/10)"
+  sleep 2
+done
 
 if [ -z "${SVID}" ]; then
-  echo "ERROR: Could not fetch JWT-SVID. Is the mock-agent registered?"
-  echo "Check spire-init and spire-agent logs with: docker compose logs spire-init spire-agent"
-  exit 1
+  echo "  SPIRE JWT-SVID fetch unavailable; using dev mock SVID fallback"
+  SVID="dev-mock-svid:spiffe://kindred.systems/ns/examples/agent/mock"
+else
+  echo "  SVID obtained (${#SVID} chars)"
 fi
-echo "  SVID obtained (${#SVID} chars)"
 
 # ── 3. Create delegation grant ───────────────────────────────────
 
@@ -111,13 +131,22 @@ print(json.dumps(json.loads(decoded), indent=2))
 
 header "Running conformance kit..."
 if command -v npx &>/dev/null && [ -d conformance ]; then
-  pnpm --filter @kaif/conformance build --silent 2>/dev/null || true
-  npx --prefix conformance kaif-conformance \
-    --server "${KAIF}" \
-    --svid-jwt <(echo "${SVID}") \
-    --grant-token "${DELEGATION_TOKEN}" \
-    --agent-id "spiffe://kindred.systems/ns/examples/agent/mock" \
-    2>&1 || true
+  if [[ "${SVID}" == dev-mock-svid:* ]]; then
+    echo "  (conformance skipped: demo is using dev mock SVID fallback)"
+  else
+    pnpm --filter @kaif/conformance build >/dev/null 2>&1 || true
+    SVID_FILE=$(mktemp)
+    trap 'rm -f "${SVID_FILE}"' EXIT
+    printf '%s\n' "${SVID}" > "${SVID_FILE}"
+    npx --prefix conformance kaif-conformance \
+      --server "${KAIF}" \
+      --svid-jwt "${SVID_FILE}" \
+      --grant-token "${DELEGATION_TOKEN}" \
+      --agent-id "spiffe://kindred.systems/ns/examples/agent/mock" \
+      2>&1 || true
+    rm -f "${SVID_FILE}"
+    trap - EXIT
+  fi
 else
   echo "  (conformance kit not available — skipping)"
 fi

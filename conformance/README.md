@@ -131,6 +131,26 @@ Returns a JSON document conforming to the `SuiteResult` schema. Pipe to `jq` or 
 
 See [`ci/conformance.yml`](./ci/conformance.yml) for a ready-to-use GitHub Actions workflow that spins up the full KAIF stack (SPIRE + Redis + server) and runs the conformance suite on every push.
 
+## Redis resilience evidence
+
+The core fixture suite validates KAIF token exchange semantics. Managed Redis HA behavior is tracked separately because platforms such as Azure Managed Redis Enterprise do not expose customer-triggerable failover operations on the `Microsoft.Cache/redisEnterprise` path.
+
+Use the repo-level resilience runner to capture reconnect and state-continuity evidence:
+
+```bash
+node scripts/redis_resilience_conformance.mjs
+```
+
+The runner records:
+
+- revoked-token denial before reconnect
+- revoked-token denial after reconnect
+- revocation key persistence across reconnect
+- audit hash-chain continuity across reconnect
+- resumed delegation / token issuance / revoke writes after reconnect
+
+Evidence is written under `reports/redis_resilience/`.
+
 ---
 
 ## Adding fixtures

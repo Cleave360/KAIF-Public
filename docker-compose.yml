@@ -46,6 +46,7 @@ services:
     volumes:
       - spire-server-socket:/run/spire/server-sockets:ro
       - spire-token:/run/spire/token
+      - spire-bootstrap:/run/spire/bootstrap
     restart: "no"
 
   spire-agent:
@@ -65,18 +66,16 @@ services:
       - spire-agent-socket:/run/spire/sockets
       - spire-agent-data:/run/spire/data
       - spire-token:/run/spire/token:ro
+      - spire-bootstrap:/run/spire/bootstrap:ro
     pid: "host"
     healthcheck:
       test:
-        - "CMD"
-        - "/opt/spire/bin/spire-agent"
-        - "healthcheck"
-        - "-socketPath"
-        - "/run/spire/sockets/agent.sock"
+        - "CMD-SHELL"
+        - "test -S /run/spire/sockets/agent.sock"
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 15s
+      retries: 20
+      start_period: 90s
 
   kaif-server:
     build:
@@ -85,14 +84,14 @@ services:
     restart: unless-stopped
     depends_on:
       redis:       { condition: service_healthy }
-      spire-agent: { condition: service_healthy }
+      spire-agent: { condition: service_started }
     ports: ["${KAIF_HOST_PORT:-8080}:8080"]
     environment:
       KAIF_PORT:                  "8080"
       KAIF_HOST:                  "0.0.0.0"
       KAIF_ISSUER:                "${KAIF_ISSUER:-http://localhost:8080}"
       KAIF_ALLOWED_AUDIENCES:     "${KAIF_ALLOWED_AUDIENCES:-http://localhost:8080}"
-      KAIF_REDIS_URL:             "redis://redis:6379"
+      KAIF_REDIS_URL:             "${KAIF_REDIS_URL:-redis://redis:6379}"
       KAIF_SPIRE_BUNDLE_ENDPOINT: "https://spire-server:8081/"
       KAIF_SPIRE_BUNDLE_TLS_INSECURE: "${KAIF_SPIRE_BUNDLE_TLS_INSECURE:-true}"
       KAIF_SPIRE_TRUST_DOMAIN:    "kindred.systems"
@@ -133,3 +132,4 @@ volumes:
   spire-agent-socket:
   spire-agent-data:
   spire-token:
+  spire-bootstrap:

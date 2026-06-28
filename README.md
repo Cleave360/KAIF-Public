@@ -249,6 +249,14 @@ npx kaif-conformance \
 
 See [`conformance/README.md`](conformance/README.md) for setup and fixture details.
 
+For Redis-backed HA resilience evidence, run:
+
+```bash
+node scripts/redis_resilience_conformance.mjs
+```
+
+That runner verifies reconnect recovery, revoke persistence, audit hash-chain continuity, and resumed writes against the active Redis-backed KAIF deployment. It writes an evidence bundle under `reports/redis_resilience/`.
+
 ---
 
 ## Standards

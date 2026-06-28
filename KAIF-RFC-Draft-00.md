@@ -573,6 +573,21 @@ Relying parties call `/introspect` on every token use to check real-time revocat
 
 Operators choose strict vs. lazy based on their risk tolerance and throughput requirements.
 
+### 8.3 HA-Backed Revocation Stores
+
+KAIF deployments commonly back the JTI denylist and audit chain with a managed Redis service.
+
+When the backing store is a managed HA service that does not expose customer-triggerable restart or failover operations, implementations MUST validate continuity through client-observable behavior rather than cluster control-plane actions.
+
+At minimum, a conformant deployment using such a service MUST demonstrate:
+
+- Redis client reconnect after transient disconnect
+- Denylist persistence across reconnect
+- Audit hash-chain continuity across reconnect
+- Resumption of successful writes after reconnect
+
+For Azure Managed Redis Enterprise specifically, customer-triggerable restart and failover operations are not exposed on the `Microsoft.Cache/redisEnterprise` resource path used by this profile. Therefore, conformance for revocation propagation and audit continuity on that platform MUST be established via reconnect and state-continuity tests, not forced failover tests.
+
 ## 9. Security Considerations
 
 ### 9.1 Token Binding (RFC 8705)
@@ -691,6 +706,19 @@ An implementation claims KAIF v1.0 conformance if it:
 10. ✅ Passes KAIF conformance test suite
 
 Conformance is verified by passing the test fixtures in [kaif-conformance-kit] (TBD).
+
+### 13.1 Revocation-Store Resilience Profile
+
+If a deployment uses a managed Redis service for denylist and audit persistence, conformance evidence SHOULD include a revocation-store resilience profile.
+
+That profile SHOULD verify:
+
+1. Redis client reconnect recovery
+2. Denylist persistence after reconnect
+3. Audit chain `prev_hash` continuity after reconnect
+4. Successful new delegation, token issuance, and revocation writes after reconnect
+
+If the platform does not expose customer-triggerable failover or restart operations, the implementation MUST document that limitation and MAY satisfy this profile using client-side disconnect and reconnect simulation plus state verification.
 
 ## 14. References
 
