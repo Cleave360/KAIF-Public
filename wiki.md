@@ -2,7 +2,9 @@
 
 ## Quick Reference
 
-This wiki documents the naming conventions, acronyms, data types, and core concepts used throughout the KAIF codebase.
+This wiki documents naming conventions, acronyms, data types, and core concepts used throughout the KAIF codebase.
+
+This page is maintained as the implementation moves from feature-complete alpha toward release hardening.
 
 ---
 
@@ -17,6 +19,7 @@ This wiki documents the naming conventions, acronyms, data types, and core conce
 - [Redis Key Prefixes](#redis-key-prefixes)
 - [Error Codes](#error-codes)
 - [Conformance & Test Vocabulary](#conformance--test-vocabulary)
+- [Current State (2026-06)](#current-state-2026-06)
 - [Implementation Status](#implementation-status)
 
 ---
@@ -81,10 +84,14 @@ This wiki documents the naming conventions, acronyms, data types, and core conce
 - Determined by trust score: `0.0–0.49` → PROVISIONAL, `0.5–0.69` → STANDARD, etc.
 - Limits token TTL, delegation depth, and minimum required tier for operations
 
-**Trust Score**
-- Numeric value `0.0–1.0` representing agent reliability
-- Components: behavioural, audit chain integrity, credential freshness, peer reputation
-- Updated dynamically; sourced from Redis: `kaif:trust:<spiffe_id>`
+**Authorization Tier Value**
+- Numeric value `0.0-1.0` used as the operator-assigned authorization gate value
+- Backward-compatible field names in claims and storage still use `trust_score` and `trust_tier`
+- Resolved tier is sourced from Redis key namespace `kaif:trust:<spiffe_id>`
+
+**Trust Score Signal**
+- Internal signal structure can include behavioural and peer components, but these are outside v1 conformance scope
+- Current enforcement behavior treats the numeric value as an authorization gate (not autonomous risk scoring)
 
 **Delegation**
 - Granting authority from a human principal to an agent
@@ -165,6 +172,10 @@ This wiki documents the naming conventions, acronyms, data types, and core conce
 - `delegation_id`: UUID of the delegation grant
 - `rollback_window`: ISO 8601 duration string (e.g., "PT10M")
 - `principal_chain`: Array of human emails (oldest first)
+
+Terminology note:
+- Documentation may refer to these as `authorization_tier_value` and `authorization_tier` for operator readability.
+- Wire-format and TypeScript compatibility currently remain `trust_score` and `trust_tier`.
 
 **KAIFActorClaim** (in `actor` field)
 - `sub`: Actor's SPIFFE ID
@@ -273,6 +284,15 @@ SUB_DELEGATION_ISSUED | REVOCATION_PROPAGATED
 - If `KAIF_STRICT_REVOCATION=true`: Every token use hits `/introspect`
 - If false: Revocation is advisory (fast path, eventual consistency)
 
+### Development-Only SVID Fallback
+
+- `KAIF_DEV_MODE=true` enables development shortcuts for local verification flows.
+- In development mode, actor tokens prefixed with `dev-mock-svid:` are accepted by `services/svid.ts` for local demos.
+- This behavior is for local testing only and must never be enabled in production.
+
+Example:
+- `actor_token=dev-mock-svid:spiffe://kindred.systems/ns/examples/agent/mock`
+
 ---
 
 ## File & Directory Conventions
@@ -340,6 +360,18 @@ spire/
 .env.example                # Environment variable template
 .gitignore                  # Standard for Node.js
 docker-compose.yml          # Full stack: SPIRE, Redis, KAIF, mock agent
+```
+
+### Operational and Standards Paths
+
+```
+conformance/README.md       # Core Profile conformance harness and fixtures
+scripts/demo.sh             # End-to-end local demo with decoded token output
+scripts/redis_resilience_conformance.mjs  # Redis resilience evidence runner
+KAIF-RFC-Draft-00.md        # Internet-Draft markdown source
+KAIF-RFC-Draft-00.xml       # xml2rfc-compatible draft artifact
+KAIF-Global-Adoption-Roadmap.md
+KAIF-Governance-Framework.md
 ```
 
 ---
@@ -490,6 +522,15 @@ Reference: [conformance/README.md](conformance/README.md)
 
 ---
 
+## Current State (2026-06)
+
+- Core protocol implementation is feature-complete for the reference stack.
+- Active hardening work includes production SPIRE posture, Redis resilience evidence, and release gate documentation.
+- Recent documentation updates added standards-track artifacts (`KAIF-RFC-Draft-00.md`, XML previews), governance/adopter docs, and refreshed security guidance.
+- Local demo flow now supports development-only mock SVID fallback when SPIRE bootstrap is unstable in local environments.
+
+---
+
 ## Implementation Status
 
 KAIF reference implementation phases are complete.
@@ -521,6 +562,6 @@ For detailed completion and gate status, see [index.md](index.md#implementation-
 
 ---
 
-**Last updated:** 2026-05-21  
+**Last updated:** 2026-06-28  
 **Maintainer:** KAIF Core Team  
-**Status:** Reference Implementation v1.0
+**Status:** Reference implementation complete, release hardening in progress

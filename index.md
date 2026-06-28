@@ -2,8 +2,8 @@
 
 **KAIF** (Kindred Agent Identity Framework) is a composable protocol stack that gives autonomous AI agents scoped, auditable, revocable authority traceable to a human principal.
 
-**Status:** Implementation Complete (All 8 Phases), Release Gates Pending
-**Last Updated:** 2026-05-21
+**Status:** Reference implementation complete, release hardening in progress
+**Last Updated:** 2026-06-28
 
 ---
 
@@ -13,12 +13,19 @@
 - **🔐 Core Concepts** — [Trust Model](#trust-model-and-tiers) | [Token Exchange](#token-exchange-rfc-8693) | [Audit Chain](#audit-chain-and-compliance)
 - **🧪 Testing & Conformance** — [Verification Snapshot](#latest-verification-snapshot) | [Test Surface Map](#test-surface-map) | [Conformance Fixtures](#conformance-fixtures-kaif-001-kaif-007)
 - **📁 Source Code** — [Server](#kaif-server-implementation) | [SDK](#kaif-agent-sdk) | [Examples](#example-implementations)
-- **📚 Documentation** — [Architecture Decisions](#architecture-and-decisions) | [Security](#security) | [Contributing](#contributing-and-governance)
+- **📚 Documentation** — [Architecture Decisions](#architecture-and-decisions) | [Security](#security) | [Contributing](#contributing-and-governance) | [Standards Track](#standards-and-adoption-track)
 - **🎯 Reference** — [Wiki (Naming Conventions)](#wiki--reference) | [Phase Checklist](#implementation-phases-checklist)
 
 ---
 
 ## 📋 Project Overview
+
+### Current Snapshot (June 2026)
+
+- Protocol and implementation phases are complete for the reference stack.
+- Current focus is release-quality hardening: resilience evidence, production deployment posture, and standards-track publication artifacts.
+- Governance and contributor documents have been refreshed and linked from the main project docs.
+- Local demo reliability now includes a development-only SVID fallback path for environments where local SPIRE bootstrap is temporarily unstable.
 
 ### KAIF Specification
 
@@ -58,8 +65,12 @@ KAIF/
 ├── CONTRIBUTING.md                    ← Developer guide
 ├── LICENSE                            ← Apache 2.0
 ├── CLAUDE.md                          ← THIS FILE: Build spec (authoritative)
-├── wiki.md                            ← THIS PROJECT: Naming conventions & definitions
+├── wiki.md                            ← Naming conventions, terminology, and current-state notes
 ├── index.md                           ← THIS FILE: Master navigation
+├── KAIF-RFC-Draft-00.md               ← Internet-Draft markdown source
+├── KAIF-RFC-Draft-00.xml              ← xml2rfc artifact
+├── KAIF-Global-Adoption-Roadmap.md    ← Ecosystem and standards adoption plan
+├── KAIF-Governance-Framework.md       ← Governance framework draft
 │
 ├── package.json                       ← Root workspace (pnpm)
 ├── pnpm-workspace.yaml                ← Monorepo config
@@ -121,7 +132,7 @@ KAIF/
 
 **Trust Tier** — Classification of agent security posture  
 **Components:**
-- **Trust Score** (0.0–1.0 numeric): Agent behavior, credential freshness, audit integrity, peer reputation
+- **Authorization Tier Value** (0.0-1.0 numeric): Operator-assigned authorization gate value (stored in current schema fields as `trust_score`)
 - **Trust Tier Label**: PROVISIONAL, STANDARD, VERIFIED, TRUSTED
 - **Privileges**: TTL, max delegation depth, minimum required for operations
 
@@ -165,7 +176,7 @@ KAIF/
 - `iss`: Issuer (KAIF server)
 - `sub`: Human principal (email)
 - `actor.sub`: Agent SPIFFE ID
-- `kaif.trust_score`: Current trust score
+- `kaif.trust_score`: Current authorization tier value
 - `kaif.delegation_depth`: Depth in chain
 - `kaif.principal_chain`: Human emails (audit trail)
 - `jti`: Unique ID (for revocation)
@@ -200,6 +211,12 @@ KAIF/
 - **Eventual consistency mode** (default): Revocation is advisory (fast, eventual)
 
 **See:** [wiki.md — Revocation Section](wiki.md#revocation)
+
+### Development Mode Notes
+
+- `KAIF_DEV_MODE=true` enables development-only shortcuts for local verification.
+- Development mode accepts actor tokens in the format `dev-mock-svid:<spiffe-id>` for local demo fallback.
+- Production deployments must keep `KAIF_DEV_MODE=false`.
 
 ---
 
@@ -283,13 +300,13 @@ await client.revoke()                            // revoke all held tokens
 
 ### Latest Verification Snapshot
 
-Latest verification status recorded in project review artifacts:
+Latest local verification snapshot:
 
-- `pnpm test` passed (server + SDK + conformance packages)
-- `pnpm build` passed (`@kaif/server`, `@kaif/sdk`, `@kaif/conformance`)
-- `docker compose config` renders successfully
+- `./scripts/demo.sh` exercised end-to-end provisioning and token issuance with decoded JWT output.
+- Redis connectivity and authentication to Azure Managed Redis were validated during current troubleshooting flows.
+- Conformance and hardening evidence workflows are available under the conformance and scripts directories.
 
-Reference: [review.md](review.md)
+Reference points: [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [conformance/README.md](conformance/README.md)
 
 ### Test Surface Map
 
@@ -375,6 +392,14 @@ Conformance result semantics:
 - Code style: ESLint + Prettier
 - Security-sensitive areas (crypto/, services/)
 
+### Standards and Adoption Track
+
+- [KAIF-RFC-Draft-00.md](KAIF-RFC-Draft-00.md) - Internet-Draft markdown source
+- [KAIF-RFC-Draft-00.xml](KAIF-RFC-Draft-00.xml) - xml2rfc artifact for tooling and preview
+- [KAIF-Global-Adoption-Roadmap.md](KAIF-Global-Adoption-Roadmap.md) - staged adoption roadmap
+- [KAIF-Governance-Framework.md](KAIF-Governance-Framework.md) - governance framework reference
+- [ADOPTERS.md](ADOPTERS.md) - adopter declarations and registry
+
 ---
 
 ## 🎯 Reference & Checklists
@@ -397,7 +422,7 @@ Conformance result semantics:
 
 ### Implementation Phases Checklist
 
-Completion status: all phases complete (Phase 0 through Phase 7).
+Completion status: all implementation phases complete (Phase 0 through Phase 7).
 
 **Phase 0 — Project Scaffold**
 - [x] Root `package.json` (pnpm workspaces)
@@ -449,7 +474,7 @@ Completion status: all phases complete (Phase 0 through Phase 7).
 - [x] `GOVERNANCE.md` (project roles, RFC process)
 - [x] `CONTRIBUTING.md` (dev setup, PR requirements)
 
-**Full Done Criteria:**
+**Full Done Criteria (implementation):**
 - [x] Integration test passes against Docker Compose stack
 - [x] `scripts/demo.sh` runs end-to-end
 - [x] No TypeScript errors in strict mode
@@ -457,6 +482,11 @@ Completion status: all phases complete (Phase 0 through Phase 7).
 - [x] All documentation files complete
 
 **See:** [CLAUDE.md — Definition of Done](CLAUDE.md#definition-of-done)
+
+Current release hardening focus (post-implementation):
+- production SPIRE deployment posture and attestation hygiene
+- resilience and revocation evidence capture for release reporting
+- standards publication readiness and independent interoperability proof
 
 ### Core Profile Release Gates (Honest Status)
 
@@ -591,10 +621,10 @@ For reference, see also:
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-05-21 |
+| Last Updated | 2026-06-28 |
 | Created For | KAIF Reference Implementation v1.0 |
 | Maintainer | KAIF Core Team |
-| Status | Implementation Complete; External Release Gates Pending |
+| Status | Reference implementation complete; release hardening in progress |
 
 ---
 
