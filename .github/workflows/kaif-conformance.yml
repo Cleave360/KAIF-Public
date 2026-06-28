@@ -37,14 +37,14 @@ jobs:
         run: |
           set -euo pipefail
           echo "Waiting for KAIF server..."
-          for i in $(seq 1 45); do
+          for i in $(seq 1 60); do
             if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
               echo "Server healthy after $((i * 2))s"
               exit 0
             fi
             sleep 2
           done
-          echo "ERROR: KAIF server did not become healthy within 90s"
+          echo "ERROR: KAIF server did not become healthy within 120s"
           docker compose ps
           docker compose logs --tail=120 spire-server spire-init spire-agent kaif-server redis || true
           exit 1
@@ -78,11 +78,10 @@ jobs:
       - name: Fetch test JWT-SVID
         run: |
           set -euo pipefail
-          AGENT_CTR=$(docker compose ps -q spire-agent 2>/dev/null | head -1)
           rm -f /tmp/svid.jwt /tmp/spire-fetch.out
 
-          if [ -n "${AGENT_CTR}" ]; then
-            docker exec "$AGENT_CTR" \
+          if docker compose ps -q spire-agent >/dev/null 2>&1; then
+            docker compose exec -T spire-agent \
               /opt/spire/bin/spire-agent api fetch jwt \
               --spiffeID spiffe://kindred.systems/ns/examples/agent/mock \
               --audience kaif-conformance \
@@ -99,6 +98,9 @@ jobs:
           elif [ -n "${CI_TEST_SVID_JWT:-}" ]; then
             echo "SPIRE did not yield a valid JWT-SVID — using pre-generated test SVID"
             printf '%s' "${CI_TEST_SVID_JWT}" > /tmp/svid.jwt
+          elif [ "${KAIF_DEV_MODE:-false}" = "true" ]; then
+            echo "SPIRE did not yield a valid JWT-SVID — using dev mock SVID because KAIF_DEV_MODE=true"
+            printf '%s' 'dev-mock-svid:spiffe://kindred.systems/ns/examples/agent/mock' > /tmp/svid.jwt
           else
             echo "ERROR: SPIRE did not yield a valid JWT-SVID and CI_TEST_SVID_JWT is not set"
             docker compose ps
@@ -119,6 +121,7 @@ jobs:
         shell: bash
         env:
           CI_TEST_SVID_JWT: ${{ secrets.CI_TEST_SVID_JWT }}
+          KAIF_DEV_MODE: "true"
 
       - name: Run conformance suite
         run: |

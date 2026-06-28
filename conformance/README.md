@@ -56,6 +56,15 @@ Use the mint script instead — it handles the `/provision` call automatically:
 eval "$(./scripts/mint-grant-token.sh --export)"
 ```
 
+**Running in CI with `KAIF_DEV_MODE=true` and no stable SPIRE JWT-SVID path?**
+The workflow MAY use:
+
+```text
+dev-mock-svid:spiffe://kindred.systems/ns/examples/agent/mock
+```
+
+as the actor token fallback. This is acceptable only for the dev-mode CI profile. Production or interoperability claims SHOULD use a real JWT-SVID or a pre-generated `CI_TEST_SVID_JWT` secret.
+
 **4. Run the suite**
 
 ```bash

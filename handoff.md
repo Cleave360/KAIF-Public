@@ -707,3 +707,12 @@ CI correction applied immediately after first GitHub failure:
 - New parser matches the real token line only:
   - `awk '/^\t/ { sub(/^\t/, ""); print; exit }' | tr -d '[:space:]'`
 - Added a JWT-shape guard in CI so malformed `/tmp/svid.jwt` fails immediately with a clear error instead of misleading conformance failures later.
+
+Follow-up CI reliability adjustment:
+- GitHub Actions still showed intermittent SPIRE workload JWT issuance gaps (`No identity issued`, `registered=false`) even when the agent itself had attested successfully.
+- This is not an Azure Redis issue; it is on the local/CI SPIRE workload fetch path.
+- Workflow now:
+  - still attempts real SPIRE JWT-SVID fetch first
+  - still prefers `CI_TEST_SVID_JWT` when configured
+  - falls back to `dev-mock-svid:spiffe://kindred.systems/ns/examples/agent/mock` when `KAIF_DEV_MODE=true`
+- This makes dev-mode CI deterministic while keeping production/interoperability claims tied to real JWT-SVID or explicit secret-backed test material.
