@@ -522,12 +522,14 @@ Reference: [conformance/README.md](conformance/README.md)
 
 ---
 
-## Current State (2026-06)
+## Current State (2026-07-02)
 
-- Core protocol implementation is feature-complete for the reference stack.
-- Active hardening work includes production SPIRE posture, Redis resilience evidence, and release gate documentation.
-- Recent documentation updates added standards-track artifacts (`KAIF-RFC-Draft-00.md`, XML previews), governance/adopter docs, and refreshed security guidance.
-- Local demo flow now supports development-only mock SVID fallback when SPIRE bootstrap is unstable in local environments.
+- Core protocol implementation complete; **boundary receipt contract integration** merged (v0.2 feature with operator-scoped authorization gates).
+- **RFC 8705 token binding** support added via KAIFConfirmationClaim (jkt, x5t#S256 thumbprint binding).
+- Conformance suite validated: 7 core fixtures (KAIF-001..KAIF-007) + 10 Redis resilience test cases all passing.
+- Production hardening ongoing: SPIRE deployment posture, Redis resilience evidence, release gate documentation, and standards publication.
+- Local demo workflow: End-to-end token exchange with decoded JWT output; development-only SVID fallback (dev-mock-svid: prefix) for bootstrap environments.
+- Operational evidence: Azure Managed Redis HA validation, audit chain continuity, automatic reconnect recovery.
 
 ---
 
@@ -562,6 +564,6 @@ For detailed completion and gate status, see [index.md](index.md#implementation-
 
 ---
 
-**Last updated:** 2026-06-28  
+**Last updated:** 2026-07-02  
 **Maintainer:** KAIF Core Team  
-**Status:** Reference implementation complete, release hardening in progress
+**Status:** Reference implementation + boundary contract integration complete; release hardening in progress

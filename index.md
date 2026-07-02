@@ -2,8 +2,8 @@
 
 **KAIF** (Kindred Agent Identity Framework) is a composable protocol stack that gives autonomous AI agents scoped, auditable, revocable authority traceable to a human principal.
 
-**Status:** Reference implementation complete, release hardening in progress
-**Last Updated:** 2026-06-28
+**Status:** Reference implementation + boundary receipt contract integration complete; release hardening in progress
+**Last Updated:** 2026-07-02
 
 ---
 
@@ -20,12 +20,14 @@
 
 ## 📋 Project Overview
 
-### Current Snapshot (June 2026)
+### Current Snapshot (July 2, 2026)
 
-- Protocol and implementation phases are complete for the reference stack.
-- Current focus is release-quality hardening: resilience evidence, production deployment posture, and standards-track publication artifacts.
-- Governance and contributor documents have been refreshed and linked from the main project docs.
-- Local demo reliability now includes a development-only SVID fallback path for environments where local SPIRE bootstrap is temporarily unstable.
+- Protocol and implementation phases complete; **boundary receipt contract** integration now merged (v0.2 feature).
+- Trust model extended with **operator-scoped authorization gates** (numeric value, backward-compatible `trust_score`/`trust_tier` naming).
+- RFC 8705 token binding support via `KAIFConfirmationClaim` (jkt, x5t#S256).
+- Release-quality hardening ongoing: resilience evidence, production deployment posture, standards-track publication.
+- Conformance suite validated: 7 core KAIF fixtures, 10 Redis resilience test cases; CI workflow hardened with robust SVID extraction.
+- Local demo reliability includes development-only SVID fallback (`dev-mock-svid:` prefix) for environments where SPIRE bootstrap is temporarily unstable.
 
 ### KAIF Specification
 
@@ -300,13 +302,15 @@ await client.revoke()                            // revoke all held tokens
 
 ### Latest Verification Snapshot
 
-Latest local verification snapshot:
+Latest verification snapshot (as of commit `0bce02f`, July 2, 2026):
 
-- `./scripts/demo.sh` exercised end-to-end provisioning and token issuance with decoded JWT output.
-- Redis connectivity and authentication to Azure Managed Redis were validated during current troubleshooting flows.
-- Conformance and hardening evidence workflows are available under the conformance and scripts directories.
+- **Boundary contract integration** merged: operator-scoped authorization gates, RFC 8705 token binding, receipt validation service
+- **Conformance suite validated**: 7 core KAIF fixtures (KAIF-001..KAIF-007) + 10 Redis resilience cases (REDIS-001..REDIS-010); CI workflow hardened with robust JWT-SVID extraction
+- **Local demo** end-to-end: provisioning, token exchange, claims validation with decoded JWT output; dev-mode SVID fallback for bootstrap environments
+- **Redis resilience** attested: connectivity to Azure Managed Redis, denylist persistence, audit continuity, automatic reconnect recovery
+- **Type system extended**: KAIFConfirmationClaim for RFC 8705 mTLS binding (jkt, x5t#S256), backward-compatible trust_score/trust_tier naming
 
-Reference points: [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [conformance/README.md](conformance/README.md)
+Reference points: [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [conformance/README.md](conformance/README.md), [boundary_contract.md](boundary_contract.md), [security/FOUNDRY_BOUNDARY_RECEIPT_CONTRACT_V1.md](security/FOUNDRY_BOUNDARY_RECEIPT_CONTRACT_V1.md)
 
 ### Test Surface Map
 
