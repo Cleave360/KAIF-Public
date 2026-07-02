@@ -194,6 +194,9 @@ KAIF-RFC-Draft-00.preview.xml
 KAIF-RFC-Draft-00.preview.clean.xml
 KAIF-RFC-Draft-00.preview.txt
 
+# Local conformance run output
+conformance-result.json
+
 # ─────────────────────────────────────────────────────────────────
 # CI/CD & CI Artifacts
 # ─────────────────────────────────────────────────────────────────

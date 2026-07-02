@@ -12,6 +12,7 @@ import { tokenRoute }  from './routes/token.js'
 import { provisionRoute } from './routes/provision.js'
 import { revokeRoute } from './routes/revoke.js'
 import { relyingRoute } from './routes/relying.js'
+import { boundaryRoute } from './routes/boundary.js'
 
 export interface BuildServerDeps {
   redis: Redis
@@ -98,6 +99,8 @@ export async function buildServer(
     governanceUiInstanceId:  config.governance_ui_instance_id,
     classCDegradedOpen:      config.class_c_degraded_open,
   })
+
+  await app.register(boundaryRoute, { redis })
 
   // ── Graceful shutdown ──────────────────────────────────────────
   let requestCount = 0

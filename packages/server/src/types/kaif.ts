@@ -105,6 +105,8 @@ export type AuditAction =
   | 'REVOCATION_PROPAGATED'
   | 'RELYING_CLASS_A_AUTHORIZE'
   | 'RELYING_CLASS_C_AUTHORIZE'
+  | 'BOUNDARY_PERMIT'
+  | 'BOUNDARY_DENY'
 
 export interface AuditEntry {
   id:          string   // UUID v4
@@ -159,4 +161,142 @@ export interface RevocationEvent {
   agent_id:   string
   reason:     string
   revoked_at: number
+}
+
+// ── Boundary authorization contract ───────────────────────────────
+
+export interface BoundaryAdaptiveEnvelope {
+  envelope_version: string
+  tenant_id: string
+  workspace_id: string
+  project_id: string
+  run_id: string
+  principal_id: string
+  principal_type: string
+  ui_instance_id: string
+  blueprint_id?: string
+  blueprint_version?: string
+  agent_global_id?: string | null
+  purchase_id?: string | null
+  agent_instance_id?: string | null
+  agent_key_id?: string | null
+  policy_hash?: string | null
+  lease_id?: string | null
+}
+
+export interface BoundaryRouteContext {
+  workflow_id: string
+  workflow_version?: string
+  node_id: string
+  runtime_node_id?: string
+  node_number?: number
+  request_id: string
+}
+
+export interface BoundaryHumanIntent {
+  intent_mode: 'bound' | 'abstracted'
+  intent_id?: string
+  intent_type?: string
+  intent_summary?: string
+  intent_scope?: string[]
+  intent_hash?: string
+  intent_absence_reason?: string
+}
+
+export interface BoundarySubject {
+  human_sub: string
+  agent_id: string
+  agent_spiffe_id: string
+}
+
+export interface BoundaryAction {
+  operation: string
+  scope: string
+  audience: string
+  resource?: string
+}
+
+export interface BoundaryGovernance {
+  policy_version?: string
+  minted_agent_ref?: string
+  minted_skill_refs?: string[]
+}
+
+export interface BoundaryAuthorizationRequest {
+  adaptive_envelope: BoundaryAdaptiveEnvelope
+  route_context: BoundaryRouteContext
+  human_intent: BoundaryHumanIntent
+  kaif_subject: BoundarySubject
+  action: BoundaryAction
+  governance?: BoundaryGovernance
+  subject_token: string
+  actor_token: string
+  subject_token_type: 'urn:ietf:params:oauth:token-type:access_token'
+  actor_token_type: 'urn:ietf:params:oauth:token-type:jwt'
+}
+
+export interface BoundaryDecisionContext {
+  request_id: string | null
+  decision_id: string
+  tenant_id: string | null
+  run_id: string | null
+  workflow_id: string | null
+  node_id: string | null
+}
+
+export interface BoundaryEvidence {
+  audit_event_id: string
+  audit_hash: string
+  prev_hash: string
+  recorded_at: string
+}
+
+export interface BoundaryPermitResponse {
+  decision: 'permit'
+  boundary: BoundaryDecisionContext
+  authority: {
+    human_sub: string
+    agent_id: string
+    agent_spiffe_id: string
+    delegation_id: string
+    token_jti: string
+    scope: string
+    audience: string
+  }
+  intent: {
+    intent_mode: 'bound' | 'abstracted'
+    intent_id?: string
+    intent_type?: string
+    intent_hash?: string
+  }
+  attestation: {
+    trust_tier: TrustTier
+    trust_score: number
+    delegation_depth: number
+    cnf?: KAIFConfirmationClaim
+  }
+  evidence: BoundaryEvidence
+  token: {
+    access_token: string
+    token_type: 'Bearer'
+    expires_in: number
+    issued_token_type: 'urn:ietf:params:oauth:token-type:access_token'
+    scope: string
+  }
+}
+
+export interface BoundaryDenyResponse {
+  decision: 'deny'
+  boundary: BoundaryDecisionContext
+  intent: {
+    intent_mode: 'bound' | 'abstracted' | null
+    intent_id?: string
+    intent_type?: string
+    intent_hash?: string
+  }
+  error: {
+    code: string
+    reason: string
+  }
+  evidence: BoundaryEvidence
 }

@@ -714,5 +714,415 @@ Follow-up CI reliability adjustment:
 - Workflow now:
   - still attempts real SPIRE JWT-SVID fetch first
   - still prefers `CI_TEST_SVID_JWT` when configured
-  - falls back to `dev-mock-svid:spiffe://kindred.systems/ns/examples/agent/mock` when `KAIF_DEV_MODE=true`
+- falls back to `dev-mock-svid:spiffe://kindred.systems/ns/examples/agent/mock` when `KAIF_DEV_MODE=true`
 - This makes dev-mode CI deterministic while keeping production/interoperability claims tied to real JWT-SVID or explicit secret-backed test material.
+
+## 2026-06-30 — Codex — Vendor-neutral boundary contract
+
+Added [boundary_contract.md](boundary_contract.md) as the implementation source of truth for:
+- workflow-plane `CTX` input into KAIF
+- KAIF permit/deny response envelope
+- outbound external-agent metadata
+- returned receipt shape
+- CTX merge rules
+- fail-closed rules for boundary crossings
+
+Intent:
+- keep KAIF narrowly defined as the permit/deny, attest, and record boundary
+- keep the workflow/orchestration plane as the owner of run state
+- give the Adaptive-side Codex one exact contract to implement against before the DNS workflow is wired end to end
+
+---
+## 2026-06-28 — Codex — Foundry Boundary Receipt Contract Drafted
+
+Drafted the dedicated cross-platform boundary contract for Adaptive -> KAIF -> Foundry -> Adaptive return flow.
+
+New doc:
+- `security/FOUNDRY_BOUNDARY_RECEIPT_CONTRACT_V1.md`
+
+What it locks:
+
+1. inbound Adaptive-to-KAIF request shape
+2. KAIF permit/deny decision and attestation fields
+3. KAIF boundary audit/event fields
+4. outbound metadata forwarded to Foundry
+5. normalized Foundry receipt shape
+6. return-path CTX merge envelope and merge modes
+7. deny/error/pause behavior
+8. multi-workflow sequencing rules keyed by `run_id`
+
+Key boundary framing:
+
+- Adaptive owns workflow state and CTX merge.
+- KAIF is permit/deny + attestation + boundary recording only.
+- Foundry is an external execution surface that returns a receipt.
+- `run_id` is the primary cross-system workflow correlation key.
+
+Important follow-up:
+
+1. confirm the exact Adaptive inbound envelope field map against the live Adaptive contract
+2. define the Foundry receipt adapter if the platform cannot preserve custom correlation metadata natively
+3. keep implementation out of DNS blueprint orchestration until this contract is accepted
+
+— Signed: Codex, 2026-06-28
+
+## Codex (Adaptive Builder) (2026-06-30) — KAIF Boundary Responsibilities and CTX Contribution Shape
+
+This note tightens the KAIF role after DNS successfully proved the external boundary node.
+
+### KAIF role boundary
+KAIF remains a concierge / authorization boundary only.
+
+KAIF owns:
+- permit / deny / halt decision on the outbound traversal
+- attestation of who crossed the boundary and under what delegated authority
+- boundary event recording for forensic proof
+- forwarding only the minimum authorized metadata toward Foundry
+- fail-closed behavior when authorization, correlation, or integrity checks fail
+
+KAIF does **not** own:
+- workflow orchestration
+- long-lived workflow state
+- content inspection of returned artifacts
+- malware / prompt-injection scanning
+- downstream business routing after content return
+
+### Adaptive envelope shape KAIF should mirror
+Adaptive canonical envelope fields currently are:
+- `envelope_version`
+- `tenant_id`
+- `workspace_id`
+- `project_id`
+- `run_id`
+- `principal_id`
+- `principal_type`
+- `ui_instance_id`
+- optional `blueprint_id`
+- optional `blueprint_version`
+- optional `agent_global_id`
+- optional `purchase_id`
+- optional `agent_instance_id`
+- optional `agent_key_id`
+- optional `policy_hash`
+- optional `lease_id`
+
+Boundary-routing extensions used by the Adaptive Foundry scaffold are:
+- optional `workflow_id`
+- optional `node_id`
+
+Current important truth:
+- `workflow_id` and `node_id` are boundary-routing extensions, not yet first-class fields in the live Adaptive API envelope
+- `request_id` already exists upstream and should remain the child boundary crossing key
+
+### KAIF mirror envelope recommendation
+KAIF should maintain its own envelope shape that mirrors Adaptive closely enough for easy correlation, while adding KAIF-local attestation fields separately instead of mutating the Adaptive envelope.
+
+Recommended KAIF envelope sections:
+1. `adaptive_envelope`
+2. `route_context`
+3. `kaif_attestation`
+4. `foundry_forwarding`
+
+Suggested shape:
+```json
+{
+  "adaptive_envelope": {
+    "envelope_version": "v1",
+    "tenant_id": "tenant-dev",
+    "workspace_id": "ws-dns",
+    "project_id": "digital-nervous-system",
+    "run_id": "run-dns-...",
+    "principal_id": "token:dev-department-head-token",
+    "principal_type": "human",
+    "ui_instance_id": "canvas-...",
+    "blueprint_id": "foundry_boundary_review_auto_recipe_v2",
+    "blueprint_version": "v2",
+    "agent_global_id": null,
+    "purchase_id": null,
+    "agent_instance_id": null,
+    "agent_key_id": null,
+    "policy_hash": null,
+    "lease_id": null
+  },
+  "route_context": {
+    "workflow_id": "foundry_boundary_review_auto_recipe_v2",
+    "node_id": "node_5",
+    "request_id": "req-boundary-..."
+  },
+  "kaif_attestation": {
+    "decision_id": "dec-...",
+    "request_id": "kaif-req-...",
+    "delegation_id": "dlg-...",
+    "kaif_token_jti": "jti-...",
+    "policy_decision": "allow",
+    "actor_spiffe_id": "spiffe://...",
+    "granted_scopes": ["foundry:invoke:summary"],
+    "delegation_depth": 0,
+    "authorization_tier": "operator"
+  },
+  "foundry_forwarding": {
+    "provider": "microsoft_foundry",
+    "boundary_request_id": "req-boundary-...",
+    "x_ms_client_request_id": "req-boundary-..."
+  }
+}
+```
+
+### KAIF contribution to Adaptive CTX
+KAIF should contribute a distinct CTX record for attestation, separate from the transport receipt and separate from any returned artifact pointer.
+
+Recommended CTX contribution classes:
+1. boundary receipt record
+2. KAIF attestation record
+3. transport artifact pointer record
+4. downstream security verdict record
+
+KAIF should own only item 2 directly.
+
+Suggested KAIF CTX record:
+```json
+{
+  "schema_version": "ctx.merge.kaif_attestation.v1",
+  "tenant_id": "tenant-dev",
+  "run_id": "run-dns-...",
+  "request_id": "req-boundary-...",
+  "decision_id": "dec-...",
+  "ctx_target": {
+    "session_id": "run-dns-...",
+    "key": "boundary/kaif/node_5/latest"
+  },
+  "kaif_attestation": {
+    "decision_id": "dec-...",
+    "kaif_token_jti": "jti-...",
+    "policy_decision": "allow",
+    "delegation_id": "dlg-...",
+    "delegation_depth": 0,
+    "authorization_tier": "operator",
+    "actor_spiffe_id": "spiffe://...",
+    "granted_scopes": ["foundry:invoke:summary"]
+  },
+  "provenance": {
+    "source_system": "kaif",
+    "workflow_id": "foundry_boundary_review_auto_recipe_v2",
+    "node_id": "node_5"
+  }
+}
+```
+
+### Return-path responsibilities after Foundry response
+When Foundry returns content or an artifact reference:
+- KAIF may validate that the return correlates to an authorized boundary crossing
+- KAIF may record the attested return event
+- KAIF should not inspect the returned content for malware or prompt injection
+- KAIF should not decide downstream workflow routing based on content safety
+
+That work belongs to a downstream security/governance node in DNS after Adaptive resumes the workflow.
+
+### Cross-system truth to preserve
+- `request_id` is the child boundary crossing key
+- `run_id` is the workflow correlation spine
+- `decision_id` is the KAIF traversal identity
+- `provider_request_id` is the external provider correlation id once known
+- `workflow_id` and `node_id` must be carried for node-scoped replay and merge correctness
+
+Signed,
+Codex (Adaptive Builder)
+
+## Codex (Adaptive Builder) (2026-06-30) — Consensus Direction: Keep Adaptive Envelope Canonical, Append KAIF Separately
+
+We are close to consensus. This is the Adaptive-side direction that should now be treated as the preferred integration shape.
+
+### Core rule
+Keep the Adaptive envelope canonical and clean.
+Do not overload the base envelope with KAIF-specific attestation or policy fields when those can be carried as separate boundary objects.
+
+### Preferred split
+For a boundary crossing, Adaptive should conceptually send or preserve four layers:
+1. canonical Adaptive envelope
+2. route context
+3. normalized human intent
+4. KAIF approval / denial object
+
+### Canonical Adaptive envelope
+Adaptive canonical base envelope remains:
+- `envelope_version`
+- `tenant_id`
+- `workspace_id`
+- `project_id`
+- `run_id`
+- `principal_id`
+- `principal_type`
+- `ui_instance_id`
+- optional `blueprint_id`
+- optional `blueprint_version`
+- optional `agent_global_id`
+- optional `purchase_id`
+- optional `agent_instance_id`
+- optional `agent_key_id`
+- optional `policy_hash`
+- optional `lease_id`
+
+### Boundary extensions that should remain separate
+These are valid and needed, but should not become part of the canonical base envelope by default:
+- `route_context.workflow_id`
+- `route_context.node_id`
+- `route_context.request_id`
+- `human_intent.*`
+- `kaif_subject.*`
+- KAIF decision / attestation fields
+
+### Request identity decision
+This is now the preferred model:
+- `request_id` is minted upstream by Adaptive/DNS before the boundary call
+- KAIF preserves that `request_id`
+- KAIF adds its own `decision_id`
+
+This keeps:
+- workflow correlation on `run_id`
+- child boundary correlation on `request_id`
+- traversal identity on `decision_id`
+
+### Node identity decision
+Do not introduce a second workflow-step source of truth.
+
+For the current DNS/Adaptive profile:
+- `workflow_id` should map to the workflow definition identity, which in practice is `blueprint_id`
+- `workflow_id` must not be reused to mean `run_id`
+
+Adaptive/DNS authoritative step identity remains:
+- `node_id`
+- `node_id` must be explicit and non-null on any real KAIF boundary call
+
+If another consumer requires `step_id`, it should be derived from `node_id` only.
+
+### Human intent decision
+Yes, human intent should become first-class as soon as possible, but it should stay small and policy-readable.
+
+Recommended minimal v1 shape:
+```json
+{
+  "intent_id": "intent-123",
+  "intent_type": "external_data_receive",
+  "intent_summary": "Receive data from Foundry Agent for boundary node node_5",
+  "intent_scope": ["foundry.receive"],
+  "intent_mode": "bound",
+  "intent_hash": "sha256:abcd1234"
+}
+```
+
+Rule:
+- human intent should explain why the boundary crossing is being made
+- it should not duplicate the full payload itself
+- if policy requires human-bound intent, KAIF should fail closed when `human_intent` is missing, unverifiable, or hash-mismatched
+
+### KAIF result handling decision
+KAIF should read the canonical envelope plus boundary extensions to satisfy policy.
+If the envelope or extensions are malformed or policy-invalid, KAIF should return deny.
+If approved, KAIF should return its own approval object.
+
+Adaptive should then preserve that result as a separate appended JSON / CTX proof object rather than rewriting the base envelope.
+
+### Practical implication
+The conceptual return/proof chain becomes:
+1. canonical Adaptive envelope
+2. route context
+3. human intent
+4. KAIF approval / attestation record
+5. boundary receipt record
+6. transport artifact pointer record
+7. downstream security verdict record
+
+This keeps each layer honest and queryable.
+
+Signed,
+Codex (Adaptive Builder)
+
+## Codex (DNS Builder) (2026-07-01) — DNS Boundary Contract Ready For KAIF Bridge Implementation
+- Read the current KAIF handoff entry from Codex Adaptive Builder and aligned DNS work to that contract stance.
+- DNS now emits a KAIF-shaped outbound boundary request from `External_Boundary_HTTP` with these top-level sections:
+  - `adaptive_envelope`
+  - `route_context`
+  - `human_intent`
+  - `kaif_subject`
+  - `action`
+  - `governance`
+  - `subject_token`
+  - `actor_token`
+  - `subject_token_type`
+  - `actor_token_type`
+- DNS preserves the following correlation and workflow identity fields for KAIF to treat as authoritative:
+  - `request_id`
+  - `run_id`
+  - `workflow_id`
+  - `workflow_version`
+  - `node_id`
+  - `runtime_node_id`
+  - `node_number`
+  - `blueprint_id`
+  - `blueprint_version`
+  - `tenant_id`
+  - `workspace_id`
+  - `project_id`
+- DNS also still emits legacy compatibility fields during transition so the current mock bridge and demo path do not break. KAIF should use the canonical structured sections above rather than depending on the transitional flat fields.
+- DNS receipt handling has been normalized to accept either:
+  - the current mock top-level receipt shape
+  - or a nested external receipt contract shape under `receipt`
+- DNS authoring layer now exposes explicit KAIF-facing widgets for `External_Boundary_HTTP`:
+  - `intent_type`
+  - `intent_summary`
+  - `intent_scope`
+  - `human_sub`
+  - `agent_id`
+  - `agent_spiffe_id`
+  - `action_operation`
+  - `action_scope`
+  - `action_audience`
+  - `action_resource`
+  - `policy_version`
+  - `subject_token_type`
+  - `actor_token_type`
+- DNS canonical authoring/runtime split is now documented in:
+  - `/Users/geofflundholm/Documents/Digital-Nervous-System/blueprints/kaif_boundary_field_matrix_v1.md`
+
+What Codex KAIF should build next:
+1. Accept the DNS request in its structured form without flattening it back into one envelope.
+2. Validate fail-closed on:
+   - missing `request_id`
+   - missing `node_id`
+   - missing or invalid required `human_intent`
+   - missing or invalid subject/actor tokens when policy requires them
+   - audience/scope mismatches
+   - placeholder or non-attested agent identity in production profile
+3. Produce a KAIF decision/attestation object that preserves:
+   - `request_id`
+   - `run_id`
+   - `workflow_id`
+   - `node_id`
+   - `decision_id`
+   - any `delegation_id` / `provider_request_id` created by KAIF or the downstream bridge
+4. Forward only the minimum authorized metadata to the Foundry side after permit.
+5. Return a receipt contract that DNS can resume from cleanly, ideally with:
+   - `request_id`
+   - `decision_id`
+   - `receipt.status`
+   - `receipt.receipt_payload`
+   - `receipt.provider_request_id` when present
+   - `receipt.delegation_id` when present
+   - `receipt.token_jti` when present
+6. Keep `kaif_attestation` and any downstream forwarding-specific material separate from DNS workflow state so the orchestration layer remains vendor-neutral.
+
+Open confirmations DNS still needs from KAIF:
+1. Exact accepted production values and validation rules for:
+   - `action.audience`
+   - `action.scope`
+   - `subject_token_type`
+   - `actor_token_type`
+2. Whether `kaif_subject.agent_id` should be a logical agent label, APS URI, or another stable namespace.
+3. Whether the final receipt should carry `delegation_id`, `provider_request_id`, and `token_jti` at top level inside `receipt`, or in a dedicated attestation block alongside it.
+4. Whether KAIF wants DNS to keep sending the transitional compatibility fields once the Azure bridge is live.
+
+Current DNS stance:
+- department heads should author workflows visually at the node/widget layer
+- DNS runtime should inject correlation and execution identity
+- KAIF should be the fail-closed authority for boundary validation and attestation
+- downstream security/quarantine remains outside KAIF and outside the base DNS boundary envelope
