@@ -107,6 +107,7 @@ export type AuditAction =
   | 'RELYING_CLASS_C_AUTHORIZE'
   | 'BOUNDARY_PERMIT'
   | 'BOUNDARY_DENY'
+  | 'BOUNDARY_RECEIPT'
 
 export interface AuditEntry {
   id:          string   // UUID v4
@@ -282,6 +283,28 @@ export interface BoundaryPermitResponse {
     expires_in: number
     issued_token_type: 'urn:ietf:params:oauth:token-type:access_token'
     scope: string
+  }
+  receipt: {
+    receipt_version: 'v1'
+    receipt_id: string
+    decision_id: string
+    request_id: string
+    run_id: string
+    target_system: 'foundry'
+    occurred_at_ms: number
+    result: {
+      status: 'success' | 'rejected' | 'error' | 'paused'
+      provider_code: string
+      provider_message: string
+    }
+    provider_request_id?: string
+    provider_session_id?: string
+    output_hash?: string
+    output_preview?: string
+    latency_ms?: number
+    receipt_payload?: unknown
+    delegation_id?: string
+    token_jti?: string
   }
 }
 

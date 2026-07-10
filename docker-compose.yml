@@ -101,6 +101,20 @@ services:
       KAIF_LOG_LEVEL:             "info"
       KAIF_STRICT_REVOCATION:     "false"
       KAIF_DEV_MODE:              "${KAIF_DEV_MODE:-false}"
+      # KAIF ↔ Microsoft Foundry integration (passed from .env)
+      KAIF_FOUNDRY_PROJECT_ENDPOINT: "${KAIF_FOUNDRY_PROJECT_ENDPOINT:-}"
+      KAIF_FOUNDRY_API_VERSION:      "${KAIF_FOUNDRY_API_VERSION:-2024-02-15-preview}"
+      KAIF_FOUNDRY_MODE:             "${KAIF_FOUNDRY_MODE:-deployment_chat}"
+      KAIF_FOUNDRY_AUTH_MODE:        "${KAIF_FOUNDRY_AUTH_MODE:-api_key}"
+      KAIF_FOUNDRY_AAD_SCOPE:        "${KAIF_FOUNDRY_AAD_SCOPE:-}"
+      KAIF_FOUNDRY_API_KEY:          "${KAIF_FOUNDRY_API_KEY:-}"
+      KAIF_FOUNDRY_MODEL:            "${KAIF_FOUNDRY_MODEL:-}"
+      KAIF_FOUNDRY_AGENT_NAME:       "${KAIF_FOUNDRY_AGENT_NAME:-}"
+      KAIF_FOUNDRY_AGENT_VERSION:    "${KAIF_FOUNDRY_AGENT_VERSION:-}"
+      KAIF_FOUNDRY_INVOKE_PATH:      "${KAIF_FOUNDRY_INVOKE_PATH:-}"
+      AZURE_TENANT_ID:               "${AZURE_TENANT_ID:-}"
+      AZURE_CLIENT_ID:               "${AZURE_CLIENT_ID:-}"
+      AZURE_CLIENT_SECRET:           "${AZURE_CLIENT_SECRET:-}"
     volumes:
       - spire-agent-socket:/run/spire/sockets:ro
       - ./packages/server/config:/app/config:ro

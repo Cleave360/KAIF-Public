@@ -97,7 +97,16 @@ temp/
 *.tmp
 *.bak
 *.backup
+.env.backup.*
+.env.*.backup
 .cache/
+
+# ─────────────────────────────────────────────────────────────────
+# Local Documentation & Reference
+# ─────────────────────────────────────────────────────────────────
+azure_steps.md
+scripts/__pycache__/
+test-output.txt
 
 # ─────────────────────────────────────────────────────────────────
 # Secrets & Keys (CRITICAL)

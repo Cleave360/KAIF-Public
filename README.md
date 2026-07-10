@@ -149,6 +149,16 @@ See `examples/mock-service/index.ts` for a complete relying-party implementation
 | `KAIF_GOVERNANCE_PROJECT_ID` | string | `kaif` | Adaptive envelope project ID |
 | `KAIF_GOVERNANCE_UI_INSTANCE_ID` | string | `ui-kaif` | Adaptive envelope UI instance ID |
 | `KAIF_CLASS_C_DEGRADED_OPEN` | boolean | `false` | Allows Class C relying-party degraded-open behavior when governance evidence append is unavailable |
+| `KAIF_FOUNDRY_PROJECT_ENDPOINT` | string | — | Base Azure AI Foundry project endpoint used by the KAIF outbound boundary adapter |
+| `KAIF_FOUNDRY_API_VERSION` | string | — | Foundry API version appended as `api-version` on outbound calls |
+| `KAIF_FOUNDRY_MODE` | `deployment_chat\|project_agent` | `deployment_chat` | Selects the outbound Foundry surface KAIF uses behind the boundary |
+| `KAIF_FOUNDRY_INVOKE_PATH` | string | — | Outbound Foundry invoke path, beginning with `/` |
+| `KAIF_FOUNDRY_AUTH_MODE` | `azure_ad\|api_key\|none` | — | Authentication mode for outbound Foundry calls |
+| `KAIF_FOUNDRY_AAD_SCOPE` | string | — | Azure AD scope/resource used when `KAIF_FOUNDRY_AUTH_MODE=azure_ad` |
+| `KAIF_FOUNDRY_API_KEY` | string | — | Foundry API key when `KAIF_FOUNDRY_AUTH_MODE=api_key` |
+| `KAIF_FOUNDRY_MODEL` | string | — | Underlying model deployment name used when `KAIF_FOUNDRY_MODE=project_agent` |
+| `KAIF_FOUNDRY_AGENT_NAME` | string | — | Foundry agent name used when `KAIF_FOUNDRY_MODE=project_agent` |
+| `KAIF_FOUNDRY_AGENT_VERSION` | string | — | Foundry agent version used when `KAIF_FOUNDRY_MODE=project_agent` |
 | `KAIF_SPIRE_BUNDLE_ENDPOINT` | string | required | SPIRE HTTPS federation bundle endpoint for SVID validation |
 | `KAIF_SPIRE_BUNDLE_CA_PATH` | string | — | Optional CA bundle path for validating a private SPIRE HTTPS bundle endpoint |
 | `KAIF_SPIRE_BUNDLE_CA_PEM` | string | — | Optional inline CA PEM for validating a private SPIRE HTTPS bundle endpoint without a mounted file |
@@ -197,6 +207,9 @@ For production SPIRE deployment:
 
 See [security/SPIRE_PRODUCTION_DEPLOYMENT.md](security/SPIRE_PRODUCTION_DEPLOYMENT.md).
 For manual signing-key rotation, use [security/KEY_ROTATION_RUNBOOK.md](security/KEY_ROTATION_RUNBOOK.md).
+For the KAIF -> Foundry boundary path, prefer service-principal based Azure AD auth over pasted bearer tokens; user-session bearer tokens are short-lived and should not be treated as runtime configuration.
+
+Use `KAIF_FOUNDRY_MODE=deployment_chat` for the direct Cognitive Services deployment path (`/openai/deployments/<deployment>/chat/completions`). Use `KAIF_FOUNDRY_MODE=project_agent` for Azure AI project agents, where KAIF calls the project endpoint responses API and supplies `KAIF_FOUNDRY_MODEL` plus the `KAIF_FOUNDRY_AGENT_NAME` and `KAIF_FOUNDRY_AGENT_VERSION` reference internally.
 
 For a production-like local rehearsal, use [.env.production.example](.env.production.example) with [docker-compose.production.yml](docker-compose.production.yml).
 

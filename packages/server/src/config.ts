@@ -29,6 +29,16 @@ export interface KAIFConfig {
   governance_project_id:   string
   governance_ui_instance_id: string
   class_c_degraded_open: boolean
+  foundry_project_endpoint?: string
+  foundry_api_version?: string
+  foundry_mode?: 'deployment_chat' | 'project_agent'
+  foundry_auth_mode?: 'azure_ad' | 'api_key' | 'none'
+  foundry_api_key?: string
+  foundry_invoke_path?: string
+  foundry_aad_scope?: string
+  foundry_model?: string
+  foundry_agent_name?: string
+  foundry_agent_version?: string
 }
 
 function requireEnv(name: string): string {
@@ -71,6 +81,28 @@ export function loadConfig(): KAIFConfig {
   const spireBundleCaPath = process.env['KAIF_SPIRE_BUNDLE_CA_PATH'] || undefined
   const spireBundleCaPem = process.env['KAIF_SPIRE_BUNDLE_CA_PEM'] || undefined
   const allowedAudiences = parseList(process.env['KAIF_ALLOWED_AUDIENCES'] ?? issuer)
+  const foundryProjectEndpoint = process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] || undefined
+  const foundryApiVersion = process.env['KAIF_FOUNDRY_API_VERSION'] || undefined
+  const foundryMode = process.env['KAIF_FOUNDRY_MODE'] || undefined
+  const foundryAuthMode = process.env['KAIF_FOUNDRY_AUTH_MODE'] || undefined
+  const foundryApiKey = process.env['KAIF_FOUNDRY_API_KEY'] || undefined
+  const foundryInvokePath = process.env['KAIF_FOUNDRY_INVOKE_PATH'] || undefined
+  const foundryAadScope = process.env['KAIF_FOUNDRY_AAD_SCOPE'] || undefined
+  const foundryModel = process.env['KAIF_FOUNDRY_MODEL'] || undefined
+  const foundryAgentName = process.env['KAIF_FOUNDRY_AGENT_NAME'] || undefined
+  const foundryAgentVersion = process.env['KAIF_FOUNDRY_AGENT_VERSION'] || undefined
+  const foundryConfigured = Boolean(
+    foundryProjectEndpoint
+    || foundryApiVersion
+    || foundryMode
+    || foundryAuthMode
+    || foundryApiKey
+    || foundryInvokePath
+    || foundryAadScope
+    || foundryModel
+    || foundryAgentName
+    || foundryAgentVersion
+  )
 
   if (production && devMode) {
     throw new Error('KAIF_DEV_MODE=true is not permitted when NODE_ENV=production')
@@ -136,7 +168,51 @@ export function loadConfig(): KAIFConfig {
     throw new Error('KAIF_ALLOWED_AUDIENCES must contain at least one audience')
   }
 
-  return {
+  if (foundryProjectEndpoint) {
+    try {
+      new URL(foundryProjectEndpoint)
+    } catch {
+      throw new Error('KAIF_FOUNDRY_PROJECT_ENDPOINT must be a valid URL')
+    }
+  }
+
+  if (foundryConfigured && !foundryProjectEndpoint) {
+    throw new Error('KAIF_FOUNDRY_PROJECT_ENDPOINT is required when configuring Foundry integration')
+  }
+
+  if (foundryAuthMode && !['azure_ad', 'api_key', 'none'].includes(foundryAuthMode)) {
+    throw new Error('KAIF_FOUNDRY_AUTH_MODE must be one of azure_ad, api_key, or none')
+  }
+
+  if (foundryMode && !['deployment_chat', 'project_agent'].includes(foundryMode)) {
+    throw new Error('KAIF_FOUNDRY_MODE must be one of deployment_chat or project_agent')
+  }
+
+  if (foundryAuthMode === 'api_key' && !foundryApiKey) {
+    throw new Error('KAIF_FOUNDRY_API_KEY is required when KAIF_FOUNDRY_AUTH_MODE=api_key')
+  }
+
+  if (foundryAuthMode === 'azure_ad' && !foundryAadScope) {
+    throw new Error('KAIF_FOUNDRY_AAD_SCOPE is required when KAIF_FOUNDRY_AUTH_MODE=azure_ad')
+  }
+
+  if (foundryInvokePath && !foundryInvokePath.startsWith('/')) {
+    throw new Error('KAIF_FOUNDRY_INVOKE_PATH must start with "/"')
+  }
+
+  if ((foundryMode ?? 'deployment_chat') === 'project_agent' && !foundryModel) {
+    throw new Error('KAIF_FOUNDRY_MODEL is required when KAIF_FOUNDRY_MODE=project_agent')
+  }
+
+  if ((foundryMode ?? 'deployment_chat') === 'project_agent' && !foundryAgentName) {
+    throw new Error('KAIF_FOUNDRY_AGENT_NAME is required when KAIF_FOUNDRY_MODE=project_agent')
+  }
+
+  if ((foundryMode ?? 'deployment_chat') === 'project_agent' && !foundryAgentVersion) {
+    throw new Error('KAIF_FOUNDRY_AGENT_VERSION is required when KAIF_FOUNDRY_MODE=project_agent')
+  }
+
+  const config: KAIFConfig = {
     port:                  parseInt(process.env['KAIF_PORT'] ?? '8080', 10),
     host:                  process.env['KAIF_HOST'] ?? '0.0.0.0',
     issuer,
@@ -170,4 +246,16 @@ export function loadConfig(): KAIFConfig {
     governance_ui_instance_id:  process.env['KAIF_GOVERNANCE_UI_INSTANCE_ID'] ?? 'ui-kaif',
     class_c_degraded_open:      process.env['KAIF_CLASS_C_DEGRADED_OPEN'] === 'true',
   }
+  if (foundryProjectEndpoint !== undefined) config.foundry_project_endpoint = foundryProjectEndpoint
+  if (foundryApiVersion !== undefined) config.foundry_api_version = foundryApiVersion
+  if (foundryMode !== undefined) config.foundry_mode = foundryMode as NonNullable<KAIFConfig['foundry_mode']>
+  if (foundryAuthMode !== undefined) config.foundry_auth_mode = foundryAuthMode as NonNullable<KAIFConfig['foundry_auth_mode']>
+  if (foundryApiKey !== undefined) config.foundry_api_key = foundryApiKey
+  if (foundryInvokePath !== undefined) config.foundry_invoke_path = foundryInvokePath
+  if (foundryAadScope !== undefined) config.foundry_aad_scope = foundryAadScope
+  if (foundryModel !== undefined) config.foundry_model = foundryModel
+  if (foundryAgentName !== undefined) config.foundry_agent_name = foundryAgentName
+  if (foundryAgentVersion !== undefined) config.foundry_agent_version = foundryAgentVersion
+
+  return config
 }

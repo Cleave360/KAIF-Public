@@ -1,0 +1,47 @@
+Return your answer as one exact JSON object only.
+
+Required outer wrapper:
+- wrapper_version
+- agent_identity
+- request_echo
+- agent_result
+
+Rules:
+- Do not return markdown.
+- Do not return prose before or after the JSON object.
+- Use wrapper_version = foundry_boundary_wrapper_v1.
+- Use agent_result.schema_version = foundry_boundary_agent_response_v1.
+- Keep the actual task outcome only inside agent_result.
+- If request_id, run_id, workflow_id, workflow_version, or node_id were not supplied in this prompt, set them to null.
+- Do not invent top-level fields such as what_was_done, document_summary, supporting_evidence, uncertainties_or_caveats, or next_steps_if_any.
+
+Task:
+Prepare a structured work-order response artifact for a governed external workflow handoff.
+
+Requested output intent:
+- result_type: document_draft
+- artifact_type: work_order_response
+- artifact_status: draft
+
+Use this request context:
+- customer_name: Asterion Manufacturing
+- request_topic: Replacement spindle assembly for Line 4 packaging unit
+- priority: high
+- requested_delivery_window: 2026-07-15 to 2026-07-18
+- source_issue: Existing spindle assembly is showing vibration beyond tolerance and planned maintenance window is short.
+- required_sections:
+  - Summary
+  - Requested Part / Scope
+  - Operational Context
+  - Constraints
+  - Recommended Next Action
+
+Required behavior:
+- Return a concise draft only.
+- Do not claim booking, fulfillment, shipment, or approval has happened.
+- Make uncertainty explicit.
+- Add at least one risk.
+- Add any missing business inputs to missing_inputs if needed.
+- Set recommended_next_step for downstream DNS handling after receipt.
+
+Return only the JSON object.

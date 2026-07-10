@@ -1,5 +1,6 @@
-import { randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import type { Redis } from 'ioredis'
+import { loadConfig } from '../config.js'
 import { KAIFError } from '../errors.js'
 import type {
   BoundaryAuthorizationRequest,
@@ -13,6 +14,7 @@ import type {
 import { appendAudit } from './audit.js'
 import { getAgentACLByName, validateScopes } from './acl.js'
 import { executeTokenExchange } from './token-exchange.js'
+import { invokeFoundry, type FoundryRequestOptions } from './foundry.js'
 
 const SUBJECT_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:access_token'
 const ACTOR_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:jwt'
@@ -276,9 +278,277 @@ function buildEvidence(entry: Awaited<ReturnType<typeof appendAudit>>): Boundary
   }
 }
 
+function firstHeader(headers: Record<string, string>, names: string[]): string | undefined {
+  for (const name of names) {
+    const exact = headers[name]
+    if (exact) return exact
+    const lower = headers[name.toLowerCase()]
+    if (lower) return lower
+  }
+  return undefined
+}
+
+function redactedPreview(body: unknown): string | undefined {
+  if (body === null || body === undefined) return undefined
+  const text = typeof body === 'string' ? body : JSON.stringify(body)
+  const trimmed = text.trim()
+  if (!trimmed) return undefined
+  return trimmed.length > 280 ? `${trimmed.slice(0, 280)}...` : trimmed
+}
+
+function hashBody(body: unknown): string | undefined {
+  if (body === null || body === undefined) return undefined
+  const text = typeof body === 'string' ? body : JSON.stringify(body)
+  return `sha256:${createHash('sha256').update(text).digest('hex')}`
+}
+
+function buildBoundaryPrompt(request: BoundaryAuthorizationRequest): string {
+  const prompt = request.human_intent.intent_mode === 'bound'
+    ? request.human_intent.intent_summary
+    : request.action.resource ?? request.action.operation
+
+  return [
+    'You are the external model behind a KAIF-authorized boundary request.',
+    'Return a concise, factual answer that follows the requested task.',
+    'Do not claim actions you did not perform.',
+    'If structured data is returned, keep it compact and directly relevant to the request.',
+    '',
+    `Intent: ${prompt}`,
+    `Resource: ${request.action.resource ?? 'unspecified'}`,
+    `Workflow: ${request.route_context.workflow_id}`,
+    `Node: ${request.route_context.node_id}`,
+    'Return only the information needed by the caller.',
+  ].join('\n')
+}
+
+function buildRequestEchoPrompt(request: BoundaryAuthorizationRequest): string {
+  return [
+    'Use these exact correlation fields in request_echo.',
+    'Do not invent or omit them.',
+    `request_id: ${request.route_context.request_id}`,
+    `run_id: ${request.adaptive_envelope.run_id}`,
+    `workflow_id: ${request.route_context.workflow_id}`,
+    `workflow_version: ${request.route_context.workflow_version ?? 'null'}`,
+    `node_id: ${request.route_context.node_id}`,
+  ].join('\n')
+}
+
+function buildProjectAgentInput(
+  request: BoundaryAuthorizationRequest,
+  messages?: unknown[]
+): Array<{ role: string, content: string }> {
+  const requestEchoPrompt = buildRequestEchoPrompt(request)
+
+  if (Array.isArray(messages) && messages.length > 0) {
+    const normalizedMessages = messages.flatMap((message) => {
+      if (!isRecord(message)) return []
+      const content = message['content']
+      if (typeof content === 'string') {
+        return [content]
+      }
+      return []
+    })
+
+    return [
+      {
+        role: 'user',
+        content: [
+          requestEchoPrompt,
+          ...normalizedMessages,
+        ].join('\n\n'),
+      },
+    ]
+  }
+
+  return [
+    {
+      role: 'user',
+      content: [
+        requestEchoPrompt,
+        buildBoundaryPrompt(request),
+      ].join('\n\n'),
+    },
+  ]
+}
+
+function buildFoundryBody(rawRequest: unknown, request: BoundaryAuthorizationRequest): unknown {
+  const config = loadConfig()
+  const record = isRecord(rawRequest) ? rawRequest : {}
+  const explicitRequest = record['foundry_request']
+  if (isRecord(explicitRequest) || Array.isArray(explicitRequest)) return explicitRequest
+
+  const payload = record['payload']
+  if (isRecord(payload) || Array.isArray(payload)) return payload
+
+  const messages = record['messages']
+  if (Array.isArray(messages)) {
+    if (config.foundry_mode === 'project_agent') {
+      return {
+        model: config.foundry_model,
+        input: buildProjectAgentInput(request, messages),
+        agent_reference: {
+          name: config.foundry_agent_name,
+          version: config.foundry_agent_version,
+          type: 'agent_reference',
+        },
+      }
+    }
+    return { messages }
+  }
+
+  const prompt = buildBoundaryPrompt(request)
+
+  if (config.foundry_mode === 'project_agent') {
+    return {
+      model: config.foundry_model,
+      input: buildProjectAgentInput(request),
+      agent_reference: {
+        name: config.foundry_agent_name,
+        version: config.foundry_agent_version,
+        type: 'agent_reference',
+      },
+    }
+  }
+
+  return {
+    messages: [
+      {
+        role: 'system',
+        content: 'You are the external model behind a KAIF-authorized boundary request.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  }
+}
+
+function extractResponseOutputText(body: Record<string, unknown>): string | undefined {
+  if (typeof body['output_text'] === 'string' && body['output_text'].trim().length > 0) {
+    return body['output_text']
+  }
+
+  const output = body['output']
+  if (!Array.isArray(output)) return undefined
+
+  const fragments: string[] = []
+  for (const item of output) {
+    if (!isRecord(item)) continue
+    const content = item['content']
+    if (!Array.isArray(content)) continue
+    for (const part of content) {
+      if (!isRecord(part)) continue
+      if (typeof part['text'] === 'string' && part['text'].trim().length > 0) {
+        fragments.push(part['text'])
+      }
+    }
+  }
+
+  return fragments.length > 0 ? fragments.join('\n') : undefined
+}
+
+function summarizeFoundryPayload(body: unknown): unknown {
+  if (typeof body === 'string') {
+    return { content: body }
+  }
+
+  if (!isRecord(body)) return body
+
+  const summary: Record<string, unknown> = {}
+
+  if (typeof body['id'] === 'string') summary['id'] = body['id']
+  if (typeof body['object'] === 'string') summary['object'] = body['object']
+  if (typeof body['model'] === 'string') summary['model'] = body['model']
+  if (typeof body['status'] === 'string') summary['status'] = body['status']
+  if (typeof body['created'] === 'number') summary['created'] = body['created']
+  if (typeof body['created_at'] === 'number') summary['created_at'] = body['created_at']
+  if (isRecord(body['usage'])) summary['usage'] = body['usage']
+
+  const outputText = extractResponseOutputText(body)
+  if (outputText !== undefined) {
+    summary['result'] = { content: outputText }
+  }
+
+  const choices = body['choices']
+  if (summary['result'] === undefined && Array.isArray(choices) && choices.length > 0) {
+    const firstChoice = choices[0]
+    if (isRecord(firstChoice)) {
+      const message = isRecord(firstChoice['message']) ? firstChoice['message'] : null
+      summary['result'] = {
+        ...(typeof firstChoice['finish_reason'] === 'string' ? { finish_reason: firstChoice['finish_reason'] } : {}),
+        ...(typeof firstChoice['index'] === 'number' ? { index: firstChoice['index'] } : {}),
+        ...(message && typeof message['role'] === 'string' ? { role: message['role'] } : {}),
+        ...(message && typeof message['content'] === 'string' ? { content: message['content'] } : {}),
+      }
+    }
+  }
+
+  const error = body['error']
+  if (isRecord(error)) {
+    summary['error'] = {
+      ...(typeof error['message'] === 'string' ? { message: error['message'] } : {}),
+      ...(typeof error['type'] === 'string' ? { type: error['type'] } : {}),
+      ...(typeof error['param'] === 'string' ? { param: error['param'] } : {}),
+      ...(typeof error['code'] === 'string' ? { code: error['code'] } : {}),
+    }
+  }
+
+  return Object.keys(summary).length > 0 ? summary : body
+}
+
+function mapFoundryStatus(status: number, body: unknown): 'success' | 'rejected' | 'error' | 'paused' {
+  if (isRecord(body) && typeof body['status'] === 'string') {
+    if (body['status'] === 'completed') return 'success'
+    if (body['status'] === 'in_progress' || body['status'] === 'queued') return 'paused'
+    if (body['status'] === 'failed' || body['status'] === 'incomplete') return 'error'
+  }
+  if (status === 202) return 'paused'
+  if (status >= 200 && status < 300) return 'success'
+  if (status === 401 || status === 403 || status === 429) return 'rejected'
+  if (isRecord(body)) {
+    const error = body['error']
+    if (isRecord(error) && typeof error['code'] === 'string' && error['code'].toLowerCase().includes('rate')) {
+      return 'paused'
+    }
+  }
+  return 'error'
+}
+
+function providerMessage(status: number, body: unknown): string {
+  if (isRecord(body)) {
+    const error = body['error']
+    if (isRecord(error)) {
+      const message = error['message']
+      const code = error['code']
+      if (typeof message === 'string' && message.length > 0) {
+        return message
+      }
+      if (typeof code === 'string' && code.length > 0) {
+        return code
+      }
+    }
+  }
+  if (typeof body === 'string' && body.trim().length > 0) {
+    return body.trim().slice(0, 280)
+  }
+  return status >= 200 && status < 300 ? 'ok' : `provider returned status ${status}`
+}
+
+function providerCode(status: number, body: unknown): string {
+  if (isRecord(body)) {
+    const error = body['error']
+    if (isRecord(error) && typeof error['code'] === 'string' && error['code'].length > 0) {
+      return error['code']
+    }
+  }
+  return String(status)
+}
+
 export async function authorizeBoundary(params: {
   redis: Redis
   rawRequest: unknown
+  foundry?: FoundryRequestOptions
 }): Promise<BoundaryPermitResponse> {
   const request = parseBoundaryRequest(params.rawRequest)
   const decisionId = randomUUID()
@@ -301,6 +571,82 @@ export async function authorizeBoundary(params: {
   const auditEntry = await appendAudit(params.redis, {
     action: 'BOUNDARY_PERMIT',
     detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} workflow_id=${request.route_context.workflow_id} node_id=${request.route_context.node_id} audience=${request.action.audience} scope=${request.action.scope}`,
+    agent_id: request.kaif_subject.agent_spiffe_id,
+    human_id: request.kaif_subject.human_sub,
+  })
+
+  const foundryBody = buildFoundryBody(params.rawRequest, request)
+  const foundryStartedAt = Date.now()
+  let receipt: BoundaryPermitResponse['receipt']
+
+  try {
+    const foundryResponse = await invokeFoundry({
+      method: 'POST',
+      body: foundryBody,
+      headers: {
+        'x-kaif-decision-id': decisionId,
+        'x-kaif-request-id': request.route_context.request_id,
+        'x-kaif-run-id': request.adaptive_envelope.run_id,
+        'x-kaif-tenant-id': request.adaptive_envelope.tenant_id,
+        'x-kaif-delegation-id': claims.kaif.delegation_id,
+        'x-kaif-token-jti': claims.jti,
+        'x-kaif-input-hash': hashBody(foundryBody) ?? 'sha256:missing',
+        'x-kaif-node-id': request.route_context.node_id,
+        'x-kaif-workflow-id': request.route_context.workflow_id,
+      },
+    }, params.foundry)
+
+    const foundryReceipt: BoundaryPermitResponse['receipt'] = {
+      receipt_version: 'v1',
+      receipt_id: randomUUID(),
+      decision_id: decisionId,
+      request_id: request.route_context.request_id,
+      run_id: request.adaptive_envelope.run_id,
+      target_system: 'foundry',
+      occurred_at_ms: Date.now(),
+      result: {
+        status: mapFoundryStatus(foundryResponse.status, foundryResponse.body),
+        provider_code: providerCode(foundryResponse.status, foundryResponse.body),
+        provider_message: providerMessage(foundryResponse.status, foundryResponse.body),
+      },
+      latency_ms: Date.now() - foundryStartedAt,
+      receipt_payload: summarizeFoundryPayload(foundryResponse.body),
+      delegation_id: claims.kaif.delegation_id,
+      token_jti: claims.jti,
+    }
+    const providerRequestId = firstHeader(foundryResponse.headers, ['x-ms-request-id', 'apim-request-id', 'x-request-id'])
+    const providerSessionId = firstHeader(foundryResponse.headers, ['x-ms-session-id'])
+    const outputHash = hashBody(foundryResponse.body)
+    const outputPreview = redactedPreview(foundryResponse.body)
+    if (providerRequestId !== undefined) foundryReceipt.provider_request_id = providerRequestId
+    if (providerSessionId !== undefined) foundryReceipt.provider_session_id = providerSessionId
+    if (outputHash !== undefined) foundryReceipt.output_hash = outputHash
+    if (outputPreview !== undefined) foundryReceipt.output_preview = outputPreview
+    receipt = foundryReceipt
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'Foundry transport failure'
+    receipt = {
+      receipt_version: 'v1',
+      receipt_id: randomUUID(),
+      decision_id: decisionId,
+      request_id: request.route_context.request_id,
+      run_id: request.adaptive_envelope.run_id,
+      target_system: 'foundry',
+      occurred_at_ms: Date.now(),
+      result: {
+        status: 'error',
+        provider_code: 'transport_error',
+        provider_message: reason,
+      },
+      latency_ms: Date.now() - foundryStartedAt,
+      delegation_id: claims.kaif.delegation_id,
+      token_jti: claims.jti,
+    }
+  }
+
+  await appendAudit(params.redis, {
+    action: 'BOUNDARY_RECEIPT',
+    detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} status=${receipt.result.status} provider_code=${receipt.result.provider_code}`,
     agent_id: request.kaif_subject.agent_spiffe_id,
     human_id: request.kaif_subject.human_sub,
   })
@@ -344,6 +690,7 @@ export async function authorizeBoundary(params: {
       issued_token_type: exchange.issued_token_type,
       scope: exchange.scope,
     },
+    receipt,
   }
 }
 

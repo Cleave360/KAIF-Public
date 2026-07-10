@@ -36,6 +36,16 @@ describe('loadConfig production guardrails', () => {
     delete process.env['KAIF_GOVERNANCE_PROJECT_ID']
     delete process.env['KAIF_GOVERNANCE_UI_INSTANCE_ID']
     delete process.env['KAIF_CLASS_C_DEGRADED_OPEN']
+    delete process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT']
+    delete process.env['KAIF_FOUNDRY_API_VERSION']
+    delete process.env['KAIF_FOUNDRY_MODE']
+    delete process.env['KAIF_FOUNDRY_AUTH_MODE']
+    delete process.env['KAIF_FOUNDRY_API_KEY']
+    delete process.env['KAIF_FOUNDRY_INVOKE_PATH']
+    delete process.env['KAIF_FOUNDRY_AAD_SCOPE']
+    delete process.env['KAIF_FOUNDRY_MODEL']
+    delete process.env['KAIF_FOUNDRY_AGENT_NAME']
+    delete process.env['KAIF_FOUNDRY_AGENT_VERSION']
   })
 
   afterEach(() => {
@@ -224,5 +234,75 @@ describe('loadConfig production guardrails', () => {
     expect(config.governance_project_id).toBe('kaif-test')
     expect(config.governance_ui_instance_id).toBe('ui-test')
     expect(config.class_c_degraded_open).toBe(true)
+  })
+
+  it('captures Foundry Azure AD settings when provided', () => {
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
+    process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
+    process.env['KAIF_FOUNDRY_AAD_SCOPE'] = 'https://ai.azure.com/.default'
+    process.env['KAIF_FOUNDRY_INVOKE_PATH'] = '/agents/mock/runs'
+
+    const config = loadConfig()
+    expect(config.foundry_project_endpoint).toBe('https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882')
+    expect(config.foundry_api_version).toBe('2025-05-15-preview')
+    expect(config.foundry_auth_mode).toBe('azure_ad')
+    expect(config.foundry_aad_scope).toBe('https://ai.azure.com/.default')
+    expect(config.foundry_invoke_path).toBe('/agents/mock/runs')
+  })
+
+  it('captures Foundry project agent settings when provided', () => {
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
+    process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
+    process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
+    process.env['KAIF_FOUNDRY_AAD_SCOPE'] = 'https://ai.azure.com/.default'
+    process.env['KAIF_FOUNDRY_MODEL'] = 'gpt-5-mini'
+    process.env['KAIF_FOUNDRY_AGENT_NAME'] = 'BoundaryAgent'
+    process.env['KAIF_FOUNDRY_AGENT_VERSION'] = '2'
+
+    const config = loadConfig()
+    expect(config.foundry_mode).toBe('project_agent')
+    expect(config.foundry_model).toBe('gpt-5-mini')
+    expect(config.foundry_agent_name).toBe('BoundaryAgent')
+    expect(config.foundry_agent_version).toBe('2')
+  })
+
+  it('requires project endpoint when Foundry integration is configured', () => {
+    process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'none'
+    expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_PROJECT_ENDPOINT is required/)
+  })
+
+  it('requires api key when Foundry auth mode is api_key', () => {
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'api_key'
+    expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_API_KEY is required/)
+  })
+
+  it('requires Azure AD scope when Foundry auth mode is azure_ad', () => {
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
+    expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_AAD_SCOPE is required/)
+  })
+
+  it('rejects Foundry invoke path without a leading slash', () => {
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'none'
+    process.env['KAIF_FOUNDRY_INVOKE_PATH'] = 'agents/mock/runs'
+    expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_INVOKE_PATH must start with "\/"/)
+  })
+
+  it('requires model and agent reference when Foundry mode is project_agent', () => {
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
+    process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
+    process.env['KAIF_FOUNDRY_AAD_SCOPE'] = 'https://ai.azure.com/.default'
+    expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_MODEL is required/)
+
+    process.env['KAIF_FOUNDRY_MODEL'] = 'gpt-5-mini'
+    expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_AGENT_NAME is required/)
+
+    process.env['KAIF_FOUNDRY_AGENT_NAME'] = 'BoundaryAgent'
+    expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_AGENT_VERSION is required/)
   })
 })

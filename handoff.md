@@ -1126,3 +1126,394 @@ Current DNS stance:
 - DNS runtime should inject correlation and execution identity
 - KAIF should be the fail-closed authority for boundary validation and attestation
 - downstream security/quarantine remains outside KAIF and outside the base DNS boundary envelope
+
+---
+## 2026-07-09 — GitHub Copilot (claude-sonnet-4-6) — Azure/Foundry integration discovery and wiring
+
+### Session summary
+
+Full Azure/Foundry integration discovery pass. Verified working endpoints, retrieved credentials, created service principal, tested both the direct model path and the BoundaryAgent path. All values wired into `.env`.
+
+---
+
+### Azure resource map (authoritative)
+
+| Field | Value |
+|---|---|
+| Subscription | `7460a200-e4dc-4e0f-8c3e-7db55e47647c` |
+| Tenant | `e7267256-e58d-4679-bed0-3f3ef087a222` |
+| Resource Group | `rg-kindred-2461` |
+| CognitiveServices account | `kindred-1882-resource` (Sweden Central) |
+| AI Foundry project | `kindred-1882` |
+| Active model deployment | `gpt-5-mini` (GPT-5-mini-2025-08-07) |
+| APIM instance | `KAIF-TEST` (Sweden Central) |
+
+---
+
+### Two distinct invocation paths — both verified working
+
+#### Path 1 — APIM gateway (direct model, no agent routing)
+```
+POST https://kaif-test.azure-api.net/kindred-1882-resource/openai/v1/responses?api-version=v1
+api-key: <KAIF_APIM_SUBSCRIPTION_KEY>
+{"model":"gpt-5-mini","input":"...","stream":false}
+```
+- Auth: APIM subscription key (`KAIF_APIM_SUBSCRIPTION_KEY`) — NOT the Foundry API key
+- Also exposes: `/openai/v1/chat/completions`, `/openai/v1/models`, `/anthropic/v1/messages`
+- Response: `output_text` is NOT at top level — it is at `output[0].content[0].text`
+- Does NOT support `agent_reference` — that parameter is rejected by the backend
+
+#### Path 2 — Foundry project endpoint (agent routing, BoundaryAgent)
+```python
+from azure.identity import AzureCliCredential   # or DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
+
+client = AIProjectClient(
+    endpoint="https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882",
+    credential=AzureCliCredential(),
+)
+response = client.get_openai_client().responses.create(
+    model="gpt-5-mini",          # underlying model — NOT the agent name
+    input=[{"role": "user", "content": "..."}],
+    extra_body={"agent_reference": {"name": "BoundaryAgent", "version": "2", "type": "agent_reference"}},
+)
+print(response.output_text)
+```
+- Auth: `AzureCliCredential` (local dev) or `DefaultAzureCredential` with SP env vars (CI/container)
+- `model` must be `"gpt-5-mini"` — passing `"BoundaryAgent"` returns `400 invalid_payload`
+- `agent_reference.version` must be `"2"` — v3 does not exist
+
+---
+
+### Agents in project kindred-1882
+
+Both discovered via `client.agents.list()`:
+
+| Agent | Latest Version | Model | Notes |
+|---|---|---|---|
+| `BoundaryAgent` | `2` | `gpt-5-mini` | Governed boundary execution agent; returns structured JSON envelope with `status`, `result_type`, `artifacts`, `evidence` |
+| `Lumis` | (present) | `gpt-5-mini` | Exists but not tested this session |
+
+BoundaryAgent response shape:
+```json
+{
+  "wrapper_version": "foundry_boundary_wrapper_v1",
+  "agent_identity": {"name": "Foundry Boundary Agent", "role": "..."},
+  "request_echo": {"request_id": null, "run_id": null, "workflow_id": null, "node_id": null},
+  "agent_result": {
+    "schema_version": "foundry_boundary_agent_response_v1",
+    "status": "completed|needs_input|escalate|rejected|error",
+    "result_type": "...",
+    "result_summary": "...",
+    "artifacts": [],
+    "evidence": [],
+    "risks": [],
+    "missing_inputs": [],
+    "recommended_next_step": "..."
+  }
+}
+```
+
+---
+
+### Entra Agent Identity Blueprint
+
+| Field | Value |
+|---|---|
+| Blueprint App ID | `28c761cc-eaac-469a-8a76-e9aa83e1ce97` |
+| Blueprint Object ID | `28c761cc-eaac-469a-8a76-e9aa83e1ce97` (same — this is correct for agentIdentityBlueprint) |
+| Display name | `kindred-1882-resource-kindred-1882-BoundaryAgent-ed53b-AgentIdentityBlueprint` |
+| Tenant | `kindredkindredsystems.onmicrosoft.com` |
+| Region tag | `swedencentral` |
+| Virtual workspace | `620d9810-238d-4395-a7a8-7d1a0196b6d3` |
+| Project tag | `kindred-1882-resource@kindred-1882@AML` |
+
+**BlueprintPrincipal status:** Not yet created (empty response from typed SP endpoint). Must be created before Agent Identity token flows work. See Entra Agent ID skill for the `POST /servicePrincipals/microsoft.graph.agentIdentityBlueprintPrincipal` call.
+
+**Important:** `DefaultAzureCredential` with Azure CLI tokens returns 403 on Graph Agent Identity write operations (`Directory.AccessAsUser.All` is rejected). Use `ClientSecretCredential` or `Connect-MgGraph` with `AgentIdentityBlueprintPrincipal.Create` scope for provisioning.
+
+---
+
+### Service principal created: kaif-foundry-sp
+
+| Field | Value |
+|---|---|
+| SP App ID (AZURE_CLIENT_ID) | `e2148609-e5d2-48d8-9a73-d814702552fd` |
+| SP Object ID | `3b47fd8b-e493-48e3-9d34-d458be5cb90b` |
+| Roles assigned | `Cognitive Services OpenAI User` + `Azure AI Developer` on `kindred-1882-resource` |
+| RBAC scope | `/subscriptions/7460a200.../resourceGroups/rg-kindred-2461/providers/Microsoft.CognitiveServices/accounts/kindred-1882-resource` |
+
+RBAC propagation takes 2–10 minutes after assignment. If SP returns 403 immediately after creation, wait and retry. SP credentials are in `.env` under `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`.
+
+---
+
+### .env variables added this session
+
+```bash
+# SP credentials
+AZURE_TENANT_ID=<tenant-id>
+AZURE_CLIENT_ID=<client-id>
+AZURE_CLIENT_SECRET=<client-secret>
+
+# APIM gateway
+KAIF_APIM_GATEWAY_URL=https://kaif-test.azure-api.net/kindred-1882-resource
+KAIF_APIM_SUBSCRIPTION_KEY=<subscription-key>
+KAIF_APIM_SUBSCRIPTION_KEY_2=<subscription-key-2>
+KAIF_APIM_MASTER_KEY=<master-key>
+
+# Foundry project endpoint (for agent routing)
+KAIF_FOUNDRY_PROJECT_ENDPOINT=https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882
+KAIF_FOUNDRY_MODEL=gpt-5-mini
+KAIF_FOUNDRY_AGENT_NAME=BoundaryAgent
+KAIF_FOUNDRY_AGENT_VERSION=2
+KAIF_FOUNDRY_AUTH_MODE=azure_ad
+KAIF_FOUNDRY_AAD_SCOPE=https://ai.azure.com/.default
+```
+
+---
+
+### API version discovery notes
+
+These are non-obvious and cost significant trial-and-error:
+
+- `cognitiveservices.azure.com` raw OpenAI deployments: `api-version=2024-02-15-preview` ✅ (2024-12-01 and newer formats return 400)
+- `services.ai.azure.com/api/projects/` Foundry project management: handled internally by `azure-ai-projects` SDK — do not pass manually
+- APIM gateway `/openai/v1/*`: `api-version=v1` ✅
+- SPIRE bundle endpoint: not versioned
+
+---
+
+### SDK package verified working
+
+```bash
+uv pip install "azure-ai-projects>=2.1.0" azure-identity
+```
+
+Tested in `.venv` (Python 3.13.13 via `uv venv`). The venv has no `pip` module — always use `uv pip install`, never `pip install` or `python3 -m pip install`.
+
+---
+
+### Notes for Codex
+
+1. **Use Path 2 (Foundry project endpoint) for all BoundaryAgent calls** — APIM does not route `agent_reference`.
+2. **`model` in the responses call must be `"gpt-5-mini"`** — the agent name in `model` field returns 400.
+3. **BoundaryAgent is at version `2`** — Codex's original code assumed `"3"` which doesn't exist.
+4. **BlueprintPrincipal not yet created** — Agent Identity token flows (fmi_path exchange) will fail until the BlueprintPrincipal SP is provisioned via Graph.
+5. **SP 403 on first use is normal** — RBAC takes 2–10 min to propagate after role assignment.
+6. **APIM subscription key ≠ Foundry API key** — they are different credentials for different surfaces.
+7. **`azure_steps.md`** in the repo root (gitignored) contains the full step-by-step CLI procedure for credential discovery if any of the above needs to be repeated.
+
+— Signed: GitHub Copilot (claude-sonnet-4-6), 2026-07-09
+
+## Codex (KAIF) (2026-07-09) — Final live boundary verification passed
+
+Final live proof after wiring the Foundry project-agent path, adding account-scope `Foundry User`, and fixing `request_echo` injection:
+
+- Runtime path verified end to end:
+  - `DNS -> KAIF -> BoundaryAgent -> KAIF -> DNS`
+- Route exercised:
+  - `POST http://127.0.0.1:18080/v1/boundary/authorize`
+- Foundry target surface:
+  - `https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882/openai/v1/responses`
+- Foundry auth mode:
+  - service principal via `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`
+
+### Final successful evidence set
+
+| Field | Value |
+|---|---|
+| Marker | `kaif-final-clean-1783616312` |
+| Request ID | `req-kaif-final-clean-1783616312` |
+| Run ID | `run-kaif-final-clean-1783616312` |
+| Workflow ID | `foundry_boundary_review_auto_recipe_v2` |
+| Workflow Version | `v2` |
+| Node ID | `node_5` |
+| Boundary decision | `permit` |
+| Provider status | `success` |
+| Provider code | `200` |
+| Provider request ID | `d3572887-59ea-4357-a212-284888959dd2` |
+
+### What was confirmed
+
+- KAIF returned `decision=permit`
+- Foundry returned `200`
+- BoundaryAgent returned a real structured artifact
+- `request_echo` survived the round trip and matched the inbound workflow correlation fields exactly
+- unique marker was present in the returned artifact/result summary
+
+### Final `request_echo`
+
+```json
+{
+  "request_id": "req-kaif-final-clean-1783616312",
+  "run_id": "run-kaif-final-clean-1783616312",
+  "workflow_id": "foundry_boundary_review_auto_recipe_v2",
+  "workflow_version": "v2",
+  "node_id": "node_5"
+}
+```
+
+### Operational note
+
+- A later failed smoke was traced to an old container using a stale Azure client secret.
+- That was resolved by recreating `kaif-server` with the refreshed secret.
+- Final container verification showed the refreshed secret loaded, and the final clean smoke above passed.
+
+### Ready state for DNS
+
+DNS can now treat KAIF as the boundary-grade authorization gate for this workflow:
+- send the boundary payload to KAIF
+- branch on `decision`
+- on `decision=permit` consume the returned receipt/artifact
+- do not call Foundry `BoundaryAgent` directly from DNS
+
+Next recommended step:
+- execute the live DNS workflow against the KAIF boundary using the same `workflow_id=node_5` path and preserve the returned `provider_request_id` in DNS evidence.
+
+---
+
+## 2026-07-09 — GitHub Copilot — Azure RBAC Project-Scoped Access Implementation + 403 Diagnostic
+
+**Context:**
+SP now needs project-level RBAC (not just account-level). Azure AI Foundry projects have separate access control from parent CognitiveServices accounts. Previously granted account-level roles were insufficient.
+
+**Work completed:**
+
+1. **Constructed project-scoped role assignment via Azure CLI:**
+   ```bash
+   az role assignment create \
+     --role "Azure AI Developer" \
+     --assignee "e2148609-e5d2-48d8-9a73-d814702552fd" \
+     --scope "/subscriptions/7460a200.../providers/Microsoft.CognitiveServices/accounts/kindred-1882-resource/projects/kindred-1882"
+   ```
+   ✅ Response confirmed: role assignment created with ID `4fb99d7a-b9f6-428b-9fef-06c4038560e0`, timestamp `2026-07-09T11:28:34Z`, principalId `3b47fd8b-e493-48e3-9d34-d458be5cb90b`.
+
+2. **Verified role assignment persistence:**
+   ```bash
+   az role assignment list \
+     --scope "/subscriptions/.../Microsoft.CognitiveServices/accounts/kindred-1882-resource/projects/kindred-1882" \
+     --query "[].{role:roleDefinitionName, principal:principalName}" \
+     -o table
+   ```
+   ✅ Result: SP `e2148609-e5d2-48d8-9a73-d814702552fd` shows as `Azure AI Developer` at project scope.
+
+3. **Tested SP access immediately post-assignment:**
+   - Used `ClientSecretCredential` (fresh token, not cached CLI token)
+   - Invoked BoundaryAgent v2 via `AIProjectClient.responses.create()`
+   - ❌ Result: HTTP 403 Forbidden
+
+4. **Baseline diagnostic — CLI user (AzureCliCredential):**
+   - Same endpoint, same agent, same request shape
+   - ✅ Result: HTTP 200, BoundaryAgent response received
+
+**Analysis:**
+
+The diagnostic split is now clear:
+- ✅ CLI user can invoke BoundaryAgent (AzureCliCredential)
+- ❌ SP cannot invoke BoundaryAgent (ClientSecretCredential)
+- ✅ Role assignment exists at project scope
+
+**Root cause hypothesis:**
+1. **Token caching (most likely):** Azure AD issued the SP an access token before the RBAC change. Cached tokens are valid until expiry (typically 1 hour). Next token refresh will include the new role grant. Azure's RBAC changes can take 5–10 minutes to propagate through all Azure AD token-issuing services.
+
+2. **Foundry project has separate access control UI:** RBAC role assignment ≠ project membership. The project may have a separate "Members" or "Access Control" panel in the Azure portal that requires explicit addition of the SP, beyond RBAC roles. This is more likely if the 403 persists after a new SP token is issued.
+
+3. **Role is insufficient:** `Azure AI Developer` might not grant the specific permission for `/api/projects/<project>/openai/v1/responses` on agent routing. Less likely but possible if Foundry uses custom roles or fine-grained scopes.
+
+**Next steps (for user to execute):**
+
+1. **Wait 5–10 more minutes** — Azure RBAC propagation lag. Then retry the SP test.
+
+2. **If SP still gets 403 after 10+ minutes total:**
+   - Open Azure Portal → AI Foundry → project `kindred-1882` → settings/members/access control
+   - Check if there's a separate "Add member" or "Add principal" UI within the project
+   - If yes: add `kaif-foundry-sp` explicitly at project scope (not account scope)
+   - This would confirm Foundry projects have dual-layer access control: RBAC + project members
+
+3. **If both CLI and SP still get 403 after 10+ min:**
+   - Problem is endpoint, not RBAC
+   - Contact Azure/Foundry support with message: *"Foundry project `/api/projects/kindred-1882/openai/v1/responses` is returning 403 for all principals, including account owner. Is the project or API in maintenance or disabled?"*
+
+**Diagnostic tree (for reference):**
+```
+Test SP access:
+  ├─ 403 immediately (expected)
+  └─ Wait 5-10 min, retry
+      ├─ ✅ 200 → SP now has access, proceed to KAIF boundary endpoint
+      ├─ ❌ 403 still → Project member UI likely required, see next step 2
+      │   ├─ Add SP explicitly in portal
+      │   ├─ Wait 2 min
+      │   └─ Retry
+      │       ├─ ✅ 200 → Confirms dual-layer access control
+      │       └─ ❌ 403 → Role is insufficient or endpoint disabled
+      └─ Also test CLI user
+          ├─ ✅ CLI works, SP fails → RBAC propagation issue (wait longer or project member UI needed)
+          └─ ❌ CLI also fails → Endpoint problem (contact Azure support)
+```
+
+**Waiting period rationale:**
+Azure RBAC caches aggressively across:
+- Azure AD token-issuing services (STS)
+- Azure Resource Manager (ARM)
+- Service-specific API gateways (Foundry in this case)
+
+Each cache has its own TTL and invalidation strategy. Total propagation is typically 2–10 minutes, occasionally longer if the service is under load.
+
+**Credentials remain ready in `.env`:**
+```
+AZURE_TENANT_ID=<tenant-id>
+AZURE_CLIENT_ID=<client-id>
+AZURE_CLIENT_SECRET=<client-secret>
+KAIF_FOUNDRY_PROJECT_ENDPOINT=https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882
+KAIF_FOUNDRY_MODEL=gpt-5-mini
+KAIF_FOUNDRY_AGENT_NAME=BoundaryAgent
+KAIF_FOUNDRY_AGENT_VERSION=2
+KAIF_FOUNDRY_AUTH_MODE=azure_ad
+KAIF_FOUNDRY_AAD_SCOPE=https://ai.azure.com/.default
+```
+
+Once SP test passes, the path to KAIF boundary authorization endpoint is clear: wrap this SP+Foundry flow in a KAIF route that validates incoming KAIF JWT, then forwards to Foundry with SP credentials.
+
+— Signed: GitHub Copilot (claude-sonnet-4-6), 2026-07-09
+
+**SOLUTION: The missing Foundry User role (FOUND)**
+
+Retested SP with `ClientSecretCredential` after waiting 10+ minutes → still 403.
+
+Diagnosis: Examined Azure Portal IAM screenshot. Observed that CLI user had `Foundry User` role visible in the account-level IAM, but SP did not. SP only had:
+- `Azure AI Developer` (account-level)
+- `Cognitive Services OpenAI User` (account-level)  
+- `Azure AI Developer` (project-scoped)
+
+The missing piece: **Foundry User** role at account scope.
+
+Applied fix:
+```bash
+az role assignment create \
+  --role "Foundry User" \
+  --assignee "e2148609-e5d2-48d8-9a73-d814702552fd" \
+  --scope "/subscriptions/7460a200-e4dc-4e0f-8c3e-7db55e47647c/resourceGroups/rg-kindred-2461/providers/Microsoft.CognitiveServices/accounts/kindred-1882-resource"
+```
+
+Result: ✅ **SP test passed** 60 seconds after role assignment.
+
+**Final SP role matrix:**
+| Role | Scope | Status |
+|---|---|---|
+| Cognitive Services OpenAI User | account | ✅ (early, unneeded) |
+| Azure AI Developer | account | ✅ |
+| Azure AI Developer | project | ✅ |
+| **Foundry User** | account | ✅ **(was the blocker)** |
+
+Key lesson: **RBAC role ≠ service-specific role.** The project required `Foundry User` at the account level, even though project-level `Azure AI Developer` was also needed. Azure's layering is: subscription → resource → service-specific gates. Don't assume RBAC roles alone grant access to managed-service features.
+
+**Next phase: KAIF boundary authorization endpoint**
+
+SP is now unblocked. Ready to build `POST /v1/boundary/authorize` — ~50 lines of TypeScript:
+1. Verify incoming KAIF JWT
+2. Use SP credentials to invoke BoundaryAgent
+3. Wrap Foundry response in KAIF receipt
+
+This endpoint is the final integration point: KAIF JWT → BoundaryAgent → KAIF receipt.
+
+— Signed: GitHub Copilot (claude-sonnet-4-6), 2026-07-09

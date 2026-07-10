@@ -1,10 +1,12 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import type { Redis } from 'ioredis'
 import { KAIFError } from '../errors.js'
+import type { FoundryRequestOptions } from '../services/foundry.js'
 import { authorizeBoundary, denyBoundary } from '../services/boundary.js'
 
 interface BoundaryRouteOpts extends FastifyPluginOptions {
   redis: Redis
+  foundry?: FoundryRequestOptions
 }
 
 export async function boundaryRoute(app: FastifyInstance, opts: BoundaryRouteOpts): Promise<void> {
@@ -15,6 +17,7 @@ export async function boundaryRoute(app: FastifyInstance, opts: BoundaryRouteOpt
         const response = await authorizeBoundary({
           redis: opts.redis,
           rawRequest: request.body,
+          ...(opts.foundry ? { foundry: opts.foundry } : {}),
         })
         return reply.status(200).send(response)
       } catch (err) {
