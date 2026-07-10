@@ -39,6 +39,12 @@ export interface KAIFConfig {
   foundry_model?: string
   foundry_agent_name?: string
   foundry_agent_version?: string
+  dns_delivery_enabled: boolean
+  dns_base_url?: string
+  dns_auth_mode?: 'bearer' | 'header' | 'both'
+  dns_auth_token?: string
+  dns_write_timeout_ms?: number
+  dns_resume_timeout_ms?: number
 }
 
 function requireEnv(name: string): string {
@@ -91,6 +97,12 @@ export function loadConfig(): KAIFConfig {
   const foundryModel = process.env['KAIF_FOUNDRY_MODEL'] || undefined
   const foundryAgentName = process.env['KAIF_FOUNDRY_AGENT_NAME'] || undefined
   const foundryAgentVersion = process.env['KAIF_FOUNDRY_AGENT_VERSION'] || undefined
+  const dnsDeliveryEnabled = process.env['KAIF_DNS_DELIVERY_ENABLED'] === 'true'
+  const dnsBaseUrl = process.env['KAIF_DNS_BASE_URL'] || undefined
+  const dnsAuthMode = process.env['KAIF_DNS_AUTH_MODE'] || undefined
+  const dnsAuthToken = process.env['KAIF_DNS_AUTH_TOKEN'] || undefined
+  const dnsWriteTimeoutRaw = process.env['KAIF_DNS_WRITE_TIMEOUT_MS']
+  const dnsResumeTimeoutRaw = process.env['KAIF_DNS_RESUME_TIMEOUT_MS']
   const foundryConfigured = Boolean(
     foundryProjectEndpoint
     || foundryApiVersion
@@ -212,6 +224,36 @@ export function loadConfig(): KAIFConfig {
     throw new Error('KAIF_FOUNDRY_AGENT_VERSION is required when KAIF_FOUNDRY_MODE=project_agent')
   }
 
+  if (dnsAuthMode && !['bearer', 'header', 'both'].includes(dnsAuthMode)) {
+    throw new Error('KAIF_DNS_AUTH_MODE must be one of bearer, header, or both')
+  }
+
+  if (dnsBaseUrl) {
+    try {
+      new URL(dnsBaseUrl)
+    } catch {
+      throw new Error('KAIF_DNS_BASE_URL must be a valid URL')
+    }
+  }
+
+  if (dnsDeliveryEnabled && !dnsBaseUrl) {
+    throw new Error('KAIF_DNS_BASE_URL is required when KAIF_DNS_DELIVERY_ENABLED=true')
+  }
+
+  if (dnsDeliveryEnabled && !dnsAuthToken) {
+    throw new Error('KAIF_DNS_AUTH_TOKEN is required when KAIF_DNS_DELIVERY_ENABLED=true')
+  }
+
+  const dnsWriteTimeoutMs = dnsWriteTimeoutRaw ? Number.parseInt(dnsWriteTimeoutRaw, 10) : undefined
+  if (dnsWriteTimeoutRaw && (!Number.isFinite(dnsWriteTimeoutMs) || dnsWriteTimeoutMs <= 0)) {
+    throw new Error('KAIF_DNS_WRITE_TIMEOUT_MS must be a positive integer')
+  }
+
+  const dnsResumeTimeoutMs = dnsResumeTimeoutRaw ? Number.parseInt(dnsResumeTimeoutRaw, 10) : undefined
+  if (dnsResumeTimeoutRaw && (!Number.isFinite(dnsResumeTimeoutMs) || dnsResumeTimeoutMs <= 0)) {
+    throw new Error('KAIF_DNS_RESUME_TIMEOUT_MS must be a positive integer')
+  }
+
   const config: KAIFConfig = {
     port:                  parseInt(process.env['KAIF_PORT'] ?? '8080', 10),
     host:                  process.env['KAIF_HOST'] ?? '0.0.0.0',
@@ -245,6 +287,7 @@ export function loadConfig(): KAIFConfig {
     governance_project_id:      process.env['KAIF_GOVERNANCE_PROJECT_ID'] ?? 'kaif',
     governance_ui_instance_id:  process.env['KAIF_GOVERNANCE_UI_INSTANCE_ID'] ?? 'ui-kaif',
     class_c_degraded_open:      process.env['KAIF_CLASS_C_DEGRADED_OPEN'] === 'true',
+    dns_delivery_enabled:       dnsDeliveryEnabled,
   }
   if (foundryProjectEndpoint !== undefined) config.foundry_project_endpoint = foundryProjectEndpoint
   if (foundryApiVersion !== undefined) config.foundry_api_version = foundryApiVersion
@@ -256,6 +299,11 @@ export function loadConfig(): KAIFConfig {
   if (foundryModel !== undefined) config.foundry_model = foundryModel
   if (foundryAgentName !== undefined) config.foundry_agent_name = foundryAgentName
   if (foundryAgentVersion !== undefined) config.foundry_agent_version = foundryAgentVersion
+  if (dnsBaseUrl !== undefined) config.dns_base_url = dnsBaseUrl
+  if (dnsAuthMode !== undefined) config.dns_auth_mode = dnsAuthMode as NonNullable<KAIFConfig['dns_auth_mode']>
+  if (dnsAuthToken !== undefined) config.dns_auth_token = dnsAuthToken
+  if (dnsWriteTimeoutMs !== undefined) config.dns_write_timeout_ms = dnsWriteTimeoutMs
+  if (dnsResumeTimeoutMs !== undefined) config.dns_resume_timeout_ms = dnsResumeTimeoutMs
 
   return config
 }

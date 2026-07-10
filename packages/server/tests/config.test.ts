@@ -46,6 +46,12 @@ describe('loadConfig production guardrails', () => {
     delete process.env['KAIF_FOUNDRY_MODEL']
     delete process.env['KAIF_FOUNDRY_AGENT_NAME']
     delete process.env['KAIF_FOUNDRY_AGENT_VERSION']
+    delete process.env['KAIF_DNS_DELIVERY_ENABLED']
+    delete process.env['KAIF_DNS_BASE_URL']
+    delete process.env['KAIF_DNS_AUTH_MODE']
+    delete process.env['KAIF_DNS_AUTH_TOKEN']
+    delete process.env['KAIF_DNS_WRITE_TIMEOUT_MS']
+    delete process.env['KAIF_DNS_RESUME_TIMEOUT_MS']
   })
 
   afterEach(() => {
@@ -304,5 +310,35 @@ describe('loadConfig production guardrails', () => {
 
     process.env['KAIF_FOUNDRY_AGENT_NAME'] = 'BoundaryAgent'
     expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_AGENT_VERSION is required/)
+  })
+
+  it('captures DNS delivery settings when provided', () => {
+    process.env['KAIF_DNS_DELIVERY_ENABLED'] = 'true'
+    process.env['KAIF_DNS_BASE_URL'] = 'http://127.0.0.1:19082'
+    process.env['KAIF_DNS_AUTH_MODE'] = 'both'
+    process.env['KAIF_DNS_AUTH_TOKEN'] = 'dev-department-head-token'
+    process.env['KAIF_DNS_WRITE_TIMEOUT_MS'] = '3000'
+    process.env['KAIF_DNS_RESUME_TIMEOUT_MS'] = '4000'
+
+    const config = loadConfig()
+    expect(config.dns_delivery_enabled).toBe(true)
+    expect(config.dns_base_url).toBe('http://127.0.0.1:19082')
+    expect(config.dns_auth_mode).toBe('both')
+    expect(config.dns_auth_token).toBe('dev-department-head-token')
+    expect(config.dns_write_timeout_ms).toBe(3000)
+    expect(config.dns_resume_timeout_ms).toBe(4000)
+  })
+
+  it('requires DNS base URL and token when delivery is enabled', () => {
+    process.env['KAIF_DNS_DELIVERY_ENABLED'] = 'true'
+    expect(() => loadConfig()).toThrow(/KAIF_DNS_BASE_URL is required/)
+
+    process.env['KAIF_DNS_BASE_URL'] = 'http://127.0.0.1:19082'
+    expect(() => loadConfig()).toThrow(/KAIF_DNS_AUTH_TOKEN is required/)
+  })
+
+  it('rejects invalid DNS auth mode', () => {
+    process.env['KAIF_DNS_AUTH_MODE'] = 'token'
+    expect(() => loadConfig()).toThrow(/KAIF_DNS_AUTH_MODE must be one of bearer, header, or both/)
   })
 })

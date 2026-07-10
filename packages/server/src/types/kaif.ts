@@ -108,6 +108,10 @@ export type AuditAction =
   | 'BOUNDARY_PERMIT'
   | 'BOUNDARY_DENY'
   | 'BOUNDARY_RECEIPT'
+  | 'BOUNDARY_DELIVERY_WRITTEN'
+  | 'BOUNDARY_DELIVERY_FAILED'
+  | 'BOUNDARY_RESUME_SENT'
+  | 'BOUNDARY_RESUME_FAILED'
 
 export interface AuditEntry {
   id:          string   // UUID v4
@@ -305,6 +309,20 @@ export interface BoundaryPermitResponse {
     receipt_payload?: unknown
     delegation_id?: string
     token_jti?: string
+  }
+  delivery?: {
+    enabled: boolean
+    context_key?: string
+    context_write: {
+      status: 'ok' | 'error' | 'skipped'
+      status_code?: number
+      error?: string
+    }
+    resume: {
+      status: 'ok' | 'error' | 'skipped'
+      status_code?: number
+      error?: string
+    }
   }
 }
 

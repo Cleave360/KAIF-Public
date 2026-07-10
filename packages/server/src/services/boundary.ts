@@ -15,6 +15,7 @@ import { appendAudit } from './audit.js'
 import { getAgentACLByName, validateScopes } from './acl.js'
 import { executeTokenExchange } from './token-exchange.js'
 import { invokeFoundry, type FoundryRequestOptions } from './foundry.js'
+import { deliverReceiptToDNS } from './dns-delivery.js'
 
 const SUBJECT_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:access_token'
 const ACTOR_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:jwt'
@@ -651,6 +652,85 @@ export async function authorizeBoundary(params: {
     human_id: request.kaif_subject.human_sub,
   })
 
+  const delivery = await deliverReceiptToDNS({
+    request,
+    response: {
+      decision: 'permit',
+      boundary: {
+        request_id: request.route_context.request_id,
+        decision_id: decisionId,
+        tenant_id: request.adaptive_envelope.tenant_id,
+        run_id: request.adaptive_envelope.run_id,
+        workflow_id: request.route_context.workflow_id,
+        node_id: request.route_context.node_id,
+      },
+      authority: {
+        human_sub: request.kaif_subject.human_sub,
+        agent_id: request.kaif_subject.agent_id,
+        agent_spiffe_id: request.kaif_subject.agent_spiffe_id,
+        delegation_id: claims.kaif.delegation_id,
+        token_jti: claims.jti,
+        scope: exchange.scope,
+        audience: Array.isArray(claims.aud) ? claims.aud[0] ?? request.action.audience : claims.aud,
+      },
+      intent: {
+        intent_mode: request.human_intent.intent_mode,
+        ...(request.human_intent.intent_id ? { intent_id: request.human_intent.intent_id } : {}),
+        ...(request.human_intent.intent_type ? { intent_type: request.human_intent.intent_type } : {}),
+        ...(request.human_intent.intent_hash ? { intent_hash: request.human_intent.intent_hash } : {}),
+      },
+      attestation: {
+        trust_tier: claims.kaif.trust_tier,
+        trust_score: claims.kaif.trust_score,
+        delegation_depth: claims.kaif.delegation_depth,
+        ...(claims.cnf ? { cnf: claims.cnf } : {}),
+      },
+      evidence: buildEvidence(auditEntry),
+      token: {
+        access_token: exchange.access_token,
+        token_type: exchange.token_type,
+        expires_in: exchange.expires_in,
+        issued_token_type: exchange.issued_token_type,
+        scope: exchange.scope,
+      },
+      receipt,
+    },
+  })
+
+  if (delivery.enabled) {
+    if (delivery.context_write.status === 'ok') {
+      await appendAudit(params.redis, {
+        action: 'BOUNDARY_DELIVERY_WRITTEN',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} context_key=${delivery.context_key ?? 'unknown'} status_code=${delivery.context_write.status_code ?? 0}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    } else if (delivery.context_write.status === 'error') {
+      await appendAudit(params.redis, {
+        action: 'BOUNDARY_DELIVERY_FAILED',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} reason=${delivery.context_write.error ?? 'unknown'}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    }
+
+    if (delivery.resume.status === 'ok') {
+      await appendAudit(params.redis, {
+        action: 'BOUNDARY_RESUME_SENT',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} run_id=${request.adaptive_envelope.run_id} status_code=${delivery.resume.status_code ?? 0}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    } else if (delivery.resume.status === 'error') {
+      await appendAudit(params.redis, {
+        action: 'BOUNDARY_RESUME_FAILED',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} run_id=${request.adaptive_envelope.run_id} reason=${delivery.resume.error ?? 'unknown'}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    }
+  }
+
   return {
     decision: 'permit',
     boundary: {
@@ -691,6 +771,7 @@ export async function authorizeBoundary(params: {
       scope: exchange.scope,
     },
     receipt,
+    delivery,
   }
 }
 
