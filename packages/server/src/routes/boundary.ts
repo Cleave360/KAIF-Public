@@ -13,13 +13,22 @@ export async function boundaryRoute(app: FastifyInstance, opts: BoundaryRouteOpt
   app.post(
     '/v1/boundary/authorize',
     async (request, reply) => {
+      const startedAt = Date.now()
       try {
         const response = await authorizeBoundary({
           redis: opts.redis,
           rawRequest: request.body,
           ...(opts.foundry ? { foundry: opts.foundry } : {}),
         })
-        return reply.status(200).send(response)
+        const elapsedMs = Date.now() - startedAt
+        reply.header('x-kaif-authorize-response-ms', String(elapsedMs))
+        request.log.info({
+          metric: 'authorize_response_ms',
+          authorize_response_ms: elapsedMs,
+          request_id: response.boundary.request_id,
+          decision_id: response.boundary.decision_id,
+        }, 'boundary_authorize_metric')
+        return reply.status(202).send(response)
       } catch (err) {
         if (err instanceof KAIFError) {
           const denyResponse = await denyBoundary({

@@ -19,6 +19,11 @@ import { deliverReceiptToDNS } from './dns-delivery.js'
 
 const SUBJECT_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:access_token'
 const ACTOR_TOKEN_TYPE = 'urn:ietf:params:oauth:token-type:jwt'
+const FOUNDRY_RETRY_BACKOFF_MS = [100, 250, 500]
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -546,192 +551,39 @@ function providerCode(status: number, body: unknown): string {
   return String(status)
 }
 
-export async function authorizeBoundary(params: {
-  redis: Redis
-  rawRequest: unknown
-  foundry?: FoundryRequestOptions
-}): Promise<BoundaryPermitResponse> {
-  const request = parseBoundaryRequest(params.rawRequest)
-  const decisionId = randomUUID()
+function isRetryableFoundryResponse(status: number, body: unknown): boolean {
+  if (status === 429 || (status >= 500 && status <= 599)) {
+    return true
+  }
 
-  const exchange = await executeTokenExchange({
-    redis: params.redis,
-    request: {
-      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-      subject_token: request.subject_token,
-      subject_token_type: request.subject_token_type,
-      actor_token: request.actor_token,
-      actor_token_type: request.actor_token_type,
-      scope: request.action.scope,
-      audience: request.action.audience,
-      ...(request.action.resource ? { resource: request.action.resource } : {}),
-    },
-  })
-
-  const claims = decodeKAIFClaims(exchange.access_token)
-  const auditEntry = await appendAudit(params.redis, {
-    action: 'BOUNDARY_PERMIT',
-    detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} workflow_id=${request.route_context.workflow_id} node_id=${request.route_context.node_id} audience=${request.action.audience} scope=${request.action.scope}`,
-    agent_id: request.kaif_subject.agent_spiffe_id,
-    human_id: request.kaif_subject.human_sub,
-  })
-
-  const foundryBody = buildFoundryBody(params.rawRequest, request)
-  const foundryStartedAt = Date.now()
-  let receipt: BoundaryPermitResponse['receipt']
-
-  try {
-    const foundryResponse = await invokeFoundry({
-      method: 'POST',
-      body: foundryBody,
-      headers: {
-        'x-kaif-decision-id': decisionId,
-        'x-kaif-request-id': request.route_context.request_id,
-        'x-kaif-run-id': request.adaptive_envelope.run_id,
-        'x-kaif-tenant-id': request.adaptive_envelope.tenant_id,
-        'x-kaif-delegation-id': claims.kaif.delegation_id,
-        'x-kaif-token-jti': claims.jti,
-        'x-kaif-input-hash': hashBody(foundryBody) ?? 'sha256:missing',
-        'x-kaif-node-id': request.route_context.node_id,
-        'x-kaif-workflow-id': request.route_context.workflow_id,
-      },
-    }, params.foundry)
-
-    const foundryReceipt: BoundaryPermitResponse['receipt'] = {
-      receipt_version: 'v1',
-      receipt_id: randomUUID(),
-      decision_id: decisionId,
-      request_id: request.route_context.request_id,
-      run_id: request.adaptive_envelope.run_id,
-      target_system: 'foundry',
-      occurred_at_ms: Date.now(),
-      result: {
-        status: mapFoundryStatus(foundryResponse.status, foundryResponse.body),
-        provider_code: providerCode(foundryResponse.status, foundryResponse.body),
-        provider_message: providerMessage(foundryResponse.status, foundryResponse.body),
-      },
-      latency_ms: Date.now() - foundryStartedAt,
-      receipt_payload: summarizeFoundryPayload(foundryResponse.body),
-      delegation_id: claims.kaif.delegation_id,
-      token_jti: claims.jti,
-    }
-    const providerRequestId = firstHeader(foundryResponse.headers, ['x-ms-request-id', 'apim-request-id', 'x-request-id'])
-    const providerSessionId = firstHeader(foundryResponse.headers, ['x-ms-session-id'])
-    const outputHash = hashBody(foundryResponse.body)
-    const outputPreview = redactedPreview(foundryResponse.body)
-    if (providerRequestId !== undefined) foundryReceipt.provider_request_id = providerRequestId
-    if (providerSessionId !== undefined) foundryReceipt.provider_session_id = providerSessionId
-    if (outputHash !== undefined) foundryReceipt.output_hash = outputHash
-    if (outputPreview !== undefined) foundryReceipt.output_preview = outputPreview
-    receipt = foundryReceipt
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : 'Foundry transport failure'
-    receipt = {
-      receipt_version: 'v1',
-      receipt_id: randomUUID(),
-      decision_id: decisionId,
-      request_id: request.route_context.request_id,
-      run_id: request.adaptive_envelope.run_id,
-      target_system: 'foundry',
-      occurred_at_ms: Date.now(),
-      result: {
-        status: 'error',
-        provider_code: 'transport_error',
-        provider_message: reason,
-      },
-      latency_ms: Date.now() - foundryStartedAt,
-      delegation_id: claims.kaif.delegation_id,
-      token_jti: claims.jti,
+  if (isRecord(body)) {
+    const error = body['error']
+    if (isRecord(error)) {
+      const code = typeof error['code'] === 'string' ? error['code'].toLowerCase() : ''
+      if (code.includes('rate_limit') || code.includes('timeout') || code.includes('server_error')) {
+        return true
+      }
     }
   }
 
-  await appendAudit(params.redis, {
-    action: 'BOUNDARY_RECEIPT',
-    detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} status=${receipt.result.status} provider_code=${receipt.result.provider_code}`,
-    agent_id: request.kaif_subject.agent_spiffe_id,
-    human_id: request.kaif_subject.human_sub,
-  })
+  return false
+}
 
-  const delivery = await deliverReceiptToDNS({
-    request,
-    response: {
-      decision: 'permit',
-      boundary: {
-        request_id: request.route_context.request_id,
-        decision_id: decisionId,
-        tenant_id: request.adaptive_envelope.tenant_id,
-        run_id: request.adaptive_envelope.run_id,
-        workflow_id: request.route_context.workflow_id,
-        node_id: request.route_context.node_id,
-      },
-      authority: {
-        human_sub: request.kaif_subject.human_sub,
-        agent_id: request.kaif_subject.agent_id,
-        agent_spiffe_id: request.kaif_subject.agent_spiffe_id,
-        delegation_id: claims.kaif.delegation_id,
-        token_jti: claims.jti,
-        scope: exchange.scope,
-        audience: Array.isArray(claims.aud) ? claims.aud[0] ?? request.action.audience : claims.aud,
-      },
-      intent: {
-        intent_mode: request.human_intent.intent_mode,
-        ...(request.human_intent.intent_id ? { intent_id: request.human_intent.intent_id } : {}),
-        ...(request.human_intent.intent_type ? { intent_type: request.human_intent.intent_type } : {}),
-        ...(request.human_intent.intent_hash ? { intent_hash: request.human_intent.intent_hash } : {}),
-      },
-      attestation: {
-        trust_tier: claims.kaif.trust_tier,
-        trust_score: claims.kaif.trust_score,
-        delegation_depth: claims.kaif.delegation_depth,
-        ...(claims.cnf ? { cnf: claims.cnf } : {}),
-      },
-      evidence: buildEvidence(auditEntry),
-      token: {
-        access_token: exchange.access_token,
-        token_type: exchange.token_type,
-        expires_in: exchange.expires_in,
-        issued_token_type: exchange.issued_token_type,
-        scope: exchange.scope,
-      },
-      receipt,
-    },
-  })
+interface BoundaryPermitContext {
+  request: BoundaryAuthorizationRequest
+  decisionId: string
+  claims: KAIFTokenClaims
+  exchange: Awaited<ReturnType<typeof executeTokenExchange>>
+  auditEntry: Awaited<ReturnType<typeof appendAudit>>
+}
 
-  if (delivery.enabled) {
-    if (delivery.context_write.status === 'ok') {
-      await appendAudit(params.redis, {
-        action: 'BOUNDARY_DELIVERY_WRITTEN',
-        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} context_key=${delivery.context_key ?? 'unknown'} status_code=${delivery.context_write.status_code ?? 0}`,
-        agent_id: request.kaif_subject.agent_spiffe_id,
-        human_id: request.kaif_subject.human_sub,
-      })
-    } else if (delivery.context_write.status === 'error') {
-      await appendAudit(params.redis, {
-        action: 'BOUNDARY_DELIVERY_FAILED',
-        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} reason=${delivery.context_write.error ?? 'unknown'}`,
-        agent_id: request.kaif_subject.agent_spiffe_id,
-        human_id: request.kaif_subject.human_sub,
-      })
-    }
-
-    if (delivery.resume.status === 'ok') {
-      await appendAudit(params.redis, {
-        action: 'BOUNDARY_RESUME_SENT',
-        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} run_id=${request.adaptive_envelope.run_id} status_code=${delivery.resume.status_code ?? 0}`,
-        agent_id: request.kaif_subject.agent_spiffe_id,
-        human_id: request.kaif_subject.human_sub,
-      })
-    } else if (delivery.resume.status === 'error') {
-      await appendAudit(params.redis, {
-        action: 'BOUNDARY_RESUME_FAILED',
-        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} run_id=${request.adaptive_envelope.run_id} reason=${delivery.resume.error ?? 'unknown'}`,
-        agent_id: request.kaif_subject.agent_spiffe_id,
-        human_id: request.kaif_subject.human_sub,
-      })
-    }
-  }
-
-  return {
+function buildPermitResponse(
+  context: BoundaryPermitContext,
+  receipt: BoundaryPermitResponse['receipt'],
+  delivery?: BoundaryPermitResponse['delivery']
+): BoundaryPermitResponse {
+  const { request, decisionId, claims, exchange, auditEntry } = context
+  const response: BoundaryPermitResponse = {
     decision: 'permit',
     boundary: {
       request_id: request.route_context.request_id,
@@ -771,8 +623,244 @@ export async function authorizeBoundary(params: {
       scope: exchange.scope,
     },
     receipt,
-    delivery,
   }
+
+  if (delivery) {
+    response.delivery = delivery
+  }
+
+  return response
+}
+
+async function runPermitContinuation(params: {
+  redis: Redis
+  context: BoundaryPermitContext
+  foundryBody: unknown
+  foundry?: FoundryRequestOptions
+}): Promise<void> {
+  const { redis, context, foundryBody, foundry } = params
+  const { request, decisionId, claims } = context
+  const foundryStartedAt = Date.now()
+  const maxAttempts = FOUNDRY_RETRY_BACKOFF_MS.length + 1
+  let attemptUsed = 1
+
+  let receipt: BoundaryPermitResponse['receipt']
+  try {
+    let foundryResponse: Awaited<ReturnType<typeof invokeFoundry>> | null = null
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await invokeFoundry({
+          method: 'POST',
+          body: foundryBody,
+          headers: {
+            'x-kaif-decision-id': decisionId,
+            'x-kaif-request-id': request.route_context.request_id,
+            'x-kaif-run-id': request.adaptive_envelope.run_id,
+            'x-kaif-tenant-id': request.adaptive_envelope.tenant_id,
+            'x-kaif-delegation-id': claims.kaif.delegation_id,
+            'x-kaif-token-jti': claims.jti,
+            'x-kaif-input-hash': hashBody(foundryBody) ?? 'sha256:missing',
+            'x-kaif-node-id': request.route_context.node_id,
+            'x-kaif-workflow-id': request.route_context.workflow_id,
+          },
+        }, foundry)
+
+        attemptUsed = attempt
+        if (attempt < maxAttempts && isRetryableFoundryResponse(response.status, response.body)) {
+          await sleep(FOUNDRY_RETRY_BACKOFF_MS[attempt - 1] ?? 100)
+          continue
+        }
+
+        foundryResponse = response
+        break
+      } catch (err) {
+        attemptUsed = attempt
+        if (attempt < maxAttempts) {
+          await sleep(FOUNDRY_RETRY_BACKOFF_MS[attempt - 1] ?? 100)
+          continue
+        }
+        throw err
+      }
+    }
+
+    if (!foundryResponse) {
+      throw new Error('Foundry invocation did not return a response')
+    }
+
+    const foundryReceipt: BoundaryPermitResponse['receipt'] = {
+      receipt_version: 'v1',
+      receipt_id: randomUUID(),
+      decision_id: decisionId,
+      request_id: request.route_context.request_id,
+      run_id: request.adaptive_envelope.run_id,
+      target_system: 'foundry',
+      occurred_at_ms: Date.now(),
+      result: {
+        status: mapFoundryStatus(foundryResponse.status, foundryResponse.body),
+        provider_code: providerCode(foundryResponse.status, foundryResponse.body),
+        provider_message: `${providerMessage(foundryResponse.status, foundryResponse.body)}${attemptUsed > 1 ? ` (attempt ${attemptUsed}/${maxAttempts})` : ''}`,
+      },
+      latency_ms: Date.now() - foundryStartedAt,
+      receipt_payload: summarizeFoundryPayload(foundryResponse.body),
+      delegation_id: claims.kaif.delegation_id,
+      token_jti: claims.jti,
+    }
+    const providerRequestId = firstHeader(foundryResponse.headers, ['x-ms-request-id', 'apim-request-id', 'x-request-id'])
+    const providerSessionId = firstHeader(foundryResponse.headers, ['x-ms-session-id'])
+    const outputHash = hashBody(foundryResponse.body)
+    const outputPreview = redactedPreview(foundryResponse.body)
+    if (providerRequestId !== undefined) foundryReceipt.provider_request_id = providerRequestId
+    if (providerSessionId !== undefined) foundryReceipt.provider_session_id = providerSessionId
+    if (outputHash !== undefined) foundryReceipt.output_hash = outputHash
+    if (outputPreview !== undefined) foundryReceipt.output_preview = outputPreview
+    receipt = foundryReceipt
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'Foundry transport failure'
+    receipt = {
+      receipt_version: 'v1',
+      receipt_id: randomUUID(),
+      decision_id: decisionId,
+      request_id: request.route_context.request_id,
+      run_id: request.adaptive_envelope.run_id,
+      target_system: 'foundry',
+      occurred_at_ms: Date.now(),
+      result: {
+        status: 'error',
+        provider_code: 'transport_error',
+        provider_message: `${reason}${attemptUsed > 1 ? ` (attempt ${attemptUsed}/${maxAttempts})` : ''}`,
+      },
+      latency_ms: Date.now() - foundryStartedAt,
+      delegation_id: claims.kaif.delegation_id,
+      token_jti: claims.jti,
+    }
+  }
+
+  await appendAudit(redis, {
+    action: 'BOUNDARY_RECEIPT',
+    detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} status=${receipt.result.status} provider_code=${receipt.result.provider_code}`,
+    agent_id: request.kaif_subject.agent_spiffe_id,
+    human_id: request.kaif_subject.human_sub,
+  })
+
+  const delivery = await deliverReceiptToDNS({
+    request,
+    response: buildPermitResponse(context, receipt),
+  })
+
+  if (delivery.enabled) {
+    if (delivery.context_write.status === 'ok') {
+      await appendAudit(redis, {
+        action: 'BOUNDARY_DELIVERY_WRITTEN',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} context_key=${delivery.context_key ?? 'unknown'} status_code=${delivery.context_write.status_code ?? 0} attempts=${delivery.context_write.attempts ?? 1}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    } else if (delivery.context_write.status === 'error') {
+      await appendAudit(redis, {
+        action: 'BOUNDARY_DELIVERY_FAILED',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} stage=${delivery.context_write.operation ?? 'context_write'} attempts=${delivery.context_write.attempts ?? 0} reason=${delivery.context_write.error ?? 'unknown'}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    }
+
+    if (delivery.resume.status === 'ok') {
+      await appendAudit(redis, {
+        action: 'BOUNDARY_RESUME_SENT',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} run_id=${request.adaptive_envelope.run_id} status_code=${delivery.resume.status_code ?? 0} attempts=${delivery.resume.attempts ?? 1}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    } else if (delivery.resume.status === 'error') {
+      await appendAudit(redis, {
+        action: 'BOUNDARY_RESUME_FAILED',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} run_id=${request.adaptive_envelope.run_id} stage=${delivery.resume.operation ?? 'resume'} attempts=${delivery.resume.attempts ?? 0} reason=${delivery.resume.error ?? 'unknown'}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    }
+  }
+}
+
+export async function authorizeBoundary(params: {
+  redis: Redis
+  rawRequest: unknown
+  foundry?: FoundryRequestOptions
+}): Promise<BoundaryPermitResponse> {
+  const request = parseBoundaryRequest(params.rawRequest)
+  const decisionId = randomUUID()
+
+  const exchange = await executeTokenExchange({
+    redis: params.redis,
+    request: {
+      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+      subject_token: request.subject_token,
+      subject_token_type: request.subject_token_type,
+      actor_token: request.actor_token,
+      actor_token_type: request.actor_token_type,
+      scope: request.action.scope,
+      audience: request.action.audience,
+      ...(request.action.resource ? { resource: request.action.resource } : {}),
+    },
+  })
+
+  const claims = decodeKAIFClaims(exchange.access_token)
+  const auditEntry = await appendAudit(params.redis, {
+    action: 'BOUNDARY_PERMIT',
+    detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} workflow_id=${request.route_context.workflow_id} node_id=${request.route_context.node_id} audience=${request.action.audience} scope=${request.action.scope}`,
+    agent_id: request.kaif_subject.agent_spiffe_id,
+    human_id: request.kaif_subject.human_sub,
+  })
+
+  const context: BoundaryPermitContext = {
+    request,
+    decisionId,
+    claims,
+    exchange,
+    auditEntry,
+  }
+  const foundryBody = buildFoundryBody(params.rawRequest, request)
+
+  setImmediate(() => {
+    void runPermitContinuation({
+      redis: params.redis,
+      context,
+      foundryBody,
+      ...(params.foundry ? { foundry: params.foundry } : {}),
+    }).catch(async (err) => {
+      await appendAudit(params.redis, {
+        action: 'BOUNDARY_DELIVERY_FAILED',
+        detail: `request_id=${request.route_context.request_id} decision_id=${decisionId} stage=async_pipeline attempts=1 reason=${err instanceof Error ? err.message : 'unknown async continuation error'}`,
+        agent_id: request.kaif_subject.agent_spiffe_id,
+        human_id: request.kaif_subject.human_sub,
+      })
+    })
+  })
+
+  const pendingReceipt: BoundaryPermitResponse['receipt'] = {
+    receipt_version: 'v1',
+    receipt_id: randomUUID(),
+    decision_id: decisionId,
+    request_id: request.route_context.request_id,
+    run_id: request.adaptive_envelope.run_id,
+    target_system: 'foundry',
+    occurred_at_ms: Date.now(),
+    result: {
+      status: 'paused',
+      provider_code: 'pending',
+      provider_message: 'Accepted for asynchronous continuation',
+    },
+  }
+
+  const response = buildPermitResponse(context, pendingReceipt, {
+    enabled: true,
+    context_write: { status: 'skipped' },
+    resume: { status: 'skipped' },
+  })
+  response.status = 'accepted'
+  response.async = true
+
+  return response
 }
 
 export async function denyBoundary(params: {

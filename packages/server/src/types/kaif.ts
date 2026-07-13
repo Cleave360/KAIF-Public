@@ -257,6 +257,8 @@ export interface BoundaryEvidence {
 }
 
 export interface BoundaryPermitResponse {
+  status?: 'accepted'
+  async?: boolean
   decision: 'permit'
   boundary: BoundaryDecisionContext
   authority: {
@@ -317,11 +319,13 @@ export interface BoundaryPermitResponse {
       status: 'ok' | 'error' | 'skipped'
       status_code?: number
       error?: string
+      attempts?: number
     }
     resume: {
       status: 'ok' | 'error' | 'skipped'
       status_code?: number
       error?: string
+      attempts?: number
     }
   }
 }

@@ -244,14 +244,22 @@ export function loadConfig(): KAIFConfig {
     throw new Error('KAIF_DNS_AUTH_TOKEN is required when KAIF_DNS_DELIVERY_ENABLED=true')
   }
 
-  const dnsWriteTimeoutMs = dnsWriteTimeoutRaw ? Number.parseInt(dnsWriteTimeoutRaw, 10) : undefined
-  if (dnsWriteTimeoutRaw && (!Number.isFinite(dnsWriteTimeoutMs) || dnsWriteTimeoutMs <= 0)) {
-    throw new Error('KAIF_DNS_WRITE_TIMEOUT_MS must be a positive integer')
+  let dnsWriteTimeoutMs: number | undefined
+  if (dnsWriteTimeoutRaw) {
+    const parsedDnsWriteTimeout = Number.parseInt(dnsWriteTimeoutRaw, 10)
+    if (!Number.isFinite(parsedDnsWriteTimeout) || parsedDnsWriteTimeout <= 0) {
+      throw new Error('KAIF_DNS_WRITE_TIMEOUT_MS must be a positive integer')
+    }
+    dnsWriteTimeoutMs = parsedDnsWriteTimeout
   }
 
-  const dnsResumeTimeoutMs = dnsResumeTimeoutRaw ? Number.parseInt(dnsResumeTimeoutRaw, 10) : undefined
-  if (dnsResumeTimeoutRaw && (!Number.isFinite(dnsResumeTimeoutMs) || dnsResumeTimeoutMs <= 0)) {
-    throw new Error('KAIF_DNS_RESUME_TIMEOUT_MS must be a positive integer')
+  let dnsResumeTimeoutMs: number | undefined
+  if (dnsResumeTimeoutRaw) {
+    const parsedDnsResumeTimeout = Number.parseInt(dnsResumeTimeoutRaw, 10)
+    if (!Number.isFinite(parsedDnsResumeTimeout) || parsedDnsResumeTimeout <= 0) {
+      throw new Error('KAIF_DNS_RESUME_TIMEOUT_MS must be a positive integer')
+    }
+    dnsResumeTimeoutMs = parsedDnsResumeTimeout
   }
 
   const config: KAIFConfig = {
