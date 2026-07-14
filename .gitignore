@@ -121,6 +121,7 @@ keys/
 .vault-token
 .gpg-cache/
 secrets/
+deploy/secrets/
 
 # ─────────────────────────────────────────────────────────────────
 # Docker & Infrastructure

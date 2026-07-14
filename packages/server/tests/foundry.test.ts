@@ -11,7 +11,7 @@ function setBaseEnv(): void {
   process.env['KAIF_IDP_JWKS_URL'] = 'https://idp.test/jwks'
   process.env['KAIF_IDP_ISSUER'] = 'https://idp.test'
   process.env['KAIF_AGENTS_CONFIG_PATH'] = new URL('../config/agents.yaml', import.meta.url).pathname
-  process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+  process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
   process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
   process.env['KAIF_FOUNDRY_INVOKE_PATH'] = '/agents/mock/runs'
 }
@@ -42,7 +42,7 @@ describe('invokeFoundry', () => {
 
     const fetchImpl = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = input instanceof URL ? input.toString() : String(input)
-      expect(url).toContain('/api/projects/kindred-1882/agents/mock/runs')
+      expect(url).toContain('/api/projects/example-project/agents/mock/runs')
       expect(url).toContain('api-version=2025-05-15-preview')
       expect((init?.headers as Record<string, string>)['api-key']).toBe('test-api-key')
       expect((init?.headers as Record<string, string>)['content-type']).toBe('application/json')
@@ -113,7 +113,7 @@ describe('invokeFoundry', () => {
   })
 
   it('defaults project agent calls to /openai/v1/responses when invoke path is omitted', async () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
     process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
@@ -125,7 +125,7 @@ describe('invokeFoundry', () => {
 
     const fetchImpl = vi.fn(async (input: URL | RequestInfo) => {
       const url = input instanceof URL ? input.toString() : String(input)
-      expect(url).toContain('/api/projects/kindred-1882/openai/v1/responses')
+      expect(url).toContain('/api/projects/example-project/openai/v1/responses')
       expect(url).not.toContain('api-version=')
       return new Response(JSON.stringify({ id: 'resp_123', status: 'completed' }), {
         status: 200,

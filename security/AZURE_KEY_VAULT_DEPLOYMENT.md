@@ -102,7 +102,7 @@ Example local env file:
 ```env
 KAIF_AZURE_KEY_VAULT_URL=https://kaif-kv-example.vault.azure.net/
 KAIF_AZURE_PRIVATE_KEY_SECRET_NAME=kaif-signing-key
-AZURE_TENANT_ID=ed7aea0a-b57e-437d-83ae-ed070eca3af5
+AZURE_TENANT_ID=<tenant-id>
 AZURE_CLIENT_ID=<client-id>
 AZURE_CLIENT_SECRET=<client-secret>
 ```

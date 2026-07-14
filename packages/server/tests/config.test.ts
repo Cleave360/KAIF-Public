@@ -243,14 +243,14 @@ describe('loadConfig production guardrails', () => {
   })
 
   it('captures Foundry Azure AD settings when provided', () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
     process.env['KAIF_FOUNDRY_AAD_SCOPE'] = 'https://ai.azure.com/.default'
     process.env['KAIF_FOUNDRY_INVOKE_PATH'] = '/agents/mock/runs'
 
     const config = loadConfig()
-    expect(config.foundry_project_endpoint).toBe('https://example-resource.services.ai.azure.com/api/projects/kindred-1882')
+    expect(config.foundry_project_endpoint).toBe('https://example-resource.services.ai.azure.com/api/projects/example-project')
     expect(config.foundry_api_version).toBe('2025-05-15-preview')
     expect(config.foundry_auth_mode).toBe('azure_ad')
     expect(config.foundry_aad_scope).toBe('https://ai.azure.com/.default')
@@ -258,7 +258,7 @@ describe('loadConfig production guardrails', () => {
   })
 
   it('captures Foundry project agent settings when provided', () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
     process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
@@ -280,26 +280,26 @@ describe('loadConfig production guardrails', () => {
   })
 
   it('requires api key when Foundry auth mode is api_key', () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'api_key'
     expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_API_KEY is required/)
   })
 
   it('requires Azure AD scope when Foundry auth mode is azure_ad', () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
     expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_AAD_SCOPE is required/)
   })
 
   it('rejects Foundry invoke path without a leading slash', () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'none'
     process.env['KAIF_FOUNDRY_INVOKE_PATH'] = 'agents/mock/runs'
     expect(() => loadConfig()).toThrow(/KAIF_FOUNDRY_INVOKE_PATH must start with "\/"/)
   })
 
   it('requires model and agent reference when Foundry mode is project_agent', () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
     process.env['KAIF_FOUNDRY_AAD_SCOPE'] = 'https://ai.azure.com/.default'

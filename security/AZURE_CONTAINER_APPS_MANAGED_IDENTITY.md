@@ -49,10 +49,10 @@ Notes:
 - `KAIF_REDIS_URL` should be a dedicated Azure Managed Redis TLS endpoint for real deployment.
 - `KAIF_SPIRE_BUNDLE_CA_PEM` is optional if the SPIRE bundle endpoint chains to a public CA.
 
-For ACR publishing in this repo, the current registry is:
+For ACR publishing in this repo, use a registry name like:
 
 ```text
-kaifacr-example.azurecr.io
+exampleacr.azurecr.io
 ```
 
 Publish with:
@@ -61,10 +61,10 @@ Publish with:
 bash scripts/publish-acr-image.sh
 ```
 
-Current published image from this workspace:
+Example published image reference:
 
 ```text
-kaifacr-example.azurecr.io/kaif/server:20260603-054625
+exampleacr.azurecr.io/kaif/server:20260603-054625
 ```
 
 ## Deployment script
