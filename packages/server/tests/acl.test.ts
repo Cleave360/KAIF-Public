@@ -8,7 +8,7 @@ import {
 const validConfig = {
   agents: {
     lyra: {
-      spiffe_id: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
+      spiffe_id: 'spiffe://example.org/ns/adaptive-layer/agent/lyra',
       trust_tier_minimum: 'STANDARD',
       permitted_scopes: ['invoke:completion', 'vault:read:*'],
       may_sub_delegate: false,

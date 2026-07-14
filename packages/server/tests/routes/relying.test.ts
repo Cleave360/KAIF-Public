@@ -14,7 +14,7 @@ function makeApp(redis: MockRedis, opts: {
   const app = Fastify({ logger: false })
   app.register(relyingRoute, {
     redis: redis as any,
-    tenantAddress: 'tenant-dev',
+    tenantAddress: 'tenant-example',
     ...(opts.auditAppendUrl ? { governanceAuditAppendUrl: opts.auditAppendUrl } : {}),
     governanceWorkspaceId:  'ws-kaif',
     governanceProjectId:    'kaif',
@@ -34,8 +34,8 @@ async function makeAuthToken(scope = 'invoke:completion'): Promise<string> {
     exp:   now + 300,
     jti:   randomUUID(),
     scope,
-    actor: { sub: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra', svid_thumbprint: 'sha256:test' },
-    may_act: { sub: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra' },
+    actor: { sub: 'spiffe://example.org/ns/adaptive-layer/agent/lyra', svid_thumbprint: 'sha256:test' },
+    may_act: { sub: 'spiffe://example.org/ns/adaptive-layer/agent/lyra' },
     kaif: {
       trust_score: 0.6, trust_tier: 'STANDARD', delegation_depth: 0,
       delegation_id: randomUUID(), rollback_window: 'PT5M',
@@ -152,7 +152,7 @@ describe('Day7b relying-party failure-mode endpoints', () => {
       layer: 'auth',
       envelope: {
         envelope_version: 'v1',
-        tenant_id: 'tenant-dev',
+        tenant_id: 'tenant-example',
         workspace_id: 'ws-kaif',
         project_id: 'kaif',
         run_id: 'run-day7b-test',

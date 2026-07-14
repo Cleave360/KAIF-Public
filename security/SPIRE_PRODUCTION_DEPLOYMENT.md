@@ -98,7 +98,7 @@ Example:
 ```ts
 const client = new KAIFClient({
   server_url: "https://kaif.example.internal",
-  spiffe_id: "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra",
+  spiffe_id: "spiffe://example.org/ns/adaptive-layer/agent/lyra",
   svid_path: "/run/spire/sockets/svid.jwt",
   delegation_token,
 })

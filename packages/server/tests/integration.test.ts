@@ -32,7 +32,7 @@ import type { KAIFTokenClaims, AuditEntry } from '../src/types/kaif.js'
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const AGENTS_CONFIG = new URL('../config/agents.yaml', import.meta.url).pathname
-const LYRA_SPIFFE   = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'
+const LYRA_SPIFFE   = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'
 const HUMAN         = 'geoff@kindred.systems'
 const GRANT_TYPE    = 'urn:ietf:params:oauth:grant-type:token-exchange'
 const SUBJECT_TYPE  = 'urn:ietf:params:oauth:token-type:access_token'

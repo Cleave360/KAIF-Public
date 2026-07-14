@@ -260,7 +260,7 @@ KMS/HSM key storage, JWKS rotation, Redis infrastructure provisioning, and Redis
 KAIF is intended to run as the external receiver for an agentic handshake while a separate governance engine runs on Redis. Without an explicit boundary, production deployments could accidentally couple KAIF to the governance engine's Redis, mix retention/security policies, or make the two systems non-independently restartable.
 
 **Fix applied:**  
-The governance integration plan now states that production/staging KAIF uses dedicated Redis with TLS, ACLs, and dedicated credentials. `KAIF_TENANT_ADDRESS` defaults to the current dev integration value `tenant-dev` in local examples and is included in Day 7b evidence. KAIF uses API-first Adaptive evidence append (`POST /v1/audit/append`, `layer="auth"`) rather than direct governance Redis coupling. Day 7b now exercises Class A/Class C failure-mode endpoints.
+The governance integration plan now states that production/staging KAIF uses dedicated Redis with TLS, ACLs, and dedicated credentials. `KAIF_TENANT_ADDRESS` defaults to the current dev integration value `tenant-example` in local examples and is included in Day 7b evidence. KAIF uses API-first Adaptive evidence append (`POST /v1/audit/append`, `layer="auth"`) rather than direct governance Redis coupling. Day 7b now exercises Class A/Class C failure-mode endpoints.
 
 **Required fix for production:**  
 Provision the production Adaptive endpoint URL, tenant slug, Redis ACL policy, and evidence export/upload path in deployment configuration.

@@ -410,7 +410,7 @@ function assertTierMinimum(score, required): void  // throws if insufficient
 ```yaml
 agents:
   lyra:                                 # agent name (key)
-    spiffe_id: "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra"
+    spiffe_id: "spiffe://example.org/ns/adaptive-layer/agent/lyra"
     trust_tier_minimum: STANDARD        # minimum tier to operate
     permitted_scopes:                   # glob supported
       - "vault:read:*"
@@ -615,7 +615,7 @@ import { KAIFClient } from '@kindred/kaif-sdk'
 
 const client = new KAIFClient({
   server_url: 'http://kaif-server:8080',
-  spiffe_id: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
+  spiffe_id: 'spiffe://example.org/ns/adaptive-layer/agent/lyra',
   svid_path: '/tmp/svid.jwt',                  // JWT-SVID file from SVIDStore
   delegation_token: 'jwt-from-provision'       // From /provision call
 })

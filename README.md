@@ -78,7 +78,7 @@ The KAIF JWT binds three things in one credential: the human principal who autho
   scope: "invoke:completion",
 
   actor: {
-    sub:             "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra",
+    sub:             "spiffe://example.org/ns/adaptive-layer/agent/lyra",
     svid_thumbprint: "sha256:3a4b..."     // JWT-SVID signing JWK thumbprint
   },
 
@@ -142,7 +142,7 @@ See `examples/mock-service/index.ts` for a complete relying-party implementation
 | `KAIF_ISSUER` | string | required | JWT `iss` claim, e.g. `https://kaif.kindredsystems.ai` |
 | `KAIF_ALLOWED_AUDIENCES` | comma-separated strings | `KAIF_ISSUER` | Explicit token-exchange `audience` values KAIF may mint; start with `https://kaif.kindredsystems.ai` |
 | `KAIF_REDIS_URL` | string | required | Redis connection URL |
-| `KAIF_TENANT_ADDRESS` | string | `tenant-dev` in local examples | Tenant address used by Adaptive governance/agent handoff integrations |
+| `KAIF_TENANT_ADDRESS` | string | `tenant-example` in local examples | Tenant address used by Adaptive governance/agent handoff integrations |
 | `KAIF_ALLOW_INSECURE_REDIS` | boolean | `false` | Allows non-TLS Redis when `NODE_ENV=production`; only for controlled production-like tests |
 | `KAIF_GOVERNANCE_AUDIT_APPEND_URL` | string | — | Adaptive `POST /v1/audit/append` URL for auth-layer evidence |
 | `KAIF_GOVERNANCE_WORKSPACE_ID` | string | `ws-kaif` | Adaptive envelope workspace ID |
@@ -234,7 +234,7 @@ import { KAIFClient } from '@kaif/sdk'
 
 const client = new KAIFClient({
   server_url:          'http://kaif-server:8080',
-  spiffe_id:           'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
+  spiffe_id:           'spiffe://example.org/ns/adaptive-layer/agent/lyra',
   svid_path:           '/run/spire/sockets/svid.jwt',   // supported production mode today
   delegation_token:    delegationTokenJWT,               // from POST /provision
 })

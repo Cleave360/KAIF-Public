@@ -104,7 +104,7 @@ describe('audit service', () => {
   })
 
   it('per-agent list is populated when agent_id provided', async () => {
-    const agentId = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'
+    const agentId = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'
     await appendAudit(redis as any, { action: 'TOKEN_ISSUED', detail: 'agent event', agent_id: agentId })
     await appendAudit(redis as any, { action: 'AUTH_FAILED', detail: 'global only' })
 
@@ -114,7 +114,7 @@ describe('audit service', () => {
   })
 
   it('verifyChain per-agent validates individual hash integrity', async () => {
-    const agentId = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'
+    const agentId = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'
     await appendAudit(redis as any, { action: 'TOKEN_ISSUED', detail: 'ok', agent_id: agentId })
 
     expect(await verifyChain(redis as any, agentId)).toBe(true)

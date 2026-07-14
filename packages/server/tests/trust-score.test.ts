@@ -89,7 +89,7 @@ describe('getTrustScore / updateTrustScore', () => {
   })
 
   it('returns stored score after update', async () => {
-    const id = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'
+    const id = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'
     await updateTrustScore(redis as any, id, 0.85)
     const signal = await getTrustScore(redis as any, id)
     expect(signal.score).toBe(0.85)

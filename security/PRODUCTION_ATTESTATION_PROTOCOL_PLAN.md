@@ -134,7 +134,7 @@ Addresses: governance-engine coupling, noisy-neighbor risk, mixed retention/secu
 - Governance engine Redis must remain independently restartable and observable.
 - Direct shared Redis access between KAIF and the governance engine is not a production integration contract.
 - Preferred integration is API-first Adaptive evidence append: `POST /v1/audit/append`, `layer="auth"`, and `envelope.tenant_id=KAIF_TENANT_ADDRESS`.
-- Current dev tenant is `tenant-dev`; expected evidence stream is `audit:auth:tenant-dev:<yyyy-mm-dd>`.
+- Current dev tenant is `tenant-example`; expected evidence stream is `audit:auth:tenant-example:<yyyy-mm-dd>`.
 
 Release gate: a production deployment must document the dedicated KAIF Redis endpoint, ACL policy, tenant address, and governance signal contract.
 

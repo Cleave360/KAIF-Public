@@ -22,9 +22,9 @@ ROTATION_STEP="${1:-all}"
 # Azure resource details
 TENANT_ID="e7267256-e58d-4679-bed0-3f3ef087a222"
 CLIENT_ID="e2148609-e5d2-48d8-9a73-d814702552fd"
-RESOURCE_GROUP="rg-kindred-2461"
-RESOURCE_NAME="kindred-1882-resource"
-SUBSCRIPTION_ID="7460a200-e4dc-4e0f-8c3e-7db55e47647c"
+RESOURCE_GROUP="rg-example"
+RESOURCE_NAME="example-resource"
+SUBSCRIPTION_ID="<subscription-id>"
 
 # Logging functions
 log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
@@ -329,7 +329,7 @@ try:
         client_secret=os.environ.get("AZURE_CLIENT_SECRET", ""),
     )
     client = AIProjectClient(
-        endpoint="https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882",
+        endpoint="https://example-resource.services.ai.azure.com/api/projects/kindred-1882",
         credential=cred,
     )
     response = client.get_openai_client().responses.create(

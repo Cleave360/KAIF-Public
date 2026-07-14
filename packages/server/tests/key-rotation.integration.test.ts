@@ -13,7 +13,7 @@ import { MockRedis } from './mock-redis.js'
 import { updateTrustScore } from '../src/services/trust-score.js'
 
 const AGENTS_CONFIG = new URL('../config/agents.yaml', import.meta.url).pathname
-const LYRA_SPIFFE = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'
+const LYRA_SPIFFE = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'
 const HUMAN = 'geoff@kindred.systems'
 
 const GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:token-exchange'

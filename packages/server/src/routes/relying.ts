@@ -135,7 +135,7 @@ export async function relyingRoute(app: FastifyInstance, opts: RelyingOpts): Pro
     const agentId = actorSub(authPayload)
     const jti = stringClaim(authPayload, 'jti', requestId)
     const commandHash = sha256Hex(`${relyingClass}:${jti}:${body.resource ?? 'default'}`)
-    const tenantId = opts.tenantAddress ?? 'tenant-dev'
+    const tenantId = opts.tenantAddress ?? 'tenant-example'
 
     const allowPayload = buildGovernancePayload({
       requestId,

@@ -25,7 +25,7 @@ describe('revocation service', () => {
 
   it('revocation event published to Redis channel', async () => {
     const jti = 'test-jti-2'
-    const agentId = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'
+    const agentId = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'
     const reason = 'user requested'
     const exp = Math.floor(Date.now() / 1000) + 300
 

@@ -11,7 +11,7 @@ function setBaseEnv(): void {
   process.env['KAIF_IDP_JWKS_URL'] = 'https://idp.test/jwks'
   process.env['KAIF_IDP_ISSUER'] = 'https://idp.test'
   process.env['KAIF_AGENTS_CONFIG_PATH'] = new URL('../config/agents.yaml', import.meta.url).pathname
-  process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+  process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
   process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
   process.env['KAIF_FOUNDRY_INVOKE_PATH'] = '/agents/mock/runs'
 }
@@ -113,7 +113,7 @@ describe('invokeFoundry', () => {
   })
 
   it('defaults project agent calls to /openai/v1/responses when invoke path is omitted', async () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
     process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
     process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'

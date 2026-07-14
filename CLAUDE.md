@@ -764,7 +764,7 @@ plugins {
 ```yaml
 agents:
   lyra:
-    spiffe_id: "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra"
+    spiffe_id: "spiffe://example.org/ns/adaptive-layer/agent/lyra"
     trust_tier_minimum: STANDARD
     permitted_scopes:
       - "vault:read:anthropic_key"

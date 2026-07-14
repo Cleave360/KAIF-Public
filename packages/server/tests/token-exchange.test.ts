@@ -47,7 +47,7 @@ let spirePrivateKey: KeyLike
 let spirePublicJWK: JWK & { kid: string }
 
 // KAIF agent SPIFFE IDs (must match agents.yaml)
-const LYRA_SPIFFE   = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'   // STANDARD min
+const LYRA_SPIFFE   = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'   // STANDARD min
 const ORION_SPIFFE  = 'spiffe://kindred.systems/ns/adaptive-layer/agent/orion'  // VERIFIED min, may delegate
 const CIPHER_SPIFFE = 'spiffe://kindred.systems/ns/adaptive-layer/agent/cipher' // TRUSTED min
 const MOCK_SPIFFE   = 'spiffe://kindred.systems/ns/examples/agent/mock'         // PROVISIONAL min, max_depth=0

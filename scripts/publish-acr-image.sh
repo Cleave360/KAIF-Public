@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ACR_NAME="${ACR_NAME:-kaifacra4c02bd7}"
+ACR_NAME="${ACR_NAME:-kaifacr-example}"
 IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-kaif/server}"
 IMAGE_TAG="${IMAGE_TAG:-$(date -u +%Y%m%d-%H%M%S)}"
 SOURCE_IMAGE="${SOURCE_IMAGE:-kaif-kaif-server:latest}"

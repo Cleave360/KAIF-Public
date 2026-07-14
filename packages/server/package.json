@@ -20,10 +20,12 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
+    "offload:redis-cosmos": "tsx src/workers/redis-cosmos-offload.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.6.0",
     "@azure/identity": "^4.13.1",
     "@azure/keyvault-secrets": "^4.11.2",
     "@fastify/helmet": "^11.1.1",

@@ -26,12 +26,12 @@ Current implementation status:
 
 - `loadConfig()` accepts optional `KAIF_TENANT_ADDRESS`.
 - Day 7b evidence reports include the tenant address when set.
-- Current dev integration uses `KAIF_TENANT_ADDRESS=tenant-dev`.
+- Current dev integration uses `KAIF_TENANT_ADDRESS=tenant-example`.
 - Production should keep the same tenant-slug model, for example `acme-prod`.
 
 The Adaptive evidence stream for the current tenant is:
 
-- `audit:auth:tenant-dev:<yyyy-mm-dd>`
+- `audit:auth:tenant-example:<yyyy-mm-dd>`
 
 ## Integration Pattern
 
@@ -63,7 +63,7 @@ Canonical payload:
   "layer": "auth",
   "envelope": {
     "envelope_version": "v1",
-    "tenant_id": "tenant-dev",
+    "tenant_id": "tenant-example",
     "workspace_id": "ws-kaif",
     "project_id": "kaif",
     "run_id": "run-...",

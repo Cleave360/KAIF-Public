@@ -50,8 +50,8 @@ async function makeTargetToken(ttl = 600): Promise<string> {
     iss: 'https://auth.test.example', sub: 'user@example.com',
     aud: 'https://api.example.com', iat: now, exp: now + ttl,
     jti: crypto.randomUUID(), scope: 'vault:read:anthropic_key',
-    actor: { sub: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra', svid_thumbprint: 'sha256:test' },
-    may_act: { sub: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra' },
+    actor: { sub: 'spiffe://example.org/ns/adaptive-layer/agent/lyra', svid_thumbprint: 'sha256:test' },
+    may_act: { sub: 'spiffe://example.org/ns/adaptive-layer/agent/lyra' },
     kaif: {
       trust_score: 0.6, trust_tier: 'STANDARD', delegation_depth: 1,
       delegation_id: crypto.randomUUID(), rollback_window: 'PT10M',

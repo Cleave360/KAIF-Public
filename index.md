@@ -150,7 +150,7 @@ KAIF/
 ### Agent Identity (SPIFFE/SPIRE)
 
 **SPIFFE ID** — Workload identifier format: `spiffe://<trust-domain>/ns/<namespace>/agent/<name>`  
-**Example:** `spiffe://kindred.systems/ns/adaptive-layer/agent/lyra`
+**Example:** `spiffe://example.org/ns/adaptive-layer/agent/lyra`
 
 **SVID** (SPIFFE Verifiable Identity Document) — JWT issued by SPIRE, contains:
 - SPIFFE ID claim
@@ -261,7 +261,7 @@ KAIF/
 ```typescript
 new KAIFClient({
   server_url: 'http://kaif-server:8080',
-  spiffe_id: 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra',
+  spiffe_id: 'spiffe://example.org/ns/adaptive-layer/agent/lyra',
   svid_path: '/tmp/svid.jwt',                  // path to JWT file SPIRE writes (not the gRPC socket)
   delegation_token: '<signed-grant-jwt>'       // signed KAIF JWT returned by POST /provision
 })

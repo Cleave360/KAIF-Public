@@ -15,7 +15,7 @@ import { _resetKeyCache } from '../../src/crypto/keys.js'
 import type { BoundaryAuthorizationRequest, KAIFTokenClaims } from '../../src/types/kaif.js'
 
 const AGENTS_CONFIG = new URL('../../config/agents.yaml', import.meta.url).pathname
-const LYRA_SPIFFE = 'spiffe://kindred.systems/ns/adaptive-layer/agent/lyra'
+const LYRA_SPIFFE = 'spiffe://example.org/ns/adaptive-layer/agent/lyra'
 
 let spirePrivateKey: KeyLike
 let spirePublicJWK: JWK & { kid: string }
@@ -30,7 +30,7 @@ function setTestEnv() {
   process.env['KAIF_AGENTS_CONFIG_PATH'] = AGENTS_CONFIG
   process.env['KAIF_ALLOWED_AUDIENCES'] = 'https://auth.test.example,urn:external-agent-platform'
   process.env['KAIF_STRICT_REVOCATION'] = 'false'
-  process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.cognitiveservices.azure.com'
+  process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.cognitiveservices.azure.com'
   process.env['KAIF_FOUNDRY_API_VERSION'] = '2024-02-15-preview'
   process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'api_key'
   process.env['KAIF_FOUNDRY_API_KEY'] = 'test-foundry-key'
@@ -110,7 +110,7 @@ function makeRequest(overrides: Partial<BoundaryAuthorizationRequest> = {}): Bou
   return {
     adaptive_envelope: {
       envelope_version: 'v1',
-      tenant_id: 'tenant-dev',
+      tenant_id: 'tenant-example',
       workspace_id: 'ws-dns',
       project_id: 'digital-nervous-system',
       blueprint_id: 'foundry_boundary_review_auto_recipe_v2',
@@ -234,7 +234,7 @@ describe('POST /v1/boundary/authorize', () => {
   })
 
   it('uses the Foundry project agent mode when configured', async () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://kindred-1882-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
     process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
     process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'

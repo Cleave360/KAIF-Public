@@ -1,7 +1,7 @@
 [
   {
     "comment": "Lyra — adaptive-layer agent, STANDARD minimum trust tier",
-    "spiffe_id": "spiffe://kindred.systems/ns/adaptive-layer/agent/lyra",
+    "spiffe_id": "spiffe://example.org/ns/adaptive-layer/agent/lyra",
     "parent_id": "spiffe://kindred.systems/spire/agent/join_token/bootstrap",
     "selectors": [{ "type": "unix", "value": "uid:1000" }],
     "ttl": 3600

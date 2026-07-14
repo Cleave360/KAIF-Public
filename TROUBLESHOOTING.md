@@ -668,7 +668,7 @@ echo "$SVID" | cut -d. -f2 | base64 -d | jq .
 
 # 3. Validate format
 # Should be: spiffe://<trust-domain>/<namespace>/<path>
-# Example: spiffe://kindred.systems/ns/adaptive-layer/agent/lyra
+# Example: spiffe://example.org/ns/adaptive-layer/agent/lyra
 
 # 4. Check if registered in ACL
 grep "$SPIFFE_ID" packages/server/config/agents.yaml
@@ -833,8 +833,8 @@ echo "SPIFFE from SVID: $SPIFFE_FROM_SVID"
 grep -n "spiffe_id:" packages/server/config/agents.yaml
 
 # 3. Compare carefully (case-sensitive!)
-# SVID: spiffe://kindred.systems/ns/adaptive-layer/agent/lyra
-# ACL:  spiffe://kindred.systems/ns/adaptive-layer/agent/lyra  ← must match exactly
+# SVID: spiffe://example.org/ns/adaptive-layer/agent/lyra
+# ACL:  spiffe://example.org/ns/adaptive-layer/agent/lyra  ← must match exactly
 ```
 
 **Solution:** Ensure exact match (case-sensitive, no trailing slashes)

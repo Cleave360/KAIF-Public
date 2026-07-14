@@ -29,7 +29,7 @@ LOCATION=westeurope
 CONTAINERAPPS_ENVIRONMENT=kaif-aca-env
 CONTAINER_APP_NAME=kaif-server-mi
 LOG_ANALYTICS_WORKSPACE=kaif-logs
-KEY_VAULT_NAME=kaif-kv-a4c02bd7
+KEY_VAULT_NAME=kaif-kv-example
 IMAGE=<registry>/<repo>:<tag>
 KAIF_REDIS_URL=rediss://<dedicated-redis-endpoint>:6380
 KAIF_ISSUER=https://kaif.kindredsystems.ai
@@ -52,7 +52,7 @@ Notes:
 For ACR publishing in this repo, the current registry is:
 
 ```text
-kaifacra4c02bd7.azurecr.io
+kaifacr-example.azurecr.io
 ```
 
 Publish with:
@@ -64,7 +64,7 @@ bash scripts/publish-acr-image.sh
 Current published image from this workspace:
 
 ```text
-kaifacra4c02bd7.azurecr.io/kaif/server:20260603-054625
+kaifacr-example.azurecr.io/kaif/server:20260603-054625
 ```
 
 ## Deployment script

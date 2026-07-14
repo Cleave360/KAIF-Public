@@ -150,7 +150,7 @@ The new secret is invalid. Check:
 ### "API key test failed"
 
 The new key isn't working. Check:
-1. Resource exists: `az cognitiveservices account show --resource-group rg-kindred-2461 --name kindred-1882-resource`
+1. Resource exists: `az cognitiveservices account show --resource-group rg-example --name example-resource`
 2. Key was actually regenerated (check portal)
 3. Wait 30 seconds and retry (keys can take time to propagate)
 
@@ -159,7 +159,7 @@ The new key isn't working. Check:
 Run:
 ```bash
 az login
-az account set --subscription 7460a200-e4dc-4e0f-8c3e-7db55e47647c
+az account set --subscription <subscription-id>
 ```
 
 ## After rotation
@@ -187,10 +187,10 @@ az ad sp show --id e2148609-e5d2-48d8-9a73-d814702552fd
 az ad app credential list --id e2148609-e5d2-48d8-9a73-d814702552fd
 
 # Check Cognitive Services account
-az cognitiveservices account show --resource-group rg-kindred-2461 --name kindred-1882-resource
+az cognitiveservices account show --resource-group rg-example --name example-resource
 
 # Check current keys (without regenerating)
-az cognitiveservices account keys list --resource-group rg-kindred-2461 --name kindred-1882-resource
+az cognitiveservices account keys list --resource-group rg-example --name example-resource
 
 # Verify Azure subscription
 az account show

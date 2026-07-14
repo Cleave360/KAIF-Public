@@ -58,8 +58,8 @@ This path is already proven in this workspace.
 
 Current Azure objects:
 - resource group: `KAIF_RESOURCE`
-- key vault: `kaif-kv-a4c02bd7`
-- ACR: `kaifacra4c02bd7.azurecr.io`
+- key vault: `kaif-kv-example`
+- ACR: `kaifacr-example.azurecr.io`
 
 Current local env file:
 - `.env.azure-sp.local` (gitignored)
@@ -93,7 +93,7 @@ Expected:
 ## 4. Publish the KAIF image to ACR
 
 The current publish script uses:
-- ACR name: `kaifacra4c02bd7`
+- ACR name: `kaifacr-example`
 - repository: `kaif/server`
 - source image: `kaif-kaif-server:latest`
 
@@ -106,14 +106,14 @@ bash scripts/publish-acr-image.sh
 Current published image from this workspace:
 
 ```text
-kaifacra4c02bd7.azurecr.io/kaif/server:20260603-054625
+kaifacr-example.azurecr.io/kaif/server:20260603-054625
 ```
 
 Verify:
 
 ```bash
 az acr repository show-tags \
-  --name kaifacra4c02bd7 \
+  --name kaifacr-example \
   --repository kaif/server \
   --output table
 ```
@@ -130,8 +130,8 @@ export LOCATION=westeurope
 export CONTAINERAPPS_ENVIRONMENT=kaif-aca-env
 export CONTAINER_APP_NAME=kaif-server-mi
 export LOG_ANALYTICS_WORKSPACE=kaif-logs
-export KEY_VAULT_NAME=kaif-kv-a4c02bd7
-export IMAGE=kaifacra4c02bd7.azurecr.io/kaif/server:20260603-054625
+export KEY_VAULT_NAME=kaif-kv-example
+export IMAGE=kaifacr-example.azurecr.io/kaif/server:20260603-054625
 
 export KAIF_REDIS_URL='rediss://<dedicated-redis-endpoint>:6380'
 export KAIF_ISSUER='https://kaif.kindredsystems.ai'

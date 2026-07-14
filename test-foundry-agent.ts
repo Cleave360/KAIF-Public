@@ -4,7 +4,7 @@
  * Run: npx ts-node test-foundry-agent.ts
  */
 
-const endpoint = "https://kindred-1882-resource.cognitiveservices.azure.com";
+const endpoint = "https://example-resource.cognitiveservices.azure.com";
 const apiKey = process.env.FOUNDRY_API_KEY;
 const deployment = "gpt-5-mini";
 const apiVersion = "2024-02-15-preview";
