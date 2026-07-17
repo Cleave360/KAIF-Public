@@ -410,7 +410,7 @@ This roadmap outlines the path from KAIF v0.9.1 (staging-ready reference impleme
 
 - [ ] **Security Advisory Process Launch** (2027-01-01)
   - Publish SECURITY.md with reporting instructions
-  - Set up security@kindred.systems email alias
+  - Set up kindred@kindredsystems.ai email alias
   - Recruit security team volunteers (3-5 people)
   - Due: 2027-01-01
 
@@ -815,6 +815,6 @@ This roadmap is aggressive but achievable. The key dependencies are:
 | 1.0 | 2026-06-27 | Initial draft |
 
 **For feedback or questions:**  
-Email: roadmap@kindred.systems  
+Email: kindred@kindredsystems.ai
 GitHub: Open an issue tagged `roadmap`  
 Community call: First call 2027-01-22 (details TBD)

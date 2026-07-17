@@ -12,7 +12,7 @@ Prerequisites:
 Clone and install:
 
 ```bash
-git clone https://github.com/Cleave360/KAIF.git
+git clone https://github.com/Cleave360/KAIF-Public.git
 cd KAIF
 pnpm install
 ```

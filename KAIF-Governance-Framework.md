@@ -292,7 +292,7 @@ All contributors must:
 KAIF adheres to the Contributor Covenant Code of Conduct v2.1.
 
 **Enforcement**:
-- Report violations to: conduct@kindred.systems
+- Report violations to: kindred@kindredsystems.ai
 - Maintainers investigate and respond within 10 business days
 - Consequences: Warning → PR blocking → project ban (escalation)
 
@@ -302,7 +302,7 @@ KAIF adheres to the Contributor Covenant Code of Conduct v2.1.
 
 **DO NOT** file security issues on GitHub. Instead:
 
-Email: **security@kindred.systems**
+Email: **kindred@kindredsystems.ai**
 
 Include:
 - Description of vulnerability
@@ -454,5 +454,5 @@ This governance framework is inspired by:
 
 **For Questions or Feedback**
 
-Email: governance@kindred.systems
+Email: kindred@kindredsystems.ai
 GitHub: Open an issue tagged `governance-discussion`

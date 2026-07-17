@@ -981,7 +981,7 @@ cat packages/server/config/agents.yaml > acl-config.yaml
 **DO NOT open GitHub issue for security issues**
 
 Instead:
-1. Email: `security@kindred.systems`
+1. Email: `kindred@kindredsystems.ai`
 2. Include: What you found, impact, reproduction steps
 3. Reference: [SECURITY.md](SECURITY.md)
 4. SLA: Acknowledged within 48h, patched within 14 days for critical

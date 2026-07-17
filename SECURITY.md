@@ -10,7 +10,7 @@
 
 ## Reporting a Vulnerability
 
-Email: **security@kindred.systems**
+Email: **kindred@kindredsystems.ai**
 
 Please include:
 

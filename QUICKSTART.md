@@ -30,7 +30,7 @@ git --version
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Cleave360/KAIF.git
+git clone https://github.com/Cleave360/KAIF-Public.git
 cd KAIF
 ```
 
