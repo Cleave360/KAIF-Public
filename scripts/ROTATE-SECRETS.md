@@ -181,10 +181,10 @@ az account set --subscription <subscription-id>
 
 ```bash
 # Check current SP
-az ad sp show --id e2148609-e5d2-48d8-9a73-d814702552fd
+az ad sp show --id <client-id>
 
 # List current SP credentials
-az ad app credential list --id e2148609-e5d2-48d8-9a73-d814702552fd
+az ad app credential list --id <client-id>
 
 # Check Cognitive Services account
 az cognitiveservices account show --resource-group rg-example --name example-resource

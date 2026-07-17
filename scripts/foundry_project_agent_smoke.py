@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Smoke-test Azure AI Foundry project agent output shape.")
     parser.add_argument(
         "--endpoint",
-        default=os.getenv("KAIF_FOUNDRY_AGENT_PROJECT_ENDPOINT", "https://example-resource.services.ai.azure.com/api/projects/kindred-1882"),
+        default=os.getenv("KAIF_FOUNDRY_AGENT_PROJECT_ENDPOINT", "https://example-resource.services.ai.azure.com/api/projects/example-project"),
         help="Azure AI Foundry project endpoint",
     )
     parser.add_argument(

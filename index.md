@@ -70,7 +70,7 @@ KAIF/
 ├── wiki.md                            ← Naming conventions, terminology, and current-state notes
 ├── index.md                           ← THIS FILE: Master navigation
 ├── KAIF-RFC-Draft-00.md               ← Internet-Draft markdown source
-├── KAIF-RFC-Draft-00.xml              ← xml2rfc artifact
+├── draft-lundholm-kaif-00.xml         ← xml2rfc Internet-Draft artifact
 ├── KAIF-Global-Adoption-Roadmap.md    ← Ecosystem and standards adoption plan
 ├── KAIF-Governance-Framework.md       ← Governance framework draft
 │
@@ -399,7 +399,7 @@ Conformance result semantics:
 ### Standards and Adoption Track
 
 - [KAIF-RFC-Draft-00.md](KAIF-RFC-Draft-00.md) - Internet-Draft markdown source
-- [KAIF-RFC-Draft-00.xml](KAIF-RFC-Draft-00.xml) - xml2rfc artifact for tooling and preview
+- [draft-lundholm-kaif-00.xml](draft-lundholm-kaif-00.xml) - xml2rfc Internet-Draft artifact
 - [KAIF-Global-Adoption-Roadmap.md](KAIF-Global-Adoption-Roadmap.md) - staged adoption roadmap
 - [KAIF-Governance-Framework.md](KAIF-Governance-Framework.md) - governance framework reference
 - [ADOPTERS.md](ADOPTERS.md) - adopter declarations and registry

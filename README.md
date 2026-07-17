@@ -2,6 +2,8 @@
 
 KAIF is an open protocol for authorising autonomous AI agents. It composes SPIFFE/SPIRE workload attestation with RFC 8693 token exchange to produce agent credentials that are short-lived, scoped, and cryptographically traceable to a human principal. Status: **v0.1.0-alpha** — reference implementation.
 
+Reference implementation only; not production ready. See [security/STATUS.md](security/STATUS.md).
+
 ---
 
 ## The Problem
@@ -16,8 +18,8 @@ KAIF is an open protocol for authorising autonomous AI agents. It composes SPIFF
 ## Quick Start
 
 ```bash
-git clone https://github.com/kindred-systems/kaif
-cd kaif
+git clone https://github.com/Cleave360/KAIF-Public
+cd KAIF-Public
 KAIF_DEV_MODE=true docker compose up -d --build
 ./scripts/demo.sh
 ```
@@ -70,7 +72,7 @@ The KAIF JWT binds three things in one credential: the human principal who autho
 ```typescript
 {
   iss:  "https://auth.kindred.systems",   // KAIF server
-  sub:  "kindred@kindredsystems.ai",          // human principal — always present
+  sub:  "operator@example.com",               // human principal — always present
   aud:  "urn:kaif:target-service",
   iat:  1716220800,
   exp:  1716221700,                       // iat + tier TTL (300–900s)

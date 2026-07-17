@@ -369,7 +369,7 @@ conformance/README.md       # Core Profile conformance harness and fixtures
 scripts/demo.sh             # End-to-end local demo with decoded token output
 scripts/redis_resilience_conformance.mjs  # Redis resilience evidence runner
 KAIF-RFC-Draft-00.md        # Internet-Draft markdown source
-KAIF-RFC-Draft-00.xml       # xml2rfc-compatible draft artifact
+draft-lundholm-kaif-00.xml  # xml2rfc-compatible Internet-Draft artifact
 KAIF-Global-Adoption-Roadmap.md
 KAIF-Governance-Framework.md
 ```

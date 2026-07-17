@@ -200,9 +200,9 @@ reports/
 # ─────────────────────────────────────────────────────────────────
 # RFC Preview Artifacts
 # ─────────────────────────────────────────────────────────────────
-KAIF-RFC-Draft-00.preview.xml
-KAIF-RFC-Draft-00.preview.clean.xml
-KAIF-RFC-Draft-00.preview.txt
+*.preview.xml
+*.preview.clean.xml
+*.preview.txt
 
 # Local conformance run output
 conformance-result.json

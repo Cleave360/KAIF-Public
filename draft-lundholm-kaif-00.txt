@@ -1,0 +1,1456 @@
+
+
+
+
+Network Working Group                                        G. Lundholm
+Internet-Draft                                           Kindred Systems
+Intended status: Standards Track                            17 July 2026
+Expires: 18 January 2027
+
+
+              The Kindred Agent Identity Framework (KAIF)
+                         draft-lundholm-kaif-00
+
+Abstract
+
+   The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token
+   exchange mechanism for delegated agent-to-service authorization,
+   combining RFC 8693 token exchange with SPIFFE workload identity
+   attestation and operator-assigned authorization tiers.
+
+   This document specifies the protocol mechanics, deployment profiles,
+   and interoperability requirements for systems implementing agent
+   authorization with audit accountability.  KAIF is intended for
+   scenarios in which an operator (human principal) provisionally
+   authorizes an agent (automated workload) to perform bounded actions
+   on their behalf, with cryptographic proof of authorization,
+   delegation depth tracking, and revocation in real time.
+
+   This document is intentionally vendor-neutral in its normative
+   requirements.  Cloud platforms, model providers, workflow systems,
+   and audit backends discussed by implementations are informative
+   deployment examples, not part of the KAIF wire protocol.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 18 January 2027.
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 1]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Problem Statement . . . . . . . . . . . . . . . . . . . .   3
+     1.2.  Scope and Intended Deployment . . . . . . . . . . . . . .   4
+     1.3.  Conventions and Terminology . . . . . . . . . . . . . . .   4
+     1.4.  Implementation Status (Informative) . . . . . . . . . . .   5
+     1.5.  Terminology Stability . . . . . . . . . . . . . . . . . .   5
+   2.  Protocol Overview . . . . . . . . . . . . . . . . . . . . . .   6
+     2.1.  Three-Party Flow  . . . . . . . . . . . . . . . . . . . .   6
+     2.2.  Delegation Grant (Subject Token)  . . . . . . . . . . . .   6
+     2.3.  Token Exchange Request (RFC 8693) . . . . . . . . . . . .   7
+     2.4.  KAIF Access Token (Response)  . . . . . . . . . . . . . .   7
+     2.5.  Validation Flow . . . . . . . . . . . . . . . . . . . . .   8
+   3.  Detailed Protocol Specification . . . . . . . . . . . . . . .   8
+     3.1.  Endpoint: POST /provision . . . . . . . . . . . . . . . .   8
+     3.2.  Endpoint: POST /oauth/token . . . . . . . . . . . . . . .   9
+     3.3.  Endpoint: POST /introspect  . . . . . . . . . . . . . . .  11
+     3.4.  Endpoint: POST /revoke  . . . . . . . . . . . . . . . . .  12
+     3.5.  Endpoint: GET /.well-known/jwks.json  . . . . . . . . . .  13
+     3.6.  Endpoint: GET /.well-known/kaif-metadata.json . . . . . .  13
+   4.  Authorization Tier Model  . . . . . . . . . . . . . . . . . .  15
+   5.  Scope Model . . . . . . . . . . . . . . . . . . . . . . . . .  15
+   6.  Delegation Depth and Sub-Delegation . . . . . . . . . . . . .  16
+   7.  Audit and Non-Repudiation . . . . . . . . . . . . . . . . . .  17
+   8.  Revocation and Propagation  . . . . . . . . . . . . . . . . .  17
+     8.1.  Lazy Revocation (Default) . . . . . . . . . . . . . . . .  18
+     8.2.  Strict Revocation . . . . . . . . . . . . . . . . . . . .  18
+     8.3.  HA-Backed Revocation Stores . . . . . . . . . . . . . . .  18
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  18
+     9.1.  Token Binding (RFC 8705)  . . . . . . . . . . . . . . . .  18
+     9.2.  Clock Skew  . . . . . . . . . . . . . . . . . . . . . . .  19
+     9.3.  Key Rotation  . . . . . . . . . . . . . . . . . . . . . .  19
+     9.4.  SPIFFE Trust Domain Validation  . . . . . . . . . . . . .  19
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 2]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+     9.5.  Scope Validation  . . . . . . . . . . . . . . . . . . . .  19
+     9.6.  Logging and Redaction . . . . . . . . . . . . . . . . . .  19
+     9.7.  Threat Model Summary  . . . . . . . . . . . . . . . . . .  20
+     9.8.  Privacy and Data Minimization . . . . . . . . . . . . . .  21
+   10. Relying Party Profile (Normative) . . . . . . . . . . . . . .  21
+     10.1.  Token Validation . . . . . . . . . . . . . . . . . . . .  21
+     10.2.  Error Handling . . . . . . . . . . . . . . . . . . . . .  21
+     10.3.  Audit Trail  . . . . . . . . . . . . . . . . . . . . . .  22
+   11. Backward Compatibility  . . . . . . . . . . . . . . . . . . .  22
+   12. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  23
+     12.1.  OAuth 2.0 Grant Type . . . . . . . . . . . . . . . . . .  23
+     12.2.  JWT Claims . . . . . . . . . . . . . . . . . . . . . . .  23
+   13. Conformance . . . . . . . . . . . . . . . . . . . . . . . . .  23
+     13.1.  Interoperability Evidence (Informative)  . . . . . . . .  24
+     13.2.  Revocation-Store Resilience Profile  . . . . . . . . . .  24
+   14. References  . . . . . . . . . . . . . . . . . . . . . . . . .  25
+     14.1.  Normative References . . . . . . . . . . . . . . . . . .  25
+     14.2.  Informative References . . . . . . . . . . . . . . . . .  25
+   Appendix A.  Illustrative Implementation Status (Informative) . .  26
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  26
+
+1.  Introduction
+
+1.1.  Problem Statement
+
+   Contemporary system architectures increasingly rely on autonomous
+   agents, both AI-driven and workflow-based, to execute actions on
+   behalf of human operators in complex distributed environments.
+   Current authorization models present several challenges:
+
+   1.  *Coarse-grained control*: Traditional API keys or static tokens
+       provide no granularity on what actions an agent may perform.
+
+   2.  *Limited auditability*: It is difficult to correlate which agent
+       executed which action, especially in delegated scenarios.
+
+   3.  *Revocation latency*: Certificate-based models suffer from multi-
+       minute revocation propagation delays.
+
+   4.  *Workload identity opacity*: There is no standardized way for an
+       authorization service to verify which workload is requesting
+       access.
+
+   KAIF addresses these challenges by combining three existing standards
+   and practices:
+
+   *  *RFC 8693*: OAuth 2.0 Token Exchange [RFC8693] for subject-actor
+      separation
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 3]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   *  *SPIFFE/SPIRE* [SPIFFE] [SPIRE]: Cryptographic workload identity
+      and JWT-SVID attestation
+
+   *  *Operator-assigned authorization tiers*: A flexible authorization
+      model that avoids hard-coded trust assumptions
+
+1.2.  Scope and Intended Deployment
+
+   KAIF is intended for operator-initiated, agent-executed, boundary-
+   crossing transactions.  A "boundary-crossing transaction" is any
+   action where:
+
+   *  The agent is acting on behalf of a human principal (operator)
+
+   *  The action modifies state in an external system (payment, API
+      mutation, purchase)
+
+   *  Regulatory, financial, or security audit requirements require
+      proof of authorization
+
+   The following are out of scope for v1.0:
+
+   *  Behavioral trust scoring (agent action pattern analysis)
+
+   *  Peer reputation models
+
+   *  Long-running streaming delegations
+
+   *  Cross-operator federation (see v2.0 roadmap)
+
+1.3.  Conventions and Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   *KAIF-specific terms:*
+
+   *  *Operator*: A human principal (person) who authorizes an agent to
+      act on their behalf.
+
+   *  *Agent*: An automated workload (software) with a SPIFFE identity
+      that executes actions on behalf of an operator.
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 4]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   *  *Boundary Crossing*: An action that crosses a trust boundary--
+      e.g., calling an external API, initiating a payment, or writing to
+      a regulated log.
+
+   *  *Authorization Tier*: An operator-assigned permission level
+      (PROVISIONAL, STANDARD, VERIFIED, TRUSTED) that determines token
+      TTL and delegation depth.
+
+   *  *Delegation Depth*: The count of intermediate agents in a
+      delegation chain (depth 0 = direct operator->agent, depth 1 =
+      operator->agent1->agent2).
+
+   *  *Revocation*: Immediate invalidation of a token via JTI (JWT ID)
+      denylist.
+
+   *  *Relying Party*: A third-party service that validates KAIF tokens
+      without running a KAIF server instance.
+
+1.4.  Implementation Status (Informative)
+
+   KAIF has been validated in at least one concrete multi-system
+   deployment as an implementation-backed protocol design.  That
+   deployment demonstrated, end to end:
+
+   *  operator-originated delegation grant issuance
+
+   *  workload identity presentation during token exchange
+
+   *  audience-bound authorization for a third-party execution surface
+
+   *  receipt correlation back to the originating workflow
+
+   *  workflow resumption after external completion
+
+   This evidence indicates that the KAIF handshake is viable across a
+   real external boundary.  It does not make any specific cloud, AI
+   provider, queue, workflow runtime, or datastore normative for
+   interoperability.  Independent implementations remain necessary to
+   establish broader interoperability confidence.
+
+1.5.  Terminology Stability
+
+   The protocol wire format in this document uses authorization_tier and
+   authorization_tier_value as the canonical delegation strength fields.
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 5]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   Implementations MAY use local internal terms such as trust_tier,
+   trust_score, or similar, but those names are deployment-specific and
+   are not normative protocol vocabulary unless explicitly mapped to the
+   KAIF claims defined here.
+
+2.  Protocol Overview
+
+2.1.  Three-Party Flow
+
+   +------------+
+   |  Operator  | (human, OIDC-authenticated)
+   | (John@co)  |
+   +------+-----+
+          |
+          | 1. Provision delegation grant
+          | (OIDC id_token -> delegation JWT)
+          v
+   +----------------------+
+   |   KAIF Server        |
+   |   (Authorization     |
+   |    Authority)        |
+   +---------------------++
+          ^               |
+          |               | 2. Token Exchange (RFC 8693)
+          |               | (delegation JWT + SVID -> access token)
+          |               v
+          |         +--------------+
+          |         |   Agent      |
+          |         |  (SPIFFE     |
+          |         |   identity)  |
+          |         +------+-------+
+          |                |
+          |                | 3. Use token at relying party
+          |                |
+          |                v
+          |         +--------------+
+          |         | Relying      |
+          |         | Party        |
+          +---------| (e.g.,       |
+                    |  Payment API)|
+                    +--------------+
+
+2.2.  Delegation Grant (Subject Token)
+
+   An operator provisions a delegation grant, a signed JWT that
+   authorizes an agent to request access tokens.  A grant issued by the
+   KAIF server contains:
+
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 6]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   {
+     "iss": "https://auth.example.com",
+     "sub": "operator@example.com",
+     "aud": "spiffe://example.com/agent/lyra",
+     "iat": 1719489600,
+     "exp": 1719493200,
+     "jti": "550e8400-e29b-41d4-a716-446655440000",
+     "scope": "invoke:completion vault:read:anthropic_key",
+     "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
+     "may_act": {
+       "sub": "spiffe://example.com/agent/lyra"
+     }
+   }
+
+2.3.  Token Exchange Request (RFC 8693)
+
+   The agent exchanges the delegation grant (subject_token) and its
+   SPIFFE identity JWT-SVID (actor_token) for an access token:
+
+   POST /oauth/token
+   Content-Type: application/x-www-form-urlencoded
+
+   grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+   &subject_token=<delegation-grant-jwt>
+   &subject_token_type=urn:ietf:params:oauth:token-type:access_token
+   &actor_token=<svid-jwt>
+   &actor_token_type=urn:ietf:params:oauth:token-type:jwt
+   &scope=invoke:completion
+   &audience=urn:example:payment-api
+
+2.4.  KAIF Access Token (Response)
+
+   The server returns a signed JWT that carries operator identity, agent
+   identity, delegation depth, tier, and scope:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 7]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   {
+     "iss": "https://auth.example.com",
+     "sub": "operator@example.com",
+     "aud": "urn:example:payment-api",
+     "iat": 1719489600,
+     "exp": 1719493200,
+     "jti": "650e8400-e29b-41d4-a716-446655440001",
+     "scope": "invoke:completion",
+     "actor": {
+       "sub": "spiffe://example.com/agent/lyra",
+       "svid_thumbprint": "sha256:a1b2c3d4..."
+     },
+     "may_act": {
+       "sub": "spiffe://example.com/agent/lyra"
+     },
+     "kaif": {
+       "authorization_tier": "STANDARD",
+       "authorization_tier_value": 0.65,
+       "delegation_depth": 0,
+       "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
+       "rollback_window": "PT10M",
+       "principal_chain": ["operator@example.com"]
+     }
+   }
+
+2.5.  Validation Flow
+
+   When a relying party receives the access token from an agent:
+
+   Agent -> Relying Party: "Use this token to execute transaction"
+           v
+           Relying party checks:
+           1. Token signature valid against KAIF issuer JWKS ok
+           2. Token not expired ok
+           3. Token not in revocation denylist (KAIF /introspect) ok
+           4. Scope permits requested action ok
+           5. Delegation depth within policy ok
+           v
+           Relying Party: "AUTHORIZED" -> execute transaction
+           v
+           Relying Party -> KAIF Server: Log receipt/audit event
+
+3.  Detailed Protocol Specification
+
+3.1.  Endpoint: POST /provision
+
+   *Purpose*: Operator provisions a delegation grant for an agent.
+
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 8]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   *Request*:
+
+   {
+     "id_token": "eyJhbGc...",
+     "agent_id": "lyra",
+     "scope": "invoke:completion vault:read:anthropic_key",
+     "ttl_seconds": 600
+   }
+
+   *Validation*:
+
+   *  id_token MUST be a valid OIDC token from configured IdP
+
+   *  agent_id MUST be registered in operator's ACL
+
+   *  scope MUST be a subset of agent's permitted scopes
+
+   *  ttl_seconds MUST be between 60 and 86400
+
+   *Response*:
+
+   {
+     "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
+     "delegation_token": "eyJhbGc...",
+     "expires_at": 1719493200,
+     "agent_id": "lyra",
+     "scope": "invoke:completion vault:read:anthropic_key"
+   }
+
+   *Errors*:
+
+   *  invalid_request (400): Missing required fields
+
+   *  invalid_grant (400): id_token invalid or expired
+
+   *  access_denied (403): Operator not authorized for agent or scope
+
+3.2.  Endpoint: POST /oauth/token
+
+   *Purpose*: RFC 8693 token exchange for agent-initiated access-token
+   requests.
+
+   *Request*:
+
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027                [Page 9]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+   &subject_token=<delegation-jwt>
+   &subject_token_type=urn:ietf:params:oauth:token-type:access_token
+   &actor_token=<svid-jwt>
+   &actor_token_type=urn:ietf:params:oauth:token-type:jwt
+   &scope=invoke:completion
+   &audience=urn:example:payment-api
+
+   *Validation steps* (in order):
+
+   1.  Parse and validate subject_token (delegation grant)
+
+       *  MUST have valid signature from KAIF issuer
+
+       *  MUST NOT be expired (with 10s clock skew tolerance)
+
+       *  MUST NOT be in JTI revocation denylist
+
+   2.  Parse and validate actor_token (JWT-SVID)
+
+       *  MUST have valid signature from SPIRE bundle
+
+       *  MUST NOT be expired
+
+       *  SPIFFE ID MUST be registered in ACL
+
+   3.  Validate scope
+
+       *  MUST be subset of subject_token scope
+
+       *  MUST be subset of actor's permitted scopes (ACL)
+
+       *  MUST use glob matching (e.g., "vault:read:*" matches
+          "vault:read:key")
+
+   4.  Check authorization tier
+
+       *  Fetch the operator-assigned authorization tier (default 0.5 =
+          STANDARD)
+
+       *  MUST meet agent's minimum tier requirement
+
+       *  Determine token TTL based on tier
+
+   5.  Compute delegation depth
+
+       *  If subject_token is direct provision: depth = 0
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 10]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+       *  If subject_token is access token from prior exchange: depth =
+          subject.kaif.delegation_depth + 1
+
+       *  MUST NOT exceed: min(actor ACL depth limit, tier depth limit)
+
+   6.  Mint access token with RS256 signature
+
+   *Response*:
+
+   {
+     "access_token": "eyJhbGc...",
+     "issued_token_type":
+       "urn:ietf:params:oauth:token-type:access_token",
+     "token_type": "Bearer",
+     "expires_in": 600,
+     "scope": "invoke:completion"
+   }
+
+   *Errors*:
+
+   *  invalid_request (400): Malformed request
+
+   *  invalid_grant (400): subject_token invalid/expired/revoked
+
+   *  invalid_scope (400): Scope not permitted
+
+   *  invalid_client (401): actor_token invalid
+
+   *  insufficient_trust (403): Authorization tier below minimum
+
+   *  delegation_depth_exceeded (403): Depth would exceed limit
+
+3.3.  Endpoint: POST /introspect
+
+   *Purpose*: RFC 7662 [RFC7662] token introspection for relying parties
+   that verify tokens in real time.
+
+   *Request*:
+
+   {
+     "token": "eyJhbGc..."
+   }
+
+   *Response* (if active):
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 11]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   {
+     "active": true,
+     "sub": "operator@example.com",
+     "aud": "urn:example:payment-api",
+     "iat": 1719489600,
+     "exp": 1719493200,
+     "scope": "invoke:completion",
+     "actor": {
+       "sub": "spiffe://example.com/agent/lyra"
+     },
+     "kaif": {
+       "authorization_tier": "STANDARD",
+       "delegation_depth": 0
+     }
+   }
+
+   *Response* (if revoked or invalid):
+
+   {
+     "active": false
+   }
+
+3.4.  Endpoint: POST /revoke
+
+   *Purpose*: Operator revokes a token.
+
+   *Request*:
+
+   {
+     "token": "eyJhbGc...",
+     "reason": "operator_request"
+   }
+
+   *Response*:
+
+   {
+     "revoked": true,
+     "jti": "650e8400-e29b-41d4-a716-446655440001"
+   }
+
+   *Mechanics*:
+
+   *  Extract JTI from token
+
+   *  Add to Redis denylist with TTL = token.exp
+
+   *  Publish to revocation channel for multi-instance sync
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 12]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   *  Write audit entry
+
+3.5.  Endpoint: GET /.well-known/jwks.json
+
+   *Purpose*: Public JWK Set [RFC7517] document for external relying
+   parties.
+
+   *Response*:
+
+   {
+     "keys": [
+       {
+         "kty": "RSA",
+         "use": "sig",
+         "kid": "2024-06-27-primary",
+         "n": "0vx7agoebGcQ...",
+         "e": "AQAB",
+         "alg": "RS256"
+       },
+       {
+         "kty": "RSA",
+         "use": "sig",
+         "kid": "2024-06-15-retained",
+         "n": "xjlCRBfn...",
+         "e": "AQAB",
+         "alg": "RS256"
+       }
+     ]
+   }
+
+   *Caching*: MUST set Cache-Control: max-age=3600
+
+3.6.  Endpoint: GET /.well-known/kaif-metadata.json
+
+   *Purpose*: Issuer metadata for relying parties (KAIF v1.1+).
+
+   *Response*:
+
+   {
+     "issuer": "https://auth.example.com",
+     "authorization_endpoint":
+       "https://auth.example.com/oauth/authorize",
+     "token_endpoint": "https://auth.example.com/oauth/token",
+     "introspection_endpoint": "https://auth.example.com/introspect",
+     "revocation_endpoint": "https://auth.example.com/revoke",
+     "jwks_uri": "https://auth.example.com/.well-known/jwks.json",
+     "supported_grant_types": [
+       "urn:ietf:params:oauth:grant-type:token-exchange"
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 13]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+     ],
+     "token_endpoint_auth_methods_supported": ["none"],
+     "response_types_supported": [],
+     "scopes_supported": [
+       "invoke:completion",
+       "vault:read",
+       "admin:revoke"
+     ],
+     "token_endpoint_auth_methods": ["none"],
+     "kaif": {
+       "authorization_tiers": [
+         {
+           "tier": "PROVISIONAL",
+           "min_value": 0.0,
+           "max_value": 0.49,
+           "token_ttl": 300,
+           "max_delegation_depth": 0
+         },
+         {
+           "tier": "STANDARD",
+           "min_value": 0.5,
+           "max_value": 0.69,
+           "token_ttl": 600,
+           "max_delegation_depth": 1
+         },
+         {
+           "tier": "VERIFIED",
+           "min_value": 0.7,
+           "max_value": 0.89,
+           "token_ttl": 900,
+           "max_delegation_depth": 2
+         },
+         {
+           "tier": "TRUSTED",
+           "min_value": 0.9,
+           "max_value": 1.0,
+           "token_ttl": 900,
+           "max_delegation_depth": 3
+         }
+       ],
+       "revocation_propagation_sla_ms": 100,
+       "audit_log_retention_days": 90
+     }
+   }
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 14]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+4.  Authorization Tier Model
+
+   KAIF uses operator-assigned authorization tier values in the range
+   0.0-1.0 to determine access permissions:
+
+   +=============+==========+===========+=======+=====================+
+   | Tier        | Range    | Token TTL | Max   | Use Case            |
+   |             |          |           | Depth |                     |
+   +=============+==========+===========+=======+=====================+
+   | PROVISIONAL | 0.0-0.49 | 300s      | 0     | New agents, limited |
+   |             |          |           |       | trust               |
+   +-------------+----------+-----------+-------+---------------------+
+   | STANDARD    | 0.5-0.69 | 600s      | 1     | Established agents  |
+   +-------------+----------+-----------+-------+---------------------+
+   | VERIFIED    | 0.7-0.89 | 900s      | 2     | High-confidence     |
+   |             |          |           |       | agents              |
+   +-------------+----------+-----------+-------+---------------------+
+   | TRUSTED     | 0.9-1.0  | 900s      | 3     | Critical operators, |
+   |             |          |           |       | full delegation     |
+   +-------------+----------+-----------+-------+---------------------+
+
+                                 Table 1
+
+   *Assigning tier values*:
+
+   Operators assign tier values to agents based on their operational
+   context, not automated behavioral scoring in v1.0.  Examples:
+
+   *  New agent: 0.3 (PROVISIONAL, untested)
+
+   *  Stable agent with 6 months history: 0.6 (STANDARD)
+
+   *  Agent in production payment path: 0.85 (VERIFIED)
+
+   *  Root operator with full authority: 1.0 (TRUSTED)
+
+5.  Scope Model
+
+   KAIF scopes follow OAuth 2.0 conventions with glob-pattern support:
+
+   scope ::= scope-name ( ":" scope-name )*
+   scope-name ::= identifier | "*"
+
+   *Examples*:
+
+   *  invoke:completion -- Invoke a specific completion (exact match)
+
+   *  vault:read:* -- Read any vault key (glob)
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 15]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   *  admin:* -- All admin operations (glob)
+
+   *  vault:read:anthropic_key -- Read one specific key (exact match)
+
+   *Validation*: Implementations MUST evaluate exact matches before glob
+   patterns, or use an equivalent matcher.  Substring matching is not
+   sufficient.
+
+6.  Delegation Depth and Sub-Delegation
+
+   An agent MAY create a delegation chain by using its access token as
+   the subject_token in a second token exchange, creating a sub-
+   delegated token.
+
+   *Rules*:
+
+   *  Depth 0: Operator -> Agent (direct)
+
+   *  Depth 1: Operator -> Agent1 -> Agent2 (sub-delegation)
+
+   *  Depth N: Limited by min(ACL max_depth, authorization_tier
+      max_depth)
+
+   *Restrictions*:
+
+   *  The parent token's may_sub_delegate flag MUST be true.
+
+   *  The parent token MUST be in VERIFIED or TRUSTED tier.
+
+   *  The sub-delegated token scope MUST be a subset of the parent
+      scope.
+
+   *  Depth MUST be strictly increasing, with no cycles.
+
+   *Example*:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 16]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   1. Operator authorizes Agent1
+     (depth 0, may_sub_delegate: true, scope: invoke:*)
+     -> token T1 with delegation_depth: 0
+
+   2. Agent1 uses T1 as subject_token to request
+      sub-delegation for Agent2
+     -> verify T1.may_sub_delegate = true
+     -> verify T1.delegation_depth + 1 <= ACL max
+     -> issue token T2 with delegation_depth: 1
+       principal_chain: [operator, agent1]
+
+   3. Agent2 attempts to sub-delegate to Agent3
+     -> check T2.delegation_depth + 1 <= ACL max
+     -> issue token T3 with delegation_depth: 2
+
+7.  Audit and Non-Repudiation
+
+   Every KAIF operation appends an immutable audit entry, linked by
+   SHA-256 [RFC6234] hash chaining:
+
+   entry = {
+     id: UUID v4,
+     ts: ISO 8601,
+     action:
+       "DELEGATION_PROVISIONED" |
+       "TOKEN_ISSUED" |
+       "TOKEN_REVOKED" |
+       ...,
+     agent_id: SPIFFE ID,
+     human_id: operator email,
+     detail: JSON,
+     hash: SHA256(prev_hash | ts | action | detail),
+     prev_hash: hash of previous entry
+   }
+
+   *Verification*:
+
+   External parties can verify audit chain integrity by replaying the
+   hash computation:
+
+   expected_hash = SHA256(prev_hash | ts | action | detail)
+   assert actual_hash == expected_hash
+
+8.  Revocation and Propagation
+
+   KAIF provides two revocation models:
+
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 17]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+8.1.  Lazy Revocation (Default)
+
+   Relying parties MAY cache tokens and check expiry locally.
+   Revocation is eventual: the denylist is checked on the next refresh.
+
+   *Latency*: Minutes (depends on token cache TTL)
+
+8.2.  Strict Revocation
+
+   Relying parties call /introspect on every token use to check
+   revocation status in real time.
+
+   *Latency*: <100ms (Redis denylist lookup)
+
+   Operators choose strict vs. lazy based on their risk tolerance and
+   throughput requirements.
+
+8.3.  HA-Backed Revocation Stores
+
+   KAIF deployments commonly back the JTI denylist and audit chain with
+   a managed Redis service.
+
+   When the backing store is a managed HA service that does not expose
+   customer-triggerable restart or failover operations, implementations
+   MUST validate continuity through client-observable behavior rather
+   than cluster control-plane actions.
+
+   At minimum, a conformant deployment using such a service MUST
+   demonstrate:
+
+   *  Redis client reconnect after transient disconnect
+
+   *  Denylist persistence across reconnect
+
+   *  Audit hash-chain continuity across reconnect
+
+   *  Resumption of successful writes after reconnect
+
+   Platform-specific HA limitations and validation methods SHOULD be
+   documented in implementation reports or deployment profiles, not
+   embedded into interoperable wire semantics.
+
+9.  Security Considerations
+
+9.1.  Token Binding (RFC 8705)
+
+   KAIF SHOULD support mutual TLS (mTLS) token binding [RFC8705].  When
+   an agent presents a client certificate, KAIF MUST include:
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 18]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   "cnf": {
+     "x5t#S256": "sha256:a1b2c3d4..."
+   }
+
+   The relying party MUST verify that the mTLS handshake certificate
+   thumbprint matches the token's cnf value.
+
+9.2.  Clock Skew
+
+   All timestamp validation MUST use 10-second clock skew tolerance (not
+   configurable).
+
+9.3.  Key Rotation
+
+   KAIF MUST support zero-downtime key rotation by maintaining both
+   active and retained keys in the JWKS.  Relying parties MUST accept
+   tokens signed with either key for a retention period (recommended: 7
+   days).
+
+9.4.  SPIFFE Trust Domain Validation
+
+   KAIF MUST validate that actor_token SPIFFE ID matches the configured
+   SPIRE trust domain.  Mismatched trust domains MUST be rejected with
+   invalid_client.
+
+9.5.  Scope Validation
+
+   Scope validation MUST use exact-match-first, then glob matching.
+   Substring matching MUST NOT be used (e.g., "vault:read" does NOT
+   match "vault:read:key").
+
+9.6.  Logging and Redaction
+
+   KAIF implementations MUST:
+
+   *  Log JTI (not token values)
+
+   *  Redact subject_token, actor_token, authorization headers in HTTP
+      logs
+
+   *  Never log private key material
+
+   *  Include request ID for tracing
+
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 19]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+9.7.  Threat Model Summary
+
+   +===============+==============+===================+===============+
+   |Attacker       |Threat        | Required Control  |Residual Risk  |
+   +===============+==============+===================+===============+
+   |External caller|Attempts token| subject_token     |Stolen valid   |
+   |without        |exchange      | signature,        |grant until    |
+   |delegation     |without       | expiry,           |expiry or      |
+   |               |operator grant| revocation, and   |revocation     |
+   |               |              | ACL validation    |               |
+   +---------------+--------------+-------------------+---------------+
+   |Compromised    |Uses wrong or | actor_token JWT-  |Abuse by a     |
+   |workload       |forged        | SVID validation   |legitimately   |
+   |               |workload      | against trust     |attested but   |
+   |               |identity      | bundle and ACL-   |compromised    |
+   |               |              | bound SPIFFE ID   |workload       |
+   +---------------+--------------+-------------------+---------------+
+   |Token thief    |Replays access| Short TTL,        |Replay window  |
+   |               |token at      | optional mTLS     |exists when    |
+   |               |relying party | binding, strict   |relying parties|
+   |               |              | introspection for |use lazy       |
+   |               |              | high-risk paths   |revocation     |
+   +---------------+--------------+-------------------+---------------+
+   |Over-privileged|Attempts      | Scope subset      |Misconfigured  |
+   |intermediary   |excessive sub-| checks,           |ACL or operator|
+   |agent          |delegation    | may_sub_delegate, |approval can   |
+   |               |              | depth             |still over-    |
+   |               |              | enforcement, tier |authorize      |
+   |               |              | gating            |               |
+   +---------------+--------------+-------------------+---------------+
+   |Malicious or   |Accepts       | Mandatory JWKS    |Weak local     |
+   |faulty relying |invalid,      | validation,       |policy at      |
+   |party          |expired, or   | expiry checks,    |relying party  |
+   |               |wrong-audience| audience checks,  |remains        |
+   |               |token         | optional strict   |possible       |
+   |               |              | introspection     |               |
+   +---------------+--------------+-------------------+---------------+
+   |Audit tampering|Alters        | Hash-chained      |Record deletion|
+   |actor          |forensic      | audit entries and |or total store |
+   |               |record after  | externally        |loss still     |
+   |               |issuance      | verifiable        |requires       |
+   |               |              | prev_hash         |external       |
+   |               |              | continuity        |retention      |
+   |               |              |                   |strategy       |
+   +---------------+--------------+-------------------+---------------+
+
+                                 Table 2
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 20]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+9.8.  Privacy and Data Minimization
+
+   KAIF is intended to prove delegated authority, not to maximize
+   identity disclosure.  Implementations SHOULD minimize personal and
+   operational data as follows:
+
+   *  sub SHOULD use the least identifying operator handle consistent
+      with the deployment's audit requirements.
+
+   *  principal_chain SHOULD contain only the identities required to
+      explain delegation lineage.
+
+   *  Audit detail fields SHOULD exclude prompt bodies, business
+      payloads, secrets, and raw token material unless separately
+      required by policy.
+
+   *  Relying parties SHOULD log JTI, actor identity, action, and result
+      before logging broader contextual data.
+
+   *  Operators and deployments SHOULD define retention periods for
+      audit entries and principal-chain material consistent with legal
+      and regulatory requirements.
+
+10.  Relying Party Profile (Normative)
+
+   A third-party service that accepts KAIF tokens MUST implement:
+
+10.1.  Token Validation
+
+   1. Fetch JWKS from issuer's /.well-known/jwks.json (cache 3600s)
+   2. Verify token signature using KID matching (try each key)
+   3. Verify exp > now (with 10s clock skew)
+   4. If lazy revocation: done
+   5. If strict revocation: POST /introspect to check JTI denylist
+   6. Extract scope, verify requested action is permitted
+   7. Extract actor.sub (SPIFFE ID), log for audit trail
+
+10.2.  Error Handling
+
+   HTTP status codes are used as defined in [RFC9110].
+
+
+
+
+
+
+
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 21]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+     +========================+===================+==================+
+     | Condition              | Action            | HTTP Status      |
+     +========================+===================+==================+
+     | Signature invalid      | Reject            | 401 Unauthorized |
+     +------------------------+-------------------+------------------+
+     | Expired                | Reject            | 401 Unauthorized |
+     +------------------------+-------------------+------------------+
+     | Revoked (strict mode)  | Reject            | 401 Unauthorized |
+     +------------------------+-------------------+------------------+
+     | Scope insufficient     | Reject            | 403 Forbidden    |
+     +------------------------+-------------------+------------------+
+     | Introspect unreachable | Degrade or reject | 503 Service      |
+     | (strict mode)          | (policy choice)   | Unavailable      |
+     +------------------------+-------------------+------------------+
+
+                                  Table 3
+
+10.3.  Audit Trail
+
+   Relying parties SHOULD log:
+
+   *  Timestamp of token use
+
+   *  JTI
+
+   *  Actor SPIFFE ID
+
+   *  Scope used
+
+   *  Action executed
+
+   *  Result (success/failure)
+
+   This enables cross-party forensics if a token is misused.
+
+11.  Backward Compatibility
+
+   This is KAIF v1.0, the initial standards-track release.  Future
+   versions:
+
+   *  *v1.1*: Issuer metadata endpoint (.well-known/kaif-metadata.json)
+
+   *  *v2.0*: Multi-issuer federation, cross-operator delegation
+
+   *  *v3.0*: Behavioral trust signals (optional, opt-in per operator)
+
+   Implementations MUST gracefully ignore unrecognized claims in KAIF
+   tokens to allow forward compatibility.
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 22]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+12.  IANA Considerations
+
+   This document registers the following values with IANA:
+
+12.1.  OAuth 2.0 Grant Type
+
+   *Type*: urn:ietf:params:oauth:grant-type:token-exchange (RFC 8693)
+
+   *Description*: Token exchange grant (already registered; KAIF
+   profiles its use)
+
+12.2.  JWT Claims
+
+   *Claim name*: kaif *Claim description*: Container for KAIF-specific
+   claims (authorization_tier, delegation_depth, principal_chain) *JWT
+   claims registry*: Requested
+
+13.  Conformance
+
+   An implementation claims KAIF v1.0 conformance if it:
+
+   1.   Implements POST /oauth/token with RFC 8693 semantics
+
+   2.   Implements POST /introspect with RFC 7662 semantics
+
+   3.   Validates actor_token as JWT-SVID from a configured SPIRE bundle
+        or equivalent SPIFFE trust source
+
+   4.   Enforces scope glob matching with exact-match-first behavior
+
+   5.   Supports delegation depth tracking and enforcement
+
+   6.   Publishes JWKS with active and retained keys
+
+   7.   Maintains an audit trail with SHA-256 hash chaining
+
+   8.   Supports JTI revocation with sub-second propagation
+
+   9.   Validates timestamps with 10-second clock skew tolerance
+
+   10.  Passes the KAIF conformance test suite
+
+   Conformance is demonstrated by passing the KAIF conformance kit
+   included with this repository.
+
+   Protocol conformance and deployment evidence are related but
+   distinct:
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 23]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   *  Protocol conformance establishes that an implementation speaks
+      KAIF correctly.
+
+   *  Deployment evidence establishes that a specific operating
+      environment behaved correctly under real conditions.
+
+   An implementation MAY publish deployment evidence, interoperability
+   notes, or platform-specific profiles in addition to protocol
+   conformance results.
+
+13.1.  Interoperability Evidence (Informative)
+
+   A report SHOULD clearly state:
+
+   1.  which parts of the KAIF handshake were exercised
+
+   2.  whether the relying party was independent from the authorization
+       server
+
+   3.  which delivery, receipt, or resume semantics were validated
+       beyond token issuance
+
+   4.  which deployment details are informative examples rather than
+       normative protocol requirements
+
+   5.  which claims were not tested
+
+13.2.  Revocation-Store Resilience Profile
+
+   If a deployment uses a managed Redis service for denylist and audit
+   persistence, conformance evidence SHOULD include a revocation-store
+   resilience profile.
+
+   That profile SHOULD verify:
+
+   1.  Redis client reconnect recovery
+
+   2.  Denylist persistence after reconnect
+
+   3.  Audit chain prev_hash continuity after reconnect
+
+   4.  Successful new delegation, token issuance, and revocation writes
+       after reconnect
+
+   If the platform does not expose customer-triggerable restart or
+   failover operations, the implementation MUST document that limitation
+   and MAY satisfy this profile using client-side disconnect and
+   reconnect simulation plus state verification.
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 24]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+14.  References
+
+14.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC6234]  Eastlake 3rd, D. and T. Hansen, "US Secure Hash Algorithms
+              (SHA and SHA-based HMAC and HKDF)", RFC 6234,
+              DOI 10.17487/RFC6234, May 2011,
+              <https://www.rfc-editor.org/info/rfc6234>.
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/info/rfc7517>.
+
+   [RFC7662]  Richer, J., Ed., "OAuth 2.0 Token Introspection",
+              RFC 7662, DOI 10.17487/RFC7662, October 2015,
+              <https://www.rfc-editor.org/info/rfc7662>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8693]  Jones, M., Nadalin, A., Campbell, B., Ed., Bradley, J.,
+              and C. Mortimore, "OAuth 2.0 Token Exchange", RFC 8693,
+              DOI 10.17487/RFC8693, January 2020,
+              <https://www.rfc-editor.org/info/rfc8693>.
+
+   [RFC9110]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Semantics", STD 97, RFC 9110,
+              DOI 10.17487/RFC9110, June 2022,
+              <https://www.rfc-editor.org/info/rfc9110>.
+
+14.2.  Informative References
+
+   [RFC8705]  Campbell, B., Bradley, J., Sakimura, N., and T.
+              Lodderstedt, "OAuth 2.0 Mutual-TLS Client Authentication
+              and Certificate-Bound Access Tokens", RFC 8705,
+              DOI 10.17487/RFC8705, February 2020,
+              <https://www.rfc-editor.org/info/rfc8705>.
+
+   [SPIFFE]   Cloud Native Computing Foundation, "Secure Production
+              Identity Framework for Everyone (SPIFFE)",
+              <https://spiffe.io/>.
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 25]
+
+Internet-Draft                    KAIF                         July 2026
+
+
+   [SPIRE]    Cloud Native Computing Foundation, "The SPIFFE Runtime
+              Environment (SPIRE)",
+              <https://spiffe.io/docs/latest/spire/>.
+
+Appendix A.  Illustrative Implementation Status (Informative)
+
+   One implementation-backed validation of KAIF exercised the following
+   path:
+
+   1.  an operator provisioned a delegation grant for a registered
+       workload
+
+   2.  the workload exchanged that grant together with its workload
+       identity for an audience-bound token
+
+   3.  a third-party execution surface accepted the boundary request
+
+   4.  a completion receipt was written back to the originating system
+
+   5.  the originating workflow resumed and completed its downstream
+       steps
+
+   This validation supports the claim that KAIF can convey delegated
+   authority, workload identity, audience restriction, and correlated
+   receipt data across a real external boundary.
+
+   This validation does not, by itself, prove:
+
+   *  interoperability across multiple independent KAIF implementations
+
+   *  standardization of any particular cloud transport, agent runtime,
+      queue, workflow engine, or datastore
+
+   *  completeness of every optional KAIF feature or future extension
+
+   Implementers SHOULD publish similarly bounded implementation reports
+   so that protocol review can distinguish wire-level interoperability
+   from deployment-specific success.
+
+Author's Address
+
+   Geoffrey Lundholm
+   Kindred Systems
+   London
+   United Kingdom
+   Email: kindred@kindredsystems.ai
+
+
+
+
+
+Lundholm                 Expires 18 January 2027               [Page 26]

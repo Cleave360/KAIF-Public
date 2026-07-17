@@ -20,7 +20,6 @@ Please include:
 
 | Organization | Stage | Use Case | Environment | Since | Link |
 |---|---|---|---|---|---|
-| Example Corp | Pilot | Agent-to-service authorization for regulated API calls | Azure Kubernetes Service | 2026-06 | https://example.com |
 
 ## Stage Definitions
 

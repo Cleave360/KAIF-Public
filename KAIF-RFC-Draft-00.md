@@ -1,17 +1,17 @@
 # KAIF: Kindred Agent Identity Framework
 
 **Internet-Draft**  
-**Expires: 27 December 2026**
+**Expires: 18 January 2027**
 
 | | |
 |---|---|
 | **Intended Status** | Standards Track |
 | **Author** | Geoffrey Lundholm |
 | **Organization** | Kindred Systems |
-| **Date** | 27 June 2026 |
+| **Date** | 17 July 2026 |
 | **IPR Disclosure** | IETF Trust Legal Provisions (BCP 78) |
 
-**Authoring note:** This markdown file is the source of truth for the draft. Generated preview artifacts (`KAIF-RFC-Draft-00.preview.xml`, `KAIF-RFC-Draft-00.preview.clean.xml`, `KAIF-RFC-Draft-00.preview.txt`) are proof outputs only and are not edited directly.
+**Authoring note:** This markdown file is the source of truth for the draft. Generated Internet-Draft artifacts (`draft-lundholm-kaif-00.xml`, `draft-lundholm-kaif-00.txt`, `draft-lundholm-kaif-00.html`) are proof outputs only and are not edited directly.
 
 ## Abstract
 
