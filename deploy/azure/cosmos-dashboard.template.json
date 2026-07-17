@@ -1,0 +1,139 @@
+{
+  "properties": {
+    "lenses": [
+      {
+        "order": 0,
+        "parts": [
+          {
+            "position": { "x": 0, "y": 0, "colSpan": 12, "rowSpan": 2 },
+            "metadata": {
+              "inputs": [],
+              "type": "Extension/HubsExtension/PartType/MarkdownPart",
+              "settings": {
+                "content": {
+                  "settings": {
+                    "content": "# KAIF Cosmos Warm Store\nDedicated dashboard for the Cosmos DB warm store backing Redis channel offload.\n\nUse this view to watch ingestion health, storage growth, RU pressure, and service availability.",
+                    "title": "KAIF Cosmos Warm Store",
+                    "subtitle": "Warm storage for Redis channel events",
+                    "markdownUri": null
+                  }
+                }
+              }
+            }
+          },
+          {
+            "position": { "x": 0, "y": 2, "colSpan": 4, "rowSpan": 4 },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": {
+                    "timespan": { "duration": "PT24H" },
+                    "id": "__COSMOS_ACCOUNT_ID__",
+                    "chartType": 0,
+                    "metrics": [
+                      { "name": "TotalRequests", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "TotalRequestUnits", "resourceId": "__COSMOS_ACCOUNT_ID__" }
+                    ]
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart"
+            }
+          },
+          {
+            "position": { "x": 4, "y": 2, "colSpan": 4, "rowSpan": 4 },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": {
+                    "timespan": { "duration": "PT24H" },
+                    "id": "__COSMOS_ACCOUNT_ID__",
+                    "chartType": 0,
+                    "metrics": [
+                      { "name": "ServiceAvailability", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "ServerSideLatency", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "ReplicationLatency", "resourceId": "__COSMOS_ACCOUNT_ID__" }
+                    ]
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart"
+            }
+          },
+          {
+            "position": { "x": 8, "y": 2, "colSpan": 4, "rowSpan": 4 },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": {
+                    "timespan": { "duration": "PT24H" },
+                    "id": "__COSMOS_ACCOUNT_ID__",
+                    "chartType": 0,
+                    "metrics": [
+                      { "name": "DataUsage", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "DocumentCount", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "AvailableStorage", "resourceId": "__COSMOS_ACCOUNT_ID__" }
+                    ]
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart"
+            }
+          },
+          {
+            "position": { "x": 0, "y": 6, "colSpan": 6, "rowSpan": 4 },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": {
+                    "timespan": { "duration": "PT24H" },
+                    "id": "__COSMOS_ACCOUNT_ID__",
+                    "chartType": 0,
+                    "metrics": [
+                      { "name": "NormalizedRUConsumption", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "AutoscaleMaxThroughput", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "ProvisionedThroughput", "resourceId": "__COSMOS_ACCOUNT_ID__" }
+                    ]
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart"
+            }
+          },
+          {
+            "position": { "x": 6, "y": 6, "colSpan": 6, "rowSpan": 4 },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": {
+                    "timespan": { "duration": "PT24H" },
+                    "id": "__COSMOS_ACCOUNT_ID__",
+                    "chartType": 0,
+                    "metrics": [
+                      { "name": "IntegratedCacheItemHitRate", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "IntegratedCacheQueryHitRate", "resourceId": "__COSMOS_ACCOUNT_ID__" },
+                      { "name": "IntegratedCacheItemExpirationCount", "resourceId": "__COSMOS_ACCOUNT_ID__" }
+                    ]
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart"
+            }
+          }
+        ]
+      }
+    ],
+    "metadata": { "model": {} }
+  },
+  "name": "__DASHBOARD_NAME__",
+  "type": "Microsoft.Portal/dashboards",
+  "location": "__DASHBOARD_LOCATION__",
+  "tags": {
+    "hidden-title": "KAIF Cosmos Warm Store"
+  }
+}

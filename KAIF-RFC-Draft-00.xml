@@ -38,10 +38,12 @@
 <td>IETF Trust Legal Provisions (BCP 78)</td>
 </tr>
 </tbody>
-</table>
+</table><t><strong>Authoring note:</strong> This markdown file is the source of truth for the draft. Generated preview artifacts (<tt>KAIF-RFC-Draft-00.preview.xml</tt>, <tt>KAIF-RFC-Draft-00.preview.clean.xml</tt>, <tt>KAIF-RFC-Draft-00.preview.txt</tt>) are proof outputs only and are not edited directly.</t>
+
 <section anchor="abstract"><name>Abstract</name>
-<t>The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token exchange mechanism for delegated agent-to-service authorization, combining RFC 8693 token exchange with SPIFFE workload identity attestation and operator-defined authorization tiers.</t>
-<t>This document specifies KAIF's protocol mechanics, deployment profiles, and interoperability requirements for systems implementing agent authorization with audit accountability. KAIF is intended for scenarios where an operator (human principal) provisionally authorizes an agent (automated workload) to perform bounded actions on their behalf, with cryptographic proof of authorization, delegation depth tracking, and real-time revocation.</t>
+<t>The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token exchange mechanism for delegated agent-to-service authorization, combining RFC 8693 token exchange with SPIFFE workload identity attestation and operator-assigned authorization tiers.</t>
+<t>This document specifies the protocol mechanics, deployment profiles, and interoperability requirements for systems implementing agent authorization with audit accountability. KAIF is intended for scenarios in which an operator (human principal) provisionally authorizes an agent (automated workload) to perform bounded actions on their behalf, with cryptographic proof of authorization, delegation depth tracking, and revocation in real time.</t>
+<t>This document is intentionally vendor-neutral in its normative requirements. Cloud platforms, model providers, workflow systems, and audit backends discussed by implementations are informative deployment examples, not part of the KAIF wire protocol.</t>
 <t><strong>Status of This Memo</strong></t>
 <t>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</t>
 <t>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF), its areas, and its working groups. Note that other groups may also distribute working documents as Internet-Drafts. The list of current Internet-Drafts is at <eref target="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</eref>.</t>
@@ -51,7 +53,7 @@
 <section anchor="1-introduction"><name>1. Introduction</name>
 
 <section anchor="1-1-problem-statement"><name>1.1 Problem Statement</name>
-<t>Contemporary system architectures increasingly rely on autonomous agents—both AI-driven and workflow-based—to execute actions on behalf of human operators in complex, distributed environments. Current authorization models present several challenges:</t>
+<t>Contemporary system architectures increasingly rely on autonomous agents, both AI-driven and workflow-based, to execute actions on behalf of human operators in complex distributed environments. Current authorization models present several challenges:</t>
 
 <ol spacing="compact">
 <li><strong>Coarse-grained control</strong>: Traditional API keys or static tokens provide no granularity on what actions an agent may perform.</li>
@@ -59,24 +61,24 @@
 <li><strong>Revocation latency</strong>: Certificate-based models suffer from multi-minute revocation propagation delays.</li>
 <li><strong>Workload identity opacity</strong>: There is no standardized way for an authorization service to verify which workload is requesting access.</li>
 </ol>
-<t>KAIF addresses these challenges by composing three existing standards:</t>
+<t>KAIF addresses these challenges by combining three existing standards and practices:</t>
 
 <ul spacing="compact">
 <li><strong>RFC 8693</strong>: OAuth 2.0 Token Exchange for subject-actor separation</li>
 <li><strong>SPIFFE/SPIRE</strong>: Cryptographic workload identity and JWT-SVID attestation</li>
-<li><strong>Operator-defined tiers</strong>: A flexible authorization model that avoids hard-coded trust assumptions</li>
+<li><strong>Operator-assigned authorization tiers</strong>: A flexible authorization model that avoids hard-coded trust assumptions</li>
 </ul>
 </section>
 
 <section anchor="1-2-scope-and-intended-deployment"><name>1.2 Scope and Intended Deployment</name>
-<t>KAIF is designed for operator-initiated, agent-executed, boundary-crossing transactions. A &quot;boundary-crossing transaction&quot; is any action where:</t>
+<t>KAIF is intended for operator-initiated, agent-executed, boundary-crossing transactions. A &quot;boundary-crossing transaction&quot; is any action where:</t>
 
 <ul spacing="compact">
 <li>The agent is acting on behalf of a human principal (operator)</li>
 <li>The action modifies state in an external system (payment, API mutation, purchase)</li>
 <li>Regulatory, financial, or security audit requirements require proof of authorization</li>
 </ul>
-<t><strong>Not in scope for v1.0:</strong></t>
+<t>The following are out of scope for v1.0:</t>
 
 <ul spacing="compact">
 <li>Behavioral trust scoring (agent action pattern analysis)</li>
@@ -87,7 +89,7 @@
 </section>
 
 <section anchor="1-3-conventions-and-terminology"><name>1.3 Conventions and Terminology</name>
-<t>The key words &quot;MUST&quot;, &quot;MUST NOT&quot;, &quot;REQUIRED&quot;, &quot;SHALL&quot;, &quot;SHALL NOT&quot;, &quot;SHOULD&quot;, &quot;SHOULD NOT&quot;, &quot;RECOMMENDED&quot;, &quot;NOT RECOMMENDED&quot;, &quot;MAY&quot;, and &quot;OPTIONAL&quot; in this document are to be interpreted as described in BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all capitals, as shown here.</t>
+<t>The key words &quot;MUST&quot;, &quot;MUST NOT&quot;, &quot;REQUIRED&quot;, &quot;SHALL&quot;, &quot;SHALL NOT&quot;, &quot;SHOULD&quot;, &quot;SHOULD NOT&quot;, &quot;RECOMMENDED&quot;, &quot;NOT RECOMMENDED&quot;, &quot;MAY&quot;, and &quot;OPTIONAL&quot; in this document are to be interpreted as described in BCP 14 [RFC2119] and [RFC8174], when and only when they appear in all capitals, as shown here.</t>
 <t><strong>KAIF-specific terms:</strong></t>
 
 <ul spacing="compact">
@@ -100,11 +102,29 @@
 <li><strong>Relying Party</strong>: A third-party service that validates KAIF tokens without running a KAIF server instance.</li>
 </ul>
 </section>
+
+<section anchor="1-4-implementation-status-informative"><name>1.4 Implementation Status (Informative)</name>
+<t>KAIF has been validated in at least one concrete multi-system deployment as an implementation-backed protocol design. That deployment demonstrated, end to end:</t>
+
+<ul spacing="compact">
+<li>operator-originated delegation grant issuance</li>
+<li>workload identity presentation during token exchange</li>
+<li>audience-bound authorization for a third-party execution surface</li>
+<li>receipt correlation back to the originating workflow</li>
+<li>workflow resumption after external completion</li>
+</ul>
+<t>This evidence indicates that the KAIF handshake is viable across a real external boundary. It does not make any specific cloud, AI provider, queue, workflow runtime, or datastore normative for interoperability. Independent implementations remain necessary to establish broader interoperability confidence.</t>
+</section>
+
+<section anchor="1-5-terminology-stability"><name>1.5 Terminology Stability</name>
+<t>The protocol wire format in this document uses <tt>authorization_tier</tt> and <tt>authorization_tier_value</tt> as the canonical delegation strength fields.</t>
+<t>Implementations MAY use local internal terms such as <tt>trust_tier</tt>, <tt>trust_score</tt>, or similar, but those names are deployment-specific and are not normative protocol vocabulary unless explicitly mapped to the KAIF claims defined here.</t>
+</section>
 </section>
 
 <section anchor="2-protocol-overview"><name>2. Protocol Overview</name>
 
-<section anchor="2-1-three-party-model"><name>2.1 Three-Party Model</name>
+<section anchor="2-1-three-party-flow"><name>2.1 Three-Party Flow</name>
 
 <artwork><![CDATA[┌────────────┐
 │  Operator  │ (human, OIDC-authenticated)
@@ -142,7 +162,7 @@
 </section>
 
 <section anchor="2-2-delegation-grant-subject-token"><name>2.2 Delegation Grant (Subject Token)</name>
-<t>An operator provisions a delegation grant—a signed JWT that authorizes an agent to request access tokens. The grant is issued by the KAIF server and contains:</t>
+<t>An operator provisions a delegation grant, a signed JWT that authorizes an agent to request access tokens. A grant issued by the KAIF server contains:</t>
 
 <artwork><![CDATA[{
   "iss": "https://auth.example.com",
@@ -177,7 +197,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="2-4-kaif-access-token-response"><name>2.4 KAIF Access Token (Response)</name>
-<t>The server responds with a signed JWT containing both operator and agent identity, delegation depth, tier, and scope:</t>
+<t>The server returns a signed JWT that carries operator identity, agent identity, delegation depth, tier, and scope:</t>
 
 <artwork><![CDATA[{
   "iss": "https://auth.example.com",
@@ -207,11 +227,11 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="2-5-validation-flow"><name>2.5 Validation Flow</name>
-<t>When an agent uses the access token at a relying party:</t>
+<t>When a relying party receives the access token from an agent:</t>
 
 <artwork><![CDATA[Agent → Relying Party: "Use this token to execute transaction"
         ↓
-        Relying Party checks:
+        Relying party checks:
         1. Token signature valid against KAIF issuer JWKS ✓
         2. Token not expired ✓
         3. Token not in revocation denylist (call KAIF /introspect) ✓
@@ -228,7 +248,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 <section anchor="3-detailed-protocol-specification"><name>3. Detailed Protocol Specification</name>
 
 <section anchor="3-1-endpoint-post-provision"><name>3.1 Endpoint: POST /provision</name>
-<t><strong>Purpose</strong>: Operator provisions a delegation grant to an agent.</t>
+<t><strong>Purpose</strong>: Operator provisions a delegation grant for an agent.</t>
 <t><strong>Request</strong>:</t>
 
 <sourcecode type="json"><![CDATA[{
@@ -260,7 +280,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="3-2-endpoint-post-oauth-token"><name>3.2 Endpoint: POST /oauth/token</name>
-<t><strong>Purpose</strong>: RFC 8693 token exchange (agent requests access token).</t>
+<t><strong>Purpose</strong>: RFC 8693 token exchange for agent-initiated access-token requests.</t>
 <t><strong>Request</strong>:</t>
 
 <artwork><![CDATA[grant_type=urn:ietf:params:oauth:grant-type:token-exchange
@@ -271,7 +291,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 &scope=invoke:completion
 &audience=urn:example:payment-api
 ]]></artwork>
-<t><strong>Validation Steps</strong> (in order):</t>
+<t><strong>Validation steps</strong> (in order):</t>
 
 <ol>
 <li><t>Parse and validate subject_token (delegation grant)</t>
@@ -298,7 +318,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 <li><t>Check authorization tier</t>
 
 <ul spacing="compact">
-<li>Fetch operator-assigned authorization tier (default 0.5 = STANDARD)</li>
+<li>Fetch the operator-assigned authorization tier (default 0.5 = STANDARD)</li>
 <li>MUST meet agent's minimum tier requirement</li>
 <li>Determine token TTL based on tier</li>
 </ul></li>
@@ -316,7 +336,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 <sourcecode type="json"><![CDATA[{
   "access_token": "eyJhbGc...",
-"issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
   "token_type": "Bearer",
   "expires_in": 600,
   "scope": "invoke:completion"
@@ -332,7 +352,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="3-3-endpoint-post-introspect"><name>3.3 Endpoint: POST /introspect</name>
-<t><strong>Purpose</strong>: RFC 7662 token introspection (for relying parties to verify tokens in real-time).</t>
+<t><strong>Purpose</strong>: RFC 7662 token introspection for relying parties that verify tokens in real time.</t>
 <t><strong>Request</strong>:</t>
 
 <sourcecode type="json"><![CDATA[{
@@ -366,7 +386,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="3-4-endpoint-post-revoke"><name>3.4 Endpoint: POST /revoke</name>
-<t><strong>Purpose</strong>: Operator revokes a token immediately.</t>
+<t><strong>Purpose</strong>: Operator revokes a token.</t>
 <t><strong>Request</strong>:</t>
 
 <sourcecode type="json"><![CDATA[{
@@ -389,7 +409,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="3-5-endpoint-get-well-known-jwks-json"><name>3.5 Endpoint: GET /.well-known/jwks.json</name>
-<t><strong>Purpose</strong>: Public JWKS for external relying parties.</t>
+<t><strong>Purpose</strong>: Public JWKS document for external relying parties.</t>
 <t><strong>Response</strong>:</t>
 
 <sourcecode type="json"><![CDATA[{
@@ -417,12 +437,12 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="3-6-endpoint-get-well-known-kaif-metadata-json"><name>3.6 Endpoint: GET /.well-known/kaif-metadata.json</name>
-<t><strong>Purpose</strong>: Operator-provided metadata for relying parties (KAIF v1.1+).</t>
+<t><strong>Purpose</strong>: Issuer metadata for relying parties (KAIF v1.1+).</t>
 <t><strong>Response</strong>:</t>
 
 <sourcecode type="json"><![CDATA[{
   "issuer": "https://auth.example.com",
-"authorization_endpoint": "https://auth.example.com/oauth/authorize",
+  "authorization_endpoint": "https://auth.example.com/oauth/authorize",
   "token_endpoint": "https://auth.example.com/oauth/token",
   "introspection_endpoint": "https://auth.example.com/introspect",
   "revocation_endpoint": "https://auth.example.com/revoke",
@@ -478,7 +498,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 </section>
 
 <section anchor="4-authorization-tier-model"><name>4. Authorization Tier Model</name>
-<t>KAIF uses operator-assigned authorization tier values (0.0–1.0) to determine access permissions:</t>
+<t>KAIF uses operator-assigned authorization tier values in the range 0.0–1.0 to determine access permissions:</t>
 <table>
 <thead>
 <tr>
@@ -523,8 +543,8 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 <td>Critical operators, full delegation</td>
 </tr>
 </tbody>
-</table><t><strong>Setting tier values</strong>:</t>
-<t>Operators assign tier values to agents based on their operational context (not automated behavioral scoring in v1.0). For example:</t>
+</table><t><strong>Assigning tier values</strong>:</t>
+<t>Operators assign tier values to agents based on their operational context, not automated behavioral scoring in v1.0. Examples:</t>
 
 <ul spacing="compact">
 <li>New agent: 0.3 (PROVISIONAL, untested)</li>
@@ -548,7 +568,7 @@ scope-name ::= identifier | "*"
 <li><tt>admin:*</tt> — All admin operations (glob)</li>
 <li><tt>vault:read:anthropic_key</tt> — Read one specific key (exact match)</li>
 </ul>
-<t><strong>Validation</strong>: Use micromatch library for glob pattern matching. Exact matches take precedence.</t>
+<t><strong>Validation</strong>: Implementations MUST evaluate exact matches before glob patterns, or use an equivalent matcher. Substring matching is not sufficient.</t>
 </section>
 
 <section anchor="6-delegation-depth-and-sub-delegation"><name>6. Delegation Depth and Sub-Delegation</name>
@@ -563,10 +583,10 @@ scope-name ::= identifier | "*"
 <t><strong>Restrictions</strong>:</t>
 
 <ul spacing="compact">
-<li>Parent token's <tt>may_sub_delegate</tt> flag MUST be true</li>
-<li>Parent token MUST be in VERIFIED or TRUSTED tier</li>
-<li>Sub-delegated token scope MUST be subset of parent scope</li>
-<li>Depth MUST be strictly increasing (no cycles)</li>
+<li>The parent token's <tt>may_sub_delegate</tt> flag MUST be true.</li>
+<li>The parent token MUST be in VERIFIED or TRUSTED tier.</li>
+<li>The sub-delegated token scope MUST be a subset of the parent scope.</li>
+<li>Depth MUST be strictly increasing, with no cycles.</li>
 </ul>
 <t><strong>Example</strong>:</t>
 
@@ -587,7 +607,7 @@ scope-name ::= identifier | "*"
 </section>
 
 <section anchor="7-audit-and-non-repudiation"><name>7. Audit and Non-Repudiation</name>
-<t>Every KAIF operation appends an immutable audit entry using SHA-256 hash chaining:</t>
+<t>Every KAIF operation appends an immutable audit entry, linked by SHA-256 hash chaining:</t>
 
 <artwork><![CDATA[entry = {
   id: UUID v4,
@@ -616,14 +636,28 @@ assert actual_hash == expected_hash
 <t>KAIF provides two revocation models:</t>
 
 <section anchor="8-1-lazy-revocation-default"><name>8.1 Lazy Revocation (Default)</name>
-<t>Relying parties cache tokens and check expiry locally. Revocation is eventual—denylist is checked on next refresh.</t>
+<t>Relying parties MAY cache tokens and check expiry locally. Revocation is eventual: the denylist is checked on the next refresh.</t>
 <t><strong>Latency</strong>: Minutes (depends on token cache TTL)</t>
 </section>
 
 <section anchor="8-2-strict-revocation"><name>8.2 Strict Revocation</name>
-<t>Relying parties call <tt>/introspect</tt> on every token use to check real-time revocation status.</t>
+<t>Relying parties call <tt>/introspect</tt> on every token use to check revocation status in real time.</t>
 <t><strong>Latency</strong>: &lt;100ms (Redis denylist lookup)</t>
 <t>Operators choose strict vs. lazy based on their risk tolerance and throughput requirements.</t>
+</section>
+
+<section anchor="8-3-ha-backed-revocation-stores"><name>8.3 HA-Backed Revocation Stores</name>
+<t>KAIF deployments commonly back the JTI denylist and audit chain with a managed Redis service.</t>
+<t>When the backing store is a managed HA service that does not expose customer-triggerable restart or failover operations, implementations MUST validate continuity through client-observable behavior rather than cluster control-plane actions.</t>
+<t>At minimum, a conformant deployment using such a service MUST demonstrate:</t>
+
+<ul spacing="compact">
+<li>Redis client reconnect after transient disconnect</li>
+<li>Denylist persistence across reconnect</li>
+<li>Audit hash-chain continuity across reconnect</li>
+<li>Resumption of successful writes after reconnect</li>
+</ul>
+<t>Platform-specific HA limitations and validation methods SHOULD be documented in implementation reports or deployment profiles, not embedded into interoperable wire semantics.</t>
 </section>
 </section>
 
@@ -661,6 +695,74 @@ assert actual_hash == expected_hash
 - Redact <tt>subject_token</tt>, <tt>actor_token</tt>, <tt>authorization</tt> headers in HTTP logs
 - Never log private key material
 - Include request ID for tracing</t>
+</section>
+
+<section anchor="9-7-threat-model-summary"><name>9.7 Threat Model Summary</name>
+<table>
+<thead>
+<tr>
+<th>Attacker</th>
+<th>Threat</th>
+<th>Required Control</th>
+<th>Residual Risk</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>External caller without delegation</td>
+<td>Attempts token exchange without operator grant</td>
+<td><tt>subject_token</tt> signature, expiry, revocation, and ACL validation</td>
+<td>Stolen valid grant until expiry or revocation</td>
+</tr>
+
+<tr>
+<td>Compromised workload</td>
+<td>Uses wrong or forged workload identity</td>
+<td><tt>actor_token</tt> JWT-SVID validation against trust bundle and ACL-bound SPIFFE ID</td>
+<td>Abuse by a legitimately attested but compromised workload</td>
+</tr>
+
+<tr>
+<td>Token thief</td>
+<td>Replays access token at relying party</td>
+<td>Short TTL, optional mTLS binding, strict introspection for high-risk paths</td>
+<td>Replay window exists when relying parties use lazy revocation</td>
+</tr>
+
+<tr>
+<td>Over-privileged intermediary agent</td>
+<td>Attempts excessive sub-delegation</td>
+<td>Scope subset checks, <tt>may_sub_delegate</tt>, depth enforcement, tier gating</td>
+<td>Misconfigured ACL or operator approval can still over-authorize</td>
+</tr>
+
+<tr>
+<td>Malicious or faulty relying party</td>
+<td>Accepts invalid, expired, or wrong-audience token</td>
+<td>Mandatory JWKS validation, expiry checks, audience checks, optional strict introspection</td>
+<td>Weak local policy at relying party remains possible</td>
+</tr>
+
+<tr>
+<td>Audit tampering actor</td>
+<td>Alters forensic record after issuance</td>
+<td>Hash-chained audit entries and externally verifiable <tt>prev_hash</tt> continuity</td>
+<td>Record deletion or total store loss still requires external retention strategy</td>
+</tr>
+</tbody>
+</table></section>
+
+<section anchor="9-8-privacy-and-data-minimization"><name>9.8 Privacy and Data Minimization</name>
+<t>KAIF is intended to prove delegated authority, not to maximize identity disclosure. Implementations SHOULD minimize personal and operational data as follows:</t>
+
+<ul spacing="compact">
+<li><tt>sub</tt> SHOULD use the least identifying operator handle consistent with the deployment's audit requirements.</li>
+<li><tt>principal_chain</tt> SHOULD contain only the identities required to explain delegation lineage.</li>
+<li>Audit <tt>detail</tt> fields SHOULD exclude prompt bodies, business payloads, secrets, and raw token material unless separately required by policy.</li>
+<li>Relying parties SHOULD log JTI, actor identity, action, and result before logging broader contextual data.</li>
+<li>Operators and deployments SHOULD define retention periods for audit entries and principal-chain material consistent with legal and regulatory requirements.</li>
+</ul>
 </section>
 </section>
 
@@ -735,7 +837,7 @@ assert actual_hash == expected_hash
 </section>
 
 <section anchor="11-backward-compatibility"><name>11. Backward Compatibility</name>
-<t>This is KAIF v1.0 (initial standards track). Future versions:</t>
+<t>This is KAIF v1.0, the initial standards-track release. Future versions:</t>
 
 <ul spacing="compact">
 <li><strong>v1.1</strong>: Issuer metadata endpoint (<tt>.well-known/kaif-metadata.json</tt>)</li>
@@ -746,11 +848,11 @@ assert actual_hash == expected_hash
 </section>
 
 <section anchor="12-iana-considerations"><name>12. IANA Considerations</name>
-<t>This document registers the following with IANA:</t>
+<t>This document registers the following values with IANA:</t>
 
 <section anchor="12-1-oauth-2-0-grant-type"><name>12.1 OAuth 2.0 Grant Type</name>
 <t><strong>Type</strong>: urn:ietf:params:oauth:grant-type:token-exchange (RFC 8693)</t>
-<t><strong>Description</strong>: Token exchange grant (already registered, KAIF profiles its use)</t>
+<t><strong>Description</strong>: Token exchange grant (already registered; KAIF profiles its use)</t>
 </section>
 
 <section anchor="12-2-jwt-claims"><name>12.2 JWT Claims</name>
@@ -764,18 +866,71 @@ assert actual_hash == expected_hash
 <t>An implementation claims KAIF v1.0 conformance if it:</t>
 
 <ol spacing="compact">
-<li>✅ Implements POST /oauth/token with RFC 8693 semantics</li>
-<li>✅ Implements POST /introspect with RFC 7662 semantics</li>
-<li>✅ Validates actor_token as JWT-SVID from SPIRE bundle</li>
-<li>✅ Enforces scope glob matching (via micromatch or equivalent)</li>
-<li>✅ Supports delegation depth tracking and enforcement</li>
-<li>✅ Publishes JWKS with active + retained keys</li>
-<li>✅ Maintains audit trail with SHA-256 hashing</li>
-<li>✅ Supports JTI revocation with sub-second propagation</li>
-<li>✅ Validates 10-second clock skew (no more)</li>
-<li>✅ Passes KAIF conformance test suite</li>
+<li>Implements POST /oauth/token with RFC 8693 semantics</li>
+<li>Implements POST /introspect with RFC 7662 semantics</li>
+<li>Validates actor_token as JWT-SVID from a configured SPIRE bundle or equivalent SPIFFE trust source</li>
+<li>Enforces scope glob matching with exact-match-first behavior</li>
+<li>Supports delegation depth tracking and enforcement</li>
+<li>Publishes JWKS with active and retained keys</li>
+<li>Maintains an audit trail with SHA-256 hash chaining</li>
+<li>Supports JTI revocation with sub-second propagation</li>
+<li>Validates timestamps with 10-second clock skew tolerance</li>
+<li>Passes the KAIF conformance test suite</li>
 </ol>
-<t>Conformance is verified by passing the test fixtures in <eref target="TBD">kaif-conformance-kit</eref>.</t>
+<t>Conformance is demonstrated by passing the KAIF conformance kit included with this repository.</t>
+<t>Protocol conformance and deployment evidence are related but distinct:</t>
+
+<ul spacing="compact">
+<li>Protocol conformance establishes that an implementation speaks KAIF correctly.</li>
+<li>Deployment evidence establishes that a specific operating environment behaved correctly under real conditions.</li>
+</ul>
+<t>An implementation MAY publish deployment evidence, interoperability notes, or platform-specific profiles in addition to protocol conformance results.</t>
+
+<section anchor="13-1-interoperability-evidence-informative"><name>13.1 Interoperability Evidence (Informative)</name>
+<t>A report SHOULD clearly state:</t>
+
+<ol spacing="compact">
+<li>which parts of the KAIF handshake were exercised</li>
+<li>whether the relying party was independent from the authorization server</li>
+<li>which delivery, receipt, or resume semantics were validated beyond token issuance</li>
+<li>which deployment details are informative examples rather than normative protocol requirements</li>
+<li>which claims were not tested</li>
+</ol>
+</section>
+
+<section anchor="13-2-revocation-store-resilience-profile"><name>13.2 Revocation-Store Resilience Profile</name>
+<t>If a deployment uses a managed Redis service for denylist and audit persistence, conformance evidence SHOULD include a revocation-store resilience profile.</t>
+<t>That profile SHOULD verify:</t>
+
+<ol spacing="compact">
+<li>Redis client reconnect recovery</li>
+<li>Denylist persistence after reconnect</li>
+<li>Audit chain <tt>prev_hash</tt> continuity after reconnect</li>
+<li>Successful new delegation, token issuance, and revocation writes after reconnect</li>
+</ol>
+<t>If the platform does not expose customer-triggerable restart or failover operations, the implementation MUST document that limitation and MAY satisfy this profile using client-side disconnect and reconnect simulation plus state verification.</t>
+</section>
+</section>
+
+<section anchor="appendix-a-illustrative-implementation-status-informative"><name>Appendix A. Illustrative Implementation Status (Informative)</name>
+<t>One implementation-backed validation of KAIF exercised the following path:</t>
+
+<ol spacing="compact">
+<li>an operator provisioned a delegation grant for a registered workload</li>
+<li>the workload exchanged that grant together with its workload identity for an audience-bound token</li>
+<li>a third-party execution surface accepted the boundary request</li>
+<li>a completion receipt was written back to the originating system</li>
+<li>the originating workflow resumed and completed its downstream steps</li>
+</ol>
+<t>This validation supports the claim that KAIF can convey delegated authority, workload identity, audience restriction, and correlated receipt data across a real external boundary.</t>
+<t>This validation does not, by itself, prove:</t>
+
+<ul spacing="compact">
+<li>interoperability across multiple independent KAIF implementations</li>
+<li>standardization of any particular cloud transport, agent runtime, queue, workflow engine, or datastore</li>
+<li>completeness of every optional KAIF feature or future extension</li>
+</ul>
+<t>Implementers SHOULD publish similarly bounded implementation reports so that protocol review can distinguish wire-level interoperability from deployment-specific success.</t>
 </section>
 
 <section anchor="14-references"><name>14. References</name>
@@ -820,7 +975,7 @@ Email: kindred@kindredsystems.ai</t>
 <t><strong>Version History</strong></t>
 
 <ul spacing="compact">
-<li>v0.0 (2026-06-27): Initial draft, WIP for standardization feedback</li>
+<li>v0.0 (2026-06-27): Initial public draft for standardization feedback</li>
 </ul>
 </section>
 </section>

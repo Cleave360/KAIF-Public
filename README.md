@@ -33,7 +33,7 @@ Four commands. Working demo. Decoded JWT on screen.
 ## How It Works
 
 ```
-Human Principal (kindred@kindredsystems.ai)
+Human Principal (operator@example.com)
           │
           │ POST /provision  (OIDC id_token)
           ▼
@@ -48,19 +48,20 @@ Human Principal (kindred@kindredsystems.ai)
                ▼
 ┌─────────────────────────────┐        ┌─────────────────┐
 │      KAIF Token Server      │◄───────│  SPIRE Agent    │
-│  validates SVID + trust     │        │  (workload id)  │
-│  score + scope + depth      │        └─────────────────┘
+│  validates SVID +           │        │  (workload id)  │
+│  authorization tier +       │        └─────────────────┘
+│  scope + depth              │
 └──────────────┬──────────────┘
                │
-               │ KAIF JWT (sub=human, actor.sub=SPIFFE ID, kaif.trust_score)
+               │ KAIF JWT (sub=human, actor.sub=SPIFFE ID, kaif.authorization_tier_value)
                ▼
 ┌─────────────────────────────┐
 │    Downstream Service       │  ← verifies JWT via /.well-known/jwks.json
-│    (vault, LLM API, etc.)   │  ← checks scope, trust_tier, delegation_depth
+│    (vault, LLM API, etc.)   │  ← checks scope, authorization_tier, delegation_depth
 └─────────────────────────────┘
 ```
 
-The KAIF JWT binds three things in one credential: the human principal who authorised the action (`sub`), the workload identity of the executing agent (`actor.sub`, SPIRE-attested), and a live trust score that governs token TTL and scope ceiling.
+The KAIF JWT binds three things in one credential: the human principal who authorised the action (`sub`), the workload identity of the executing agent (`actor.sub`, SPIRE-attested), and an operator-assigned authorization tier value that governs token TTL and scope ceiling.
 
 ---
 
@@ -84,7 +85,7 @@ The KAIF JWT binds three things in one credential: the human principal who autho
 
   cnf: { jkt: "sha256:3a4b..." },         // confirmation binding for replay checks
 
-  may_act: { sub: "spiffe://kindred.systems/..." },
+  may_act: { sub: "spiffe://example.org/..." },
 
   kaif: {
     authorization_tier_value: 0.82,   // 0.0–1.0, operator-assigned
@@ -92,7 +93,7 @@ The KAIF JWT binds three things in one credential: the human principal who autho
     delegation_depth: 0,                 // 0 = direct human grant
     delegation_id:    "uuid-v4",
     rollback_window:  "PT15M",           // ISO 8601 duration
-    principal_chain:  ["kindred@kindredsystems.ai"]
+    principal_chain:  ["operator@example.com"]
   }
 }
 ```
@@ -110,7 +111,7 @@ Six-step sequence per KAIF Core Profile v1.0 §2.1:
 3. Verify `exp` — reject expired tokens (10-second clock skew tolerance maximum)
 4. Verify `jti` is not in the local denylist (or call `/introspect` in strict mode)
 5. Verify `scope` contains the required permission
-6. Verify `kaif.trust_tier` meets your service's minimum requirement
+6. Verify `kaif.authorization_tier` meets your service's minimum requirement
 
 ```typescript
 import { createRemoteJWKSet, jwtVerify } from 'jose'
@@ -218,7 +219,7 @@ For a production-like local rehearsal, use [.env.production.example](.env.produc
 | Field | Type | Description |
 |---|---|---|
 | `spiffe_id` | string | SPIFFE workload ID — must match SVID exactly |
-| `trust_tier_minimum` | `PROVISIONAL\|STANDARD\|VERIFIED\|TRUSTED` | Minimum trust score to receive a token |
+| `trust_tier_minimum` | `PROVISIONAL\|STANDARD\|VERIFIED\|TRUSTED` | Implementation ACL field name for the minimum authorization tier required to receive a token |
 | `permitted_scopes` | string[] | Allowed scopes; glob supported (`vault:read:*`) |
 | `may_sub_delegate` | boolean | Whether agent can pass its token as subject_token |
 | `max_delegation_depth` | number | Maximum depth of the delegation chain |

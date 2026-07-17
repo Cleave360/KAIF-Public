@@ -15,9 +15,9 @@
 
 ## Abstract
 
-The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token exchange mechanism for delegated agent-to-service authorization, combining RFC 8693 token exchange with SPIFFE workload identity attestation and operator-defined authorization tiers.
+The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token exchange mechanism for delegated agent-to-service authorization, combining RFC 8693 token exchange with SPIFFE workload identity attestation and operator-assigned authorization tiers.
 
-This document specifies KAIF's protocol mechanics, deployment profiles, and interoperability requirements for systems implementing agent authorization with audit accountability. KAIF is intended for scenarios in which an operator (human principal) provisionally authorizes an agent (automated workload) to perform bounded actions on their behalf, with cryptographic proof of authorization, delegation depth tracking, and real-time revocation.
+This document specifies the protocol mechanics, deployment profiles, and interoperability requirements for systems implementing agent authorization with audit accountability. KAIF is intended for scenarios in which an operator (human principal) provisionally authorizes an agent (automated workload) to perform bounded actions on their behalf, with cryptographic proof of authorization, delegation depth tracking, and revocation in real time.
 
 This document is intentionally vendor-neutral in its normative requirements. Cloud platforms, model providers, workflow systems, and audit backends discussed by implementations are informative deployment examples, not part of the KAIF wire protocol.
 
@@ -33,28 +33,28 @@ Internet-Drafts are draft documents valid for a maximum of six months and may be
 
 ### 1.1 Problem Statement
 
-Contemporary system architectures increasingly rely on autonomous agents—both AI-driven and workflow-based—to execute actions on behalf of human operators in complex, distributed environments. Current authorization models present several challenges:
+Contemporary system architectures increasingly rely on autonomous agents, both AI-driven and workflow-based, to execute actions on behalf of human operators in complex distributed environments. Current authorization models present several challenges:
 
 1. **Coarse-grained control**: Traditional API keys or static tokens provide no granularity on what actions an agent may perform.
 2. **Limited auditability**: It is difficult to correlate which agent executed which action, especially in delegated scenarios.
 3. **Revocation latency**: Certificate-based models suffer from multi-minute revocation propagation delays.
 4. **Workload identity opacity**: There is no standardized way for an authorization service to verify which workload is requesting access.
 
-KAIF addresses these challenges by profiling and composing three existing standards and practices:
+KAIF addresses these challenges by combining three existing standards and practices:
 
 - **RFC 8693**: OAuth 2.0 Token Exchange for subject-actor separation
 - **SPIFFE/SPIRE**: Cryptographic workload identity and JWT-SVID attestation
-- **Operator-defined tiers**: A flexible authorization model that avoids hard-coded trust assumptions
+- **Operator-assigned authorization tiers**: A flexible authorization model that avoids hard-coded trust assumptions
 
 ### 1.2 Scope and Intended Deployment
 
-KAIF is designed for operator-initiated, agent-executed, boundary-crossing transactions. A "boundary-crossing transaction" is any action where:
+KAIF is intended for operator-initiated, agent-executed, boundary-crossing transactions. A "boundary-crossing transaction" is any action where:
 
 - The agent is acting on behalf of a human principal (operator)
 - The action modifies state in an external system (payment, API mutation, purchase)
 - Regulatory, financial, or security audit requirements require proof of authorization
 
-**Not in scope for v1.0:**
+The following are out of scope for v1.0:
 
 - Behavioral trust scoring (agent action pattern analysis)
 - Peer reputation models
@@ -63,7 +63,7 @@ KAIF is designed for operator-initiated, agent-executed, boundary-crossing trans
 
 ### 1.3 Conventions and Terminology
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all capitals, as shown here.
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC2119] and [RFC8174], when and only when they appear in all capitals, as shown here.
 
 **KAIF-specific terms:**
 
@@ -85,7 +85,7 @@ KAIF has been validated in at least one concrete multi-system deployment as an i
 - receipt correlation back to the originating workflow
 - workflow resumption after external completion
 
-This evidence supports the claim that the KAIF handshake is practical across a real external boundary. It does not make any specific cloud, AI provider, queue, workflow runtime, or datastore normative for interoperability. Independent implementations remain necessary to establish broader interop confidence.
+This evidence indicates that the KAIF handshake is viable across a real external boundary. It does not make any specific cloud, AI provider, queue, workflow runtime, or datastore normative for interoperability. Independent implementations remain necessary to establish broader interoperability confidence.
 
 ### 1.5 Terminology Stability
 
@@ -95,7 +95,7 @@ Implementations MAY use local internal terms such as `trust_tier`, `trust_score`
 
 ## 2. Protocol Overview
 
-### 2.1 Three-Party Model
+### 2.1 Three-Party Flow
 
 ```
 ┌────────────┐
@@ -134,7 +134,7 @@ Implementations MAY use local internal terms such as `trust_tier`, `trust_score`
 
 ### 2.2 Delegation Grant (Subject Token)
 
-An operator provisions a delegation grant, a signed JWT that authorizes an agent to request access tokens. The grant is issued by the KAIF server and contains:
+An operator provisions a delegation grant, a signed JWT that authorizes an agent to request access tokens. A grant issued by the KAIF server contains:
 
 ```
 {
@@ -171,7 +171,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 ### 2.4 KAIF Access Token (Response)
 
-The server responds with a signed JWT containing both operator and agent identity, delegation depth, tier, and scope:
+The server returns a signed JWT that carries operator identity, agent identity, delegation depth, tier, and scope:
 
 ```
 {
@@ -202,12 +202,12 @@ The server responds with a signed JWT containing both operator and agent identit
 
 ### 2.5 Validation Flow
 
-When an agent uses the access token at a relying party:
+When a relying party receives the access token from an agent:
 
 ```
 Agent → Relying Party: "Use this token to execute transaction"
         ↓
-        Relying Party checks:
+        Relying party checks:
         1. Token signature valid against KAIF issuer JWKS ✓
         2. Token not expired ✓
         3. Token not in revocation denylist (call KAIF /introspect) ✓
@@ -223,7 +223,7 @@ Agent → Relying Party: "Use this token to execute transaction"
 
 ### 3.1 Endpoint: POST /provision
 
-**Purpose**: Operator provisions a delegation grant to an agent.
+**Purpose**: Operator provisions a delegation grant for an agent.
 
 **Request**:
 ```json
@@ -259,7 +259,7 @@ Agent → Relying Party: "Use this token to execute transaction"
 
 ### 3.2 Endpoint: POST /oauth/token
 
-**Purpose**: RFC 8693 token exchange (agent requests access token).
+**Purpose**: RFC 8693 token exchange for agent-initiated access-token requests.
 
 **Request**:
 ```
@@ -272,7 +272,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 &audience=urn:example:payment-api
 ```
 
-**Validation Steps** (in order):
+**Validation steps** (in order):
 
 1. Parse and validate subject_token (delegation grant)
    - MUST have valid signature from KAIF issuer
@@ -290,7 +290,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
    - MUST use glob matching (e.g., "vault:read:*" matches "vault:read:key")
    
 4. Check authorization tier
-   - Fetch operator-assigned authorization tier (default 0.5 = STANDARD)
+    - Fetch the operator-assigned authorization tier (default 0.5 = STANDARD)
    - MUST meet agent's minimum tier requirement
    - Determine token TTL based on tier
    
@@ -322,7 +322,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 ### 3.3 Endpoint: POST /introspect
 
-**Purpose**: RFC 7662 token introspection (for relying parties to verify tokens in real-time).
+**Purpose**: RFC 7662 token introspection for relying parties that verify tokens in real time.
 
 **Request**:
 ```json
@@ -359,7 +359,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 ### 3.4 Endpoint: POST /revoke
 
-**Purpose**: Operator revokes a token immediately.
+**Purpose**: Operator revokes a token.
 
 **Request**:
 ```json
@@ -385,7 +385,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 ### 3.5 Endpoint: GET /.well-known/jwks.json
 
-**Purpose**: Public JWKS for external relying parties.
+**Purpose**: Public JWKS document for external relying parties.
 
 **Response**:
 ```json
@@ -415,7 +415,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 ### 3.6 Endpoint: GET /.well-known/kaif-metadata.json
 
-**Purpose**: Issuer-provided metadata for relying parties (KAIF v1.1+).
+**Purpose**: Issuer metadata for relying parties (KAIF v1.1+).
 
 **Response**:
 ```json
@@ -476,7 +476,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 ## 4. Authorization Tier Model
 
-KAIF uses operator-assigned authorization tier values (0.0–1.0) to determine access permissions:
+KAIF uses operator-assigned authorization tier values in the range 0.0–1.0 to determine access permissions:
 
 | Tier | Range | Token TTL | Max Depth | Use Case |
 |------|-------|-----------|-----------|----------|
@@ -485,9 +485,9 @@ KAIF uses operator-assigned authorization tier values (0.0–1.0) to determine a
 | VERIFIED | 0.7–0.89 | 900s | 2 | High-confidence agents |
 | TRUSTED | 0.9–1.0 | 900s | 3 | Critical operators, full delegation |
 
-**Setting tier values**:
+**Assigning tier values**:
 
-Operators assign tier values to agents based on their operational context (not automated behavioral scoring in v1.0). For example:
+Operators assign tier values to agents based on their operational context, not automated behavioral scoring in v1.0. Examples:
 
 - New agent: 0.3 (PROVISIONAL, untested)
 - Stable agent with 6 months history: 0.6 (STANDARD)
@@ -510,7 +510,7 @@ scope-name ::= identifier | "*"
 - `admin:*` — All admin operations (glob)
 - `vault:read:anthropic_key` — Read one specific key (exact match)
 
-**Validation**: Implementations MUST use exact-match-first glob pattern evaluation or an equivalent matcher. Substring matching is not sufficient.
+**Validation**: Implementations MUST evaluate exact matches before glob patterns, or use an equivalent matcher. Substring matching is not sufficient.
 
 ## 6. Delegation Depth and Sub-Delegation
 
@@ -524,10 +524,10 @@ An agent MAY create a delegation chain by using its access token as the subject_
 
 **Restrictions**:
 
-- Parent token's `may_sub_delegate` flag MUST be true
-- Parent token MUST be in VERIFIED or TRUSTED tier
-- Sub-delegated token scope MUST be subset of parent scope
-- Depth MUST be strictly increasing (no cycles)
+- The parent token's `may_sub_delegate` flag MUST be true.
+- The parent token MUST be in VERIFIED or TRUSTED tier.
+- The sub-delegated token scope MUST be a subset of the parent scope.
+- Depth MUST be strictly increasing, with no cycles.
 
 **Example**:
 
@@ -549,7 +549,7 @@ An agent MAY create a delegation chain by using its access token as the subject_
 
 ## 7. Audit and Non-Repudiation
 
-Every KAIF operation appends an immutable audit entry using SHA-256 hash chaining:
+Every KAIF operation appends an immutable audit entry, linked by SHA-256 hash chaining:
 
 ```
 entry = {
@@ -583,13 +583,13 @@ KAIF provides two revocation models:
 
 ### 8.1 Lazy Revocation (Default)
 
-Relying parties cache tokens and check expiry locally. Revocation is eventual—denylist is checked on next refresh.
+Relying parties MAY cache tokens and check expiry locally. Revocation is eventual: the denylist is checked on the next refresh.
 
 **Latency**: Minutes (depends on token cache TTL)
 
 ### 8.2 Strict Revocation
 
-Relying parties call `/introspect` on every token use to check real-time revocation status.
+Relying parties call `/introspect` on every token use to check revocation status in real time.
 
 **Latency**: <100ms (Redis denylist lookup)
 
@@ -709,7 +709,7 @@ This enables cross-party forensics if a token is misused.
 
 ## 11. Backward Compatibility
 
-This is KAIF v1.0 (initial standards track). Future versions:
+This is KAIF v1.0, the initial standards-track release. Future versions:
 
 - **v1.1**: Issuer metadata endpoint (`.well-known/kaif-metadata.json`)
 - **v2.0**: Multi-issuer federation, cross-operator delegation
@@ -719,13 +719,13 @@ Implementations MUST gracefully ignore unrecognized claims in KAIF tokens to all
 
 ## 12. IANA Considerations
 
-This document registers the following with IANA:
+This document registers the following values with IANA:
 
 ### 12.1 OAuth 2.0 Grant Type
 
 **Type**: urn:ietf:params:oauth:grant-type:token-exchange (RFC 8693)
 
-**Description**: Token exchange grant (already registered, KAIF profiles its use)
+**Description**: Token exchange grant (already registered; KAIF profiles its use)
 
 ### 12.2 JWT Claims
 
@@ -748,7 +748,7 @@ An implementation claims KAIF v1.0 conformance if it:
 9. Validates timestamps with 10-second clock skew tolerance
 10. Passes the KAIF conformance test suite
 
-Conformance is verified by passing the test fixtures in [kaif-conformance-kit] (TBD).
+Conformance is demonstrated by passing the KAIF conformance kit included with this repository.
 
 Protocol conformance and deployment evidence are related but distinct:
 
@@ -759,7 +759,7 @@ An implementation MAY publish deployment evidence, interoperability notes, or pl
 
 ### 13.1 Interoperability Evidence (Informative)
 
-An implementation report SHOULD clearly state:
+A report SHOULD clearly state:
 
 1. which parts of the KAIF handshake were exercised
 2. whether the relying party was independent from the authorization server
@@ -778,9 +778,9 @@ That profile SHOULD verify:
 3. Audit chain `prev_hash` continuity after reconnect
 4. Successful new delegation, token issuance, and revocation writes after reconnect
 
-If the platform does not expose customer-triggerable failover or restart operations, the implementation MUST document that limitation and MAY satisfy this profile using client-side disconnect and reconnect simulation plus state verification.
+If the platform does not expose customer-triggerable restart or failover operations, the implementation MUST document that limitation and MAY satisfy this profile using client-side disconnect and reconnect simulation plus state verification.
 
-## Appendix A. Example Implementation Status (Informative)
+## Appendix A. Illustrative Implementation Status (Informative)
 
 One implementation-backed validation of KAIF exercised the following path:
 
@@ -790,7 +790,7 @@ One implementation-backed validation of KAIF exercised the following path:
 4. a completion receipt was written back to the originating system
 5. the originating workflow resumed and completed its downstream steps
 
-This validation supports the claim that KAIF can carry delegated authority, workload identity, audience restriction, and correlated receipt data across a real external boundary.
+This validation supports the claim that KAIF can convey delegated authority, workload identity, audience restriction, and correlated receipt data across a real external boundary.
 
 This validation does not, by itself, prove:
 
@@ -798,7 +798,7 @@ This validation does not, by itself, prove:
 - standardization of any particular cloud transport, agent runtime, queue, workflow engine, or datastore
 - completeness of every optional KAIF feature or future extension
 
-Implementers are encouraged to publish similarly bounded implementation reports so that protocol review can distinguish wire-level interoperability from deployment-specific success.
+Implementers SHOULD publish similarly bounded implementation reports so that protocol review can distinguish wire-level interoperability from deployment-specific success.
 
 ## 14. References
 
@@ -841,4 +841,4 @@ Email: kindred@kindredsystems.ai
 
 **Version History**
 
-- v0.0 (2026-06-27): Initial draft, WIP for standardization feedback
+- v0.0 (2026-06-27): Initial public draft for standardization feedback

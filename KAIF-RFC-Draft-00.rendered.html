@@ -1,1620 +1,409 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<meta charset="utf-8">
-<meta content="Common,Latin" name="scripts">
-<meta content="initial-scale=1.0" name="viewport">
-<title>KAIF: Kindred Agent Identity Framework</title>
-<meta content="Geoffrey Lundholm" name="author">
-<meta content="
-       Preview wrapper for mmark output. 
-    " name="description">
-<meta content="xml2rfc 3.34.0" name="generator">
-<meta content="draft-lundholm-kaif-00" name="ietf.draft">
-<!-- Generator version information:
-  xml2rfc 3.34.0
-    Python 3.14.6
-    ConfigArgParse 1.7.5
-    google-i18n-address 3.1.1
-    intervaltree 3.2.1
-    Jinja2 3.1.6
-    lxml 6.1.1
-    natsort 8.4.0
-    platformdirs 4.10.0
-    pycountry 26.2.16
-    PyYAML 6.0.3
-    requests 2.34.2
-    wcwidth 0.7.0
--->
-<link href="KAIF-RFC-Draft-00.preview.clean.xml" rel="alternate" type="application/rfc+xml">
-<link href="#copyright" rel="license">
-<style type="text/css">/*
-
-  NOTE: Changes at the bottom of this file overrides some earlier settings.
-
-  Once the style has stabilized and has been adopted as an official RFC style,
-  this can be consolidated so that style settings occur only in one place, but
-  for now the contents of this file consists first of the initial CSS work as
-  provided to the RFC Formatter (xml2rfc) work, followed by itemized and
-  commented changes found necessary during the development of the v3
-  formatters.
-
-*/
-
-/* fonts */
-@import url('https://static.ietf.org/fonts/noto-sans/import.css'); /* Sans-serif */
-@import url('https://static.ietf.org/fonts/noto-serif/import.css'); /* Serif (print) */
-@import url('https://static.ietf.org/fonts/roboto-mono/import.css'); /* Monospace */
-
-:root {
-  --font-sans: 'Noto Sans', Arial, Helvetica, sans-serif;
-  --font-serif: 'Noto Serif', 'Times', 'Times New Roman', serif;
-  --font-mono: 'Roboto Mono', Courier, 'Courier New', monospace;
-}
-
-@viewport {
-  zoom: 1.0;
-}
-@-ms-viewport {
-  width: extend-to-zoom;
-  zoom: 1.0;
-}
-/* general and mobile first */
-html {
-}
-body {
-  max-width: 90%;
-  margin: 1.5em auto;
-  color: #222;
-  background-color: #fff;
-  font-size: 14px;
-  font-family: var(--font-sans);
-  line-height: 1.6;
-  scroll-behavior: smooth;
-  overflow-wrap: break-word;
-}
-.ears {
-  display: none;
-}
-
-/* headings */
-#title, h1, h2, h3, h4, h5, h6 {
-  margin: 1em 0 0.5em;
-  font-weight: bold;
-  line-height: 1.3;
-}
-#title {
-  clear: both;
-  border-bottom: 1px solid #ddd;
-  margin: 0 0 0.5em 0;
-  padding: 1em 0 0.5em;
-}
-.author {
-  padding-bottom: 4px;
-}
-h1 {
-  font-size: 26px;
-  margin: 1em 0;
-}
-h2 {
-  font-size: 22px;
-  margin-top: -20px;  /* provide offset for in-page anchors */
-  padding-top: 33px;
-}
-h3 {
-  font-size: 18px;
-  margin-top: -36px;  /* provide offset for in-page anchors */
-  padding-top: 42px;
-}
-h4 {
-  font-size: 16px;
-  margin-top: -36px;  /* provide offset for in-page anchors */
-  padding-top: 42px;
-}
-h5, h6 {
-  font-size: 14px;
-}
-#n-copyright-notice {
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 1em;
-  margin-bottom: 1em;
-}
-/* general structure */
-p {
-  padding: 0;
-  margin: 0 0 1em 0;
-  text-align: left;
-}
-div, span {
-  position: relative;
-}
-div {
-  margin: 0;
-}
-.alignRight.art-text {
-  background-color: #f9f9f9;
-  border: 1px solid #eee;
-  border-radius: 3px;
-  padding: 1em 1em 0;
-  margin-bottom: 1.5em;
-}
-.alignRight.art-text pre {
-  padding: 0;
-}
-.alignRight {
-  margin: 1em 0;
-}
-.alignRight > *:first-child {
-  border: none;
-  margin: 0;
-  float: right;
-  clear: both;
-}
-.alignRight > *:nth-child(2) {
-  clear: both;
-  display: block;
-  border: none;
-}
-svg {
-  display: block;
-}
-@media print {
-  svg {
-    max-height: 850px;
-    max-width: 660px;
-  }
-}
-svg[font-family~="serif" i], svg [font-family~="serif" i] {
-  font-family: var(--font-serif);
-}
-svg[font-family~="sans-serif" i], svg [font-family~="sans-serif" i] {
-  font-family: var(--font-sans);
-}
-svg[font-family~="monospace" i], svg [font-family~="monospace" i] {
-  font-family: var(--font-mono);
-}
-.alignCenter.art-text {
-  background-color: #f9f9f9;
-  border: 1px solid #eee;
-  border-radius: 3px;
-  padding: 1em 1em 0;
-  margin-bottom: 1.5em;
-}
-.alignCenter.art-text pre {
-  padding: 0;
-}
-.alignCenter {
-  margin: 1em 0;
-}
-.alignCenter > *:first-child {
-  display: table;
-  border: none;
-  margin: 0 auto;
-}
-
-/* lists */
-ol, ul {
-  padding: 0;
-  margin: 0 0 1em 2em;
-}
-ol ol, ul ul, ol ul, ul ol {
-  margin-left: 1em;
-}
-li {
-  margin: 0 0 0.25em 0;
-}
-.ulCompact li {
-  margin: 0;
-}
-ul.empty, .ulEmpty {
-  list-style-type: none;
-}
-ul.empty li, .ulEmpty li {
-  margin-top: 0.5em;
-}
-ul.ulBare, li.ulBare {
-  margin-left: 0em !important;
-}
-ul.compact, .ulCompact,
-ol.compact, .olCompact {
-  line-height: 100%;
-  margin: 0 0 0 2em;
-}
-
-/* definition lists */
-dl {
-}
-dl > dt {
-  float: left;
-  margin-right: 1em;
-}
-/* 
-dl.nohang > dt {
-  float: none;
-}
-*/
-dl > dd {
-  margin-bottom: .8em;
-  min-height: 1.3em;
-}
-dl.compact > dd, .dlCompact > dd {
-  margin-bottom: 0em;
-}
-dl > dd > dl {
-  margin-top: 0.5em;
-  margin-bottom: 0em;
-}
-
-/* links */
-a {
-  text-decoration: none;
-}
-a[href] {
-  color: #22e; /* Arlen: WCAG 2019 */
-}
-a[href]:hover {
-  background-color: #f2f2f2;
-}
-figcaption a[href],
-a[href].selfRef {
-  color: #222;
-}
-/* XXX probably not this:
-a.selfRef:hover {
-  background-color: transparent;
-  cursor: default;
-} */
-
-/* Figures */
-tt, code, pre {
-  background-color: #f9f9f9;
-  font-family: var(--font-mono);
-}
-pre {
-  border: 1px solid #eee;
-  margin: 0;
-  padding: 1em;
-}
-img {
-  max-width: 100%;
-}
-figure {
-  margin: 0;
-}
-figure blockquote {
-  margin: 0.8em 0.4em 0.4em;
-}
-figcaption {
-  font-style: italic;
-  margin: 0 0 1em 0;
-}
-@media screen {
-  pre {
-    overflow-x: auto;
-    max-width: 100%;
-    max-width: calc(100% - 22px);
-  }
-}
-
-/* aside, blockquote */
-aside, blockquote {
-  margin-left: 0;
-  padding: 1.2em 2em;
-}
-blockquote {
-  background-color: #f9f9f9;
-  color: #111; /* Arlen: WCAG 2019 */
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  margin: 1em 0;
-}
-blockquote > *:last-child {
-  margin-bottom: 0;
-}
-cite {
-  display: block;
-  text-align: right;
-  font-style: italic;
-}
-.xref {
-  overflow-wrap: normal;
-}
-
-/* tables */
-table {
-  width: 100%;
-  margin: 0 0 1em;
-  border-collapse: collapse;
-  border: 1px solid #eee;
-}
-th, td {
-  text-align: left;
-  vertical-align: top;
-  padding: 0.5em 0.75em;
-}
-th {
-  text-align: left;
-  background-color: #e9e9e9;
-}
-tr:nth-child(2n+1) > td {
-  background-color: #f5f5f5;
-}
-table caption {
-  font-style: italic;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-}
-table p {
-  /* XXX to avoid bottom margin on table row signifiers. If paragraphs should
-     be allowed within tables more generally, it would be far better to select on a class. */
-  margin: 0;
-}
-
-/* pilcrow */
-a.pilcrow {
-  color: #666; /* Arlen: AHDJ 2019 */
-  text-decoration: none;
-  visibility: hidden;
-  user-select: none;
-  -ms-user-select: none;
-  -o-user-select:none;
-  -moz-user-select: none;
-  -khtml-user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-@media screen {
-  aside:hover > a.pilcrow,
-  p:hover > a.pilcrow,
-  blockquote:hover > a.pilcrow,
-  div:hover > a.pilcrow,
-  li:hover > a.pilcrow,
-  pre:hover > a.pilcrow {
-    visibility: visible;
-  }
-  a.pilcrow:hover {
-    background-color: transparent;
-  }
-}
-
-/* misc */
-hr {
-  border: 0;
-  border-top: 1px solid #eee;
-}
-.bcp14 {
-  font-variant: small-caps;
-}
-
-.role {
-  font-variant: all-small-caps;
-}
-
-/* info block */
-#identifiers {
-  margin: 0;
-  font-size: 0.9em;
-}
-#identifiers dt {
-  width: 3em;
-  clear: left;
-}
-#identifiers dd {
-  float: left;
-  margin-bottom: 0;
-}
-/* Fix PDF info block run off issue */
-@media print {
-  #identifiers dd {
-    max-width: 100%;
-  }
-}
-#identifiers .authors .author {
-  display: inline-block;
-  margin-right: 1.5em;
-}
-#identifiers .authors .org {
-  font-style: italic;
-}
-
-/* The prepared/rendered info at the very bottom of the page */
-.docInfo {
-  color: #666; /* Arlen: WCAG 2019 */
-  font-size: 0.9em;
-  font-style: italic;
-  margin-top: 2em;
-}
-.docInfo .prepared {
-  float: left;
-}
-.docInfo .prepared {
-  float: right;
-}
-
-/* table of contents */
-#toc  {
-  padding: 0.75em 0 2em 0;
-  margin-bottom: 1em;
-}
-nav.toc ul {
-  margin: 0 0.5em 0 0;
-  padding: 0;
-  list-style: none;
-}
-nav.toc li {
-  line-height: 1.3em;
-  margin: 0.75em 0;
-  padding-left: 1.2em;
-  text-indent: -1.2em;
-}
-/* references */
-.references dt {
-  text-align: right;
-  font-weight: bold;
-  min-width: 7em;
-}
-.references dd {
-  margin-left: 8em;
-  overflow: auto;
-}
-
-.refInstance {
-  margin-bottom: 1.25em;
-}
-
-.refSubseries {
-  margin-bottom: 1.25em;
-}
-
-.references .ascii {
-  margin-bottom: 0.25em;
-}
-
-/* index */
-.index ul {
-  margin: 0 0 0 1em;
-  padding: 0;
-  list-style: none;
-}
-.index ul ul {
-  margin: 0;
-}
-.index li {
-  margin: 0;
-  text-indent: -2em;
-  padding-left: 2em;
-  padding-bottom: 5px;
-}
-.indexIndex {
-  margin: 0.5em 0 1em;
-}
-.index a {
-  font-weight: 700;
-}
-/* make the index two-column on all but the smallest screens */
-@media (min-width: 600px) {
-  .index ul {
-    -moz-column-count: 2;
-    -moz-column-gap: 20px;
-  }
-  .index ul ul {
-    -moz-column-count: 1;
-    -moz-column-gap: 0;
-  }
-}
-
-/* authors */
-address.vcard {
-  font-style: normal;
-  margin: 1em 0;
-}
-
-address.vcard .nameRole {
-  font-weight: 700;
-  margin-left: 0;
-}
-address.vcard .label {
-  font-family: var(--font-sans);
-  margin: 0.5em 0;
-}
-address.vcard .type {
-  display: none;
-}
-.alternative-contact {
-  margin: 1.5em 0 1em;
-}
-hr.addr {
-  border-top: 1px dashed;
-  margin: 0;
-  color: #ddd;
-  max-width: calc(100% - 16px);
-}
-
-/* temporary notes */
-.rfcEditorRemove::before {
-  position: absolute;
-  top: 0.2em;
-  right: 0.2em;
-  padding: 0.2em;
-  content: "The RFC Editor will remove this note";
-  color: #9e2a00; /* Arlen: WCAG 2019 */
-  background-color: #ffd; /* Arlen: WCAG 2019 */
-}
-.rfcEditorRemove {
-  position: relative;
-  padding-top: 1.8em;
-  background-color: #ffd; /* Arlen: WCAG 2019 */
-  border-radius: 3px;
-}
-.cref {
-  background-color: #ffd; /* Arlen: WCAG 2019 */
-  padding: 2px 4px;
-}
-.crefSource {
-  font-style: italic;
-}
-/* alternative layout for smaller screens */
-@media screen and (max-width: 1023px) {
-  body {
-    padding-top: 2em;
-  }
-  #title {
-    padding: 1em 0;
-  }
-  h1 {
-    font-size: 24px;
-  }
-  h2 {
-    font-size: 20px;
-    margin-top: -18px;  /* provide offset for in-page anchors */
-    padding-top: 38px;
-  }
-  #identifiers dd {
-    max-width: 60%;
-  }
-  #toc {
-    position: fixed;
-    z-index: 2;
-    top: 0;
-    right: 0;
-    padding: 0;
-    margin: 0;
-    background-color: inherit;
-    border-bottom: 1px solid #ccc;
-  }
-  #toc h2 {
-    margin: -1px 0 0 0;
-    padding: 4px 0 4px 6px;
-    padding-right: 1em;
-    min-width: 190px;
-    font-size: 1.1em;
-    text-align: right;
-    background-color: #444;
-    color: white;
-    cursor: pointer;
-  }
-  #toc h2::before { /* css hamburger */
-    float: right;
-    position: relative;
-    width: 1em;
-    height: 1px;
-    left: -164px;
-    margin: 6px 0 0 0;
-    background: white none repeat scroll 0 0;
-    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
-    content: "";
-  }
-  #toc nav {
-    display: none;
-    padding: 0.5em 1em 1em;
-    overflow: auto;
-    height: calc(100vh - 48px);
-    border-left: 1px solid #ddd;
-  }
-}
-
-/* alternative layout for wide screens */
-@media screen and (min-width: 1024px) {
-  body {
-    max-width: 724px;
-    margin: 42px auto;
-    padding-left: 1.5em;
-    padding-right: 29em;
-  }
-  #toc {
-    position: fixed;
-    top: 42px;
-    right: 42px;
-    width: 25%;
-    margin: 0;
-    padding: 0 1em;
-    z-index: 1;
-  }
-  #toc h2 {
-    border-top: none;
-    border-bottom: 1px solid #ddd;
-    font-size: 1em;
-    font-weight: normal;
-    margin: 0;
-    padding: 0.25em 1em 1em 0;
-  }
-  #toc nav {
-    display: block;
-    height: calc(90vh - 84px);
-    bottom: 0;
-    padding: 0.5em 0 0;
-    overflow: auto;
-  }
-  img { /* future proofing */
-    max-width: 100%;
-    height: auto;
-  }
-}
-
-/* pagination */
-@media print {
-  body {
-    width: 100%;
-  }
-  p {
-    orphans: 3;
-    widows: 3;
-  }
-  #n-copyright-notice {
-    border-bottom: none;
-  }
-  #toc, #n-introduction {
-    page-break-before: always;
-  }
-  #toc {
-    border-top: none;
-    padding-top: 0;
-  }
-  figure, pre {
-    page-break-inside: avoid;
-  }
-  figure {
-    overflow: scroll;
-  }
-  .breakable pre {
-    break-inside: auto;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    page-break-after: avoid;
-  }
-  h2+*, h3+*, h4+*, h5+*, h6+* {
-    page-break-before: avoid;
-  }
-  pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-size: 10pt;
-  }
-  table {
-    border: 1px solid #ddd;
-  }
-  td {
-    border-top: 1px solid #ddd;
-  }
-}
-
-/* This is commented out here, as the string-set: doesn't
-   pass W3C validation currently */
-/*
-.ears thead .left {
-  string-set: ears-top-left content();
-}
-
-.ears thead .center {
-  string-set: ears-top-center content();
-}
-
-.ears thead .right {
-  string-set: ears-top-right content();
-}
-
-.ears tfoot .left {
-  string-set: ears-bottom-left content();
-}
-
-.ears tfoot .center {
-  string-set: ears-bottom-center content();
-}
-
-.ears tfoot .right {
-  string-set: ears-bottom-right content();
-}
-*/
-
-@page :first {
-  padding-top: 0;
-  @top-left {
-    content: normal;
-    border: none;
-  }
-  @top-center {
-    content: normal;
-    border: none;
-  }
-  @top-right {
-    content: normal;
-    border: none;
-  }
-}
-
-@page {
-  size: A4;
-  margin-bottom: 45mm;
-  padding-top: 20px;
-  /* The following is commented out here, but set appropriately by in code, as
-     the content depends on the document */
-  /*
-  @top-left {
-    content: 'Internet-Draft';
-    vertical-align: bottom;
-    border-bottom: solid 1px #ccc;
-  }
-  @top-left {
-    content: string(ears-top-left);
-    vertical-align: bottom;
-    border-bottom: solid 1px #ccc;
-  }
-  @top-center {
-    content: string(ears-top-center);
-    vertical-align: bottom;
-    border-bottom: solid 1px #ccc;
-  }
-  @top-right {
-    content: string(ears-top-right);
-    vertical-align: bottom;
-    border-bottom: solid 1px #ccc;
-  }
-  @bottom-left {
-    content: string(ears-bottom-left);
-    vertical-align: top;
-    border-top: solid 1px #ccc;
-  }
-  @bottom-center {
-    content: string(ears-bottom-center);
-    vertical-align: top;
-    border-top: solid 1px #ccc;
-  }
-  @bottom-right {
-      content: '[Page ' counter(page) ']';
-      vertical-align: top;
-      border-top: solid 1px #ccc;
-  }
-  */
-
-}
-
-/* Changes introduced to fix issues found during implementation */
-/* Make sure links are clickable even if overlapped by following H* */
-a {
-  z-index: 2;
-}
-/* Separate body from document info even without intervening H1 */
-section {
-  clear: both;
-}
-
-
-/* Top align author divs, to avoid names without organization dropping level with org names */
-.author {
-  vertical-align: top;
-}
-
-/* Leave room in document info to show Internet-Draft on one line */
-#identifiers dt {
-  width: 8em;
-}
-
-/* Don't waste quite as much whitespace between label and value in doc info */
-#identifiers dd {
-  margin-left: 1em;
-}
-
-/* Give floating toc a background color (needed when it's a div inside section */
-#toc {
-  background-color: white;
-}
-
-/* Make the collapsed ToC header render white on gray also when it's a link */
-@media screen and (max-width: 1023px) {
-  #toc h2 a,
-  #toc h2 a:link,
-  #toc h2 a:focus,
-  #toc h2 a:hover,
-  #toc a.toplink,
-  #toc a.toplink:hover {
-    color: white;
-    background-color: #444;
-    text-decoration: none;
-  }
-}
-
-/* Give the bottom of the ToC some whitespace */
-@media screen and (min-width: 1024px) {
-  #toc {
-    padding: 0 0 1em 1em;
-  }
-}
-
-/* Style section numbers with more space between number and title */
-.section-number {
-  padding-right: 0.5em;
-}
-
-/* prevent monospace from becoming overly large */
-tt, code, pre {
-  font-size: 95%;
-}
-
-/* Fix the height/width aspect for ascii art*/
-.sourcecode pre,
-.art-text pre {
-  line-height: 1.12;
-}
-
-
-/* Add styling for a link in the ToC that points to the top of the document */
-a.toplink {
-  float: right;
-  margin-right: 0.5em;
-}
-
-/* Fix the dl styling to match the RFC 7992 attributes */
-dl > dt,
-dl.dlParallel > dt {
-  float: left;
-  margin-right: 1em;
-}
-dl.dlNewline > dt {
-  float: none;
-}
-
-/* Provide styling for table cell text alignment */
-table td.text-left,
-table th.text-left {
-  text-align: left;
-}
-table td.text-center,
-table th.text-center {
-  text-align: center;
-}
-table td.text-right,
-table th.text-right {
-  text-align: right;
-}
-
-/* Make the alternative author contact information look less like just another
-   author, and group it closer with the primary author contact information */
-.alternative-contact {
-  margin: 0.5em 0 0.25em 0;
-}
-address .non-ascii {
-  margin: 0 0 0 2em;
-}
-
-/* With it being possible to set tables with alignment
-  left, center, and right, { width: 100%; } does not make sense */
-table {
-  width: auto;
-}
-
-/* Avoid reference text that sits in a block with very wide left margin,
-   because of a long floating dt label.*/
-.references dd {
-  overflow: visible;
-}
-
-/* Control caption placement */
-caption {
-  caption-side: bottom;
-}
-
-/* Limit the width of the author address vcard, so names in right-to-left
-   script don't end up on the other side of the page. */
-
-address.vcard {
-  max-width: 30em;
-  margin-right: auto;
-}
-
-/* For address alignment dependent on LTR or RTL scripts */
-address div.left {
-  text-align: left;
-}
-address div.right {
-  text-align: right;
-}
-
-/* Provide table alignment support.  We can't use the alignX classes above
-   since they do unwanted things with caption and other styling. */
-table.right {
- margin-left: auto;
- margin-right: 0;
-}
-table.center {
- margin-left: auto;
- margin-right: auto;
-}
-table.left {
- margin-left: 0;
- margin-right: auto;
-}
-
-/* Give the table caption label the same styling as the figcaption */
-caption a[href] {
-  color: #222;
-}
-
-@media print {
-  .toplink {
-    display: none;
-  }
-
-  /* avoid overwriting the top border line with the ToC header */
-  #toc {
-    padding-top: 1px;
-  }
-
-  /* Avoid page breaks inside dl and author address entries */
-  .vcard {
-    page-break-inside: avoid;
-  }
-
-}
-/* Tweak the bcp14 keyword presentation */
-.bcp14 {
-  font-variant: small-caps;
-  font-weight: bold;
-  font-size: 0.9em;
-}
-/* Tweak the invisible space above H* in order not to overlay links in text above */
- h2 {
-  margin-top: -18px;  /* provide offset for in-page anchors */
-  padding-top: 31px;
- }
- h3 {
-  margin-top: -18px;  /* provide offset for in-page anchors */
-  padding-top: 24px;
- }
- h4 {
-  margin-top: -18px;  /* provide offset for in-page anchors */
-  padding-top: 24px;
- }
-/* Float artwork pilcrow to the right */
-@media screen {
-  .artwork a.pilcrow {
-    display: block;
-    line-height: 0.7;
-    margin-top: 0.15em;
-  }
-}
-/* Make pilcrows on dd visible */
-@media screen {
-  dd:hover > a.pilcrow {
-    visibility: visible;
-  }
-}
-/* Make the placement of figcaption match that of a table's caption
-   by removing the figure's added bottom margin */
-.alignLeft.art-text,
-.alignCenter.art-text,
-.alignRight.art-text {
-   margin-bottom: 0;
-}
-.alignLeft,
-.alignCenter,
-.alignRight {
-  margin: 1em 0 0 0;
-}
-/* In print, the pilcrow won't show on hover, so prevent it from taking up space,
-   possibly even requiring a new line */
-@media print {
-  a.pilcrow {
-    display: none;
-  }
-}
-/* Styling for the external metadata */
-div#external-metadata {
-  background-color: #eee;
-  padding: 0.5em;
-  margin-bottom: 0.5em;
-  display: none;
-}
-div#internal-metadata {
-  padding: 0.5em;                       /* to match the external-metadata padding */
-}
-/* Styling for title RFC Number */
-h1#rfcnum {
-  clear: both;
-  margin: 0 0 -1em;
-  padding: 1em 0 0 0;
-}
-/* Make .olPercent look the same as <ol><li> */
-dl.olPercent > dd {
-  margin-bottom: 0.25em;
-  min-height: initial;
-}
-/* Give aside some styling to set it apart */
-aside {
-  border-left: 1px solid #ddd;
-  margin: 1em 0 1em 2em;
-  padding: 0.2em 2em;
-}
-aside > dl,
-aside > ol,
-aside > ul,
-aside > table,
-aside > p {
-  margin-bottom: 0.5em;
-}
-/* Additional page break settings */
-@media print {
-  figcaption, table caption {
-    page-break-before: avoid;
-  }
-}
-/* Font size adjustments for print */
-@media print {
-  body  { font-size: 10pt;      line-height: normal; max-width: 96%; }
-  h1    { font-size: 1.72em;    padding-top: 1.5em; } /* 1*1.2*1.2*1.2 */
-  h2    { font-size: 1.44em;    padding-top: 1.5em; } /* 1*1.2*1.2 */
-  h3    { font-size: 1.2em;     padding-top: 1.5em; } /* 1*1.2 */
-  h4    { font-size: 1em;       padding-top: 1.5em; }
-  h5, h6 { font-size: 1em;      margin: initial; padding: 0.5em 0 0.3em; }
-}
-/* Sourcecode margin in print, when there's no pilcrow */
-@media print {
-  .artwork,
-  .artwork > pre,
-  .sourcecode {
-    margin-bottom: 1em;
-  }
-}
-/* Avoid narrow tables forcing too narrow table captions, which may render badly */
-table {
-  min-width: 20em;
-}
-/* ol type a */
-ol.type-a { list-style-type: lower-alpha; }
-ol.type-A { list-style-type: upper-alpha; }
-ol.type-i { list-style-type: lower-roman; }
-ol.type-I { list-style-type: upper-roman; }
-/* Apply the print table and row borders in general, on request from the RPC,
-and increase the contrast between border and odd row background slightly */
-table {
-  border: 1px solid #ddd;
-}
-td {
-  border-top: 1px solid #ddd;
-}
-tr {
-  break-inside: avoid;
-}
-tr:nth-child(2n+1) > td {
-  background-color: #f8f8f8;
-}
-/* Use style rules to govern display of the TOC. */
-@media screen and (max-width: 1023px) {
-  #toc nav { display: none; }
-  #toc.active nav { display: block; }
-}
-/* Add support for keepWithNext */
-.keepWithNext {
-  break-after: avoid-page;
-  break-after: avoid-page;
-}
-/* Add support for keepWithPrevious */
-.keepWithPrevious {
-  break-before: avoid-page;
-}
-/* Change the approach to avoiding breaks inside artwork etc. */
-figure, pre, table, .artwork, .sourcecode  {
-  break-before: auto;
-  break-after: auto;
-}
-/* Avoid breaks between <dt> and <dd> */
-dl {
-  break-before: auto;
-  break-inside: auto;
-}
-dt {
-  break-before: auto;
-  break-after: avoid-page;
-}
-dd {
-  break-before: avoid-page;
-  break-after: auto;
-  orphans: 3;
-  widows: 3
-}
-span.break, dd.break {
-  margin-bottom: 0;
-  min-height: 0;
-  break-before: auto;
-  break-inside: auto;
-  break-after: auto;
-}
-/* Undo break-before ToC */
-@media print {
-  #toc {
-    break-before: auto;
-  }
-}
-/* Text in compact lists should not get extra bottom margin space,
-   since that would makes the list not compact */
-ul.compact p, .ulCompact p,
-ol.compact p, .olCompact p {
- margin: 0;
-}
-/* But the list as a whole needs the extra space at the end */
-section ul.compact,
-section .ulCompact,
-section ol.compact,
-section .olCompact {
-  margin-bottom: 1em;                    /* same as p not within ul.compact etc. */
-}
-/* The tt and code background above interferes with for instance table cell
-   backgrounds.  Changed to something a bit more selective. */
-tt, code {
-  background-color: transparent;
-}
-p tt, p code, li tt, li code, dt tt, dt code {
-  background-color: #f8f8f8;
-}
-/* Tweak the pre margin -- 0px doesn't come out well */
-pre {
-   margin-top: 0.5px;
-}
-/* Tweak the compact list text */
-ul.compact, .ulCompact,
-ol.compact, .olCompact,
-dl.compact, .dlCompact {
-  line-height: normal;
-}
-/* Don't add top margin for nested lists */
-li > ul, li > ol, li > dl,
-dd > ul, dd > ol, dd > dl,
-dl > dd > dl {
-  margin-top: initial;
-}
-/* Elements that should not be rendered on the same line as a <dt> */
-/* This should match the element list in writer.text.TextWriter.render_dl() */
-dd > div.artwork:first-child,
-dd > aside:first-child,
-dd > blockquote:first-child,
-dd > figure:first-child,
-dd > ol:first-child,
-dd > div.sourcecode:first-child,
-dd > table:first-child,
-dd > ul:first-child {
-  clear: left;
-}
-/* fix for weird browser behaviour when <dd/> is empty */
-dt+dd:empty::before{
-  content: "\00a0";
-}
-/* Make paragraph spacing inside <li> smaller than in body text, to fit better within the list */
-li > p {
-  margin-bottom: 0.5em
-}
-/* Don't let p margin spill out from inside list items */
-li > p:last-of-type:only-child {
-  margin-bottom: 0;
-}
-</style>
-<link href="rfc-local.css" rel="stylesheet" type="text/css">
-<script type="application/javascript">async function addMetadata(){try{const e=document.styleSheets[0].cssRules;for(let t=0;t<e.length;t++)if(/#identifiers/.exec(e[t].selectorText)){const a=e[t].cssText.replace("#identifiers","#external-updates");document.styleSheets[0].insertRule(a,document.styleSheets[0].cssRules.length)}}catch(e){console.log(e)}const e=document.getElementById("external-metadata");if(e)try{var t,a="",o=function(e){const t=document.getElementsByTagName("meta");for(let a=0;a<t.length;a++)if(t[a].getAttribute("name")===e)return t[a].getAttribute("content");return""}("rfc.number");if(o){t="https://www.rfc-editor.org/rfc/rfc"+o+".json";try{const e=await fetch(t);a=await e.json()}catch(e){t=document.URL.indexOf("html")>=0?document.URL.replace(/html$/,"json"):document.URL+".json";const o=await fetch(t);a=await o.json()}}if(!a)return;e.style.display="block";const s="",d="https://datatracker.ietf.org/doc",n="https://datatracker.ietf.org/ipr/search",c="https://www.rfc-editor.org/info",l=a.doc_id.toLowerCase(),i=a.doc_id.slice(0,3).toLowerCase(),f=a.doc_id.slice(3).replace(/^0+/,""),u={status:"Status",obsoletes:"Obsoletes",obsoleted_by:"Obsoleted By",updates:"Updates",updated_by:"Updated By",see_also:"See Also",errata_url:"Errata"};let h="<dl style='overflow:hidden' id='external-updates'>";["status","obsoletes","obsoleted_by","updates","updated_by","see_also","errata_url"].forEach(e=>{if("status"==e){a[e]=a[e].toLowerCase();var t=a[e].split(" "),o=t.length,w="",p=1;for(let e=0;e<o;e++)p<o?w=w+r(t[e])+" ":w+=r(t[e]),p++;a[e]=w}else if("obsoletes"==e||"obsoleted_by"==e||"updates"==e||"updated_by"==e){var g,m="",b=1;g=a[e].length;for(let t=0;t<g;t++)a[e][t]&&(a[e][t]=String(a[e][t]).toLowerCase(),m=b<g?m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>, ":m+"<a href='"+s+"/rfc/".concat(a[e][t])+"'>"+a[e][t].slice(3)+"</a>",b++);a[e]=m}else if("see_also"==e){var y,L="",C=1;y=a[e].length;for(let t=0;t<y;t++)if(a[e][t]){a[e][t]=String(a[e][t]);var _=a[e][t].slice(0,3),v=a[e][t].slice(3).replace(/^0+/,"");L=C<y?"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>, ":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>, ":"RFC"!=_?L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+_+" "+v+"</a>":L+"<a href='"+s+"/info/"+_.toLowerCase().concat(v.toLowerCase())+"'>"+v+"</a>",C++}a[e]=L}else if("errata_url"==e){var R="";R=a[e]?R+"<a href='"+a[e]+"'>Errata exist</a> | <a href='"+d+"/"+l+"'>Datatracker</a>| <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>":"<a href='"+d+"/"+l+"'>Datatracker</a> | <a href='"+n+"/?"+i+"="+f+"&submit="+i+"'>IPR</a> | <a href='"+c+"/"+l+"'>Info page</a>",a[e]=R}""!=a[e]?"Errata"==u[e]?h+=`<dt>More info:</dt><dd>${a[e]}</dd>`:h+=`<dt>${u[e]}:</dt><dd>${a[e]}</dd>`:"Errata"==u[e]&&(h+=`<dt>More info:</dt><dd>${a[e]}</dd>`)}),h+="</dl>",e.innerHTML=h}catch(e){console.log(e)}else console.log("Could not locate metadata <div> element");function r(e){return e.charAt(0).toUpperCase()+e.slice(1)}}window.removeEventListener("load",addMetadata),window.addEventListener("load",addMetadata);</script>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>KAIF-RFC-Draft-00</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
 </head>
-<body class="xml2rfc">
-<table class="ears">
-<thead><tr>
-<td class="left">Internet-Draft</td>
-<td class="center">KAIF: Kindred Agent Identity Framework</td>
-<td class="right">June 2026</td>
-</tr></thead>
-<tfoot><tr>
-<td class="left">Lundholm</td>
-<td class="center">Expires 29 December 2026</td>
-<td class="right">[Page]</td>
-</tr></tfoot>
+<body>
+<h1 id="kaif-kindred-agent-identity-framework">KAIF: Kindred Agent
+Identity Framework</h1>
+<p><strong>Internet-Draft</strong><br />
+<strong>Expires: 27 December 2026</strong></p>
+<table>
+<tbody>
+<tr>
+<td><strong>Intended Status</strong></td>
+<td>Standards Track</td>
+</tr>
+<tr>
+<td><strong>Author</strong></td>
+<td>Geoffrey Lundholm</td>
+</tr>
+<tr>
+<td><strong>Organization</strong></td>
+<td>Kindred Systems</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>27 June 2026</td>
+</tr>
+<tr>
+<td><strong>IPR Disclosure</strong></td>
+<td>IETF Trust Legal Provisions (BCP 78)</td>
+</tr>
+</tbody>
 </table>
-<div id="external-metadata" class="document-information"></div>
-<div id="internal-metadata" class="document-information">
-<dl id="identifiers">
-<dt class="label-workgroup">Workgroup:</dt>
-<dd class="workgroup">Network Working Group</dd>
-<dt class="label-published">Published:</dt>
-<dd class="published">
-<time datetime="2026-06-27" class="published">27 June 2026</time>
-    </dd>
-<dt class="label-intended-status">Intended Status:</dt>
-<dd class="intended-status">Standards Track</dd>
-<dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2026-12-29">29 December 2026</time></dd>
-<dt class="label-authors">Author:</dt>
-<dd class="authors">
-<div class="author">
-      <div class="author-name">G. Lundholm</div>
-<div class="org">Kindred Systems</div>
-</div>
-</dd>
-</dl>
-</div>
-<h1 id="title">KAIF: Kindred Agent Identity Framework</h1>
-<section id="section-abstract">
-      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">Preview wrapper for mmark output.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
-</section>
-<div id="status-of-memo">
-<section id="section-boilerplate.1">
-        <h2 id="name-status-of-this-memo">
-<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
-        </h2>
-<p id="section-boilerplate.1-1">
-        This Internet-Draft is submitted in full conformance with the
-        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
-<p id="section-boilerplate.1-2">
-        Internet-Drafts are working documents of the Internet Engineering Task
-        Force (IETF). Note that other groups may also distribute working
-        documents as Internet-Drafts. The list of current Internet-Drafts is
-        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
-<p id="section-boilerplate.1-3">
-        Internet-Drafts are draft documents valid for a maximum of six months
-        and may be updated, replaced, or obsoleted by other documents at any
-        time. It is inappropriate to use Internet-Drafts as reference
-        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
-<p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 29 December 2026.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="copyright">
-<section id="section-boilerplate.2">
-        <h2 id="name-copyright-notice">
-<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
-        </h2>
-<p id="section-boilerplate.2-1">
-            Copyright (c) 2026 IETF Trust and the persons identified as the
-            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
-<p id="section-boilerplate.2-2">
-            This document is subject to BCP 78 and the IETF Trust's Legal
-            Provisions Relating to IETF Documents
-            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
-            publication of this document. Please review these documents
-            carefully, as they describe your rights and restrictions with
-            respect to this document. Code Components extracted from this
-            document must include Revised BSD License text as described in
-            Section 4.e of the Trust Legal Provisions and are provided without
-            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="toc">
-<section id="section-toc.1">
-        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
-<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
-        </h2>
-<nav class="toc"><ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
-            <p id="section-toc.1-1.1.1"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-kaif-kindred-agent-identity" class="internal xref">KAIF: Kindred Agent Identity Framework</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
-                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-abstract" class="internal xref">Abstract</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
-                <p id="section-toc.1-1.1.2.2.1"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-1-introduction" class="internal xref">1. Introduction</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2.2.1">
-                    <p id="section-toc.1-1.1.2.2.2.1.1" class="keepWithNext"><a href="#section-1.2.1" class="auto internal xref">1.2.1</a>.  <a href="#name-11-problem-statement" class="internal xref">1.1 Problem Statement</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2.2.2">
-                    <p id="section-toc.1-1.1.2.2.2.2.1" class="keepWithNext"><a href="#section-1.2.2" class="auto internal xref">1.2.2</a>.  <a href="#name-12-scope-and-intended-deplo" class="internal xref">1.2 Scope and Intended Deployment</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2.2.3">
-                    <p id="section-toc.1-1.1.2.2.2.3.1"><a href="#section-1.2.3" class="auto internal xref">1.2.3</a>.  <a href="#name-13-conventions-and-terminol" class="internal xref">1.3 Conventions and Terminology</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3">
-                <p id="section-toc.1-1.1.2.3.1"><a href="#section-1.3" class="auto internal xref">1.3</a>.  <a href="#name-2-protocol-overview" class="internal xref">2. Protocol Overview</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3.2.1">
-                    <p id="section-toc.1-1.1.2.3.2.1.1"><a href="#section-1.3.1" class="auto internal xref">1.3.1</a>.  <a href="#name-21-three-party-model" class="internal xref">2.1 Three-Party Model</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3.2.2">
-                    <p id="section-toc.1-1.1.2.3.2.2.1"><a href="#section-1.3.2" class="auto internal xref">1.3.2</a>.  <a href="#name-22-delegation-grant-subject" class="internal xref">2.2 Delegation Grant (Subject Token)</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3.2.3">
-                    <p id="section-toc.1-1.1.2.3.2.3.1"><a href="#section-1.3.3" class="auto internal xref">1.3.3</a>.  <a href="#name-23-token-exchange-request-r" class="internal xref">2.3 Token Exchange Request (RFC 8693)</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3.2.4">
-                    <p id="section-toc.1-1.1.2.3.2.4.1"><a href="#section-1.3.4" class="auto internal xref">1.3.4</a>.  <a href="#name-24-kaif-access-token-respon" class="internal xref">2.4 KAIF Access Token (Response)</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.3.2.5">
-                    <p id="section-toc.1-1.1.2.3.2.5.1"><a href="#section-1.3.5" class="auto internal xref">1.3.5</a>.  <a href="#name-25-validation-flow" class="internal xref">2.5 Validation Flow</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4">
-                <p id="section-toc.1-1.1.2.4.1"><a href="#section-1.4" class="auto internal xref">1.4</a>.  <a href="#name-3-detailed-protocol-specifi" class="internal xref">3. Detailed Protocol Specification</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4.2.1">
-                    <p id="section-toc.1-1.1.2.4.2.1.1"><a href="#section-1.4.1" class="auto internal xref">1.4.1</a>.  <a href="#name-31-endpoint-post-provision" class="internal xref">3.1 Endpoint: POST /provision</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4.2.2">
-                    <p id="section-toc.1-1.1.2.4.2.2.1"><a href="#section-1.4.2" class="auto internal xref">1.4.2</a>.  <a href="#name-32-endpoint-post-oauth-toke" class="internal xref">3.2 Endpoint: POST /oauth/token</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4.2.3">
-                    <p id="section-toc.1-1.1.2.4.2.3.1"><a href="#section-1.4.3" class="auto internal xref">1.4.3</a>.  <a href="#name-33-endpoint-post-introspect" class="internal xref">3.3 Endpoint: POST /introspect</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4.2.4">
-                    <p id="section-toc.1-1.1.2.4.2.4.1"><a href="#section-1.4.4" class="auto internal xref">1.4.4</a>.  <a href="#name-34-endpoint-post-revoke" class="internal xref">3.4 Endpoint: POST /revoke</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4.2.5">
-                    <p id="section-toc.1-1.1.2.4.2.5.1"><a href="#section-1.4.5" class="auto internal xref">1.4.5</a>.  <a href="#name-35-endpoint-get-well-known-" class="internal xref">3.5 Endpoint: GET /.well-known/jwks.json</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.4.2.6">
-                    <p id="section-toc.1-1.1.2.4.2.6.1"><a href="#section-1.4.6" class="auto internal xref">1.4.6</a>.  <a href="#name-36-endpoint-get-well-known-" class="internal xref">3.6 Endpoint: GET /.well-known/kaif-metadata.json</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.5">
-                <p id="section-toc.1-1.1.2.5.1"><a href="#section-1.5" class="auto internal xref">1.5</a>.  <a href="#name-4-authorization-tier-model" class="internal xref">4. Authorization Tier Model</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.6">
-                <p id="section-toc.1-1.1.2.6.1"><a href="#section-1.6" class="auto internal xref">1.6</a>.  <a href="#name-5-scope-model" class="internal xref">5. Scope Model</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.7">
-                <p id="section-toc.1-1.1.2.7.1"><a href="#section-1.7" class="auto internal xref">1.7</a>.  <a href="#name-6-delegation-depth-and-sub-" class="internal xref">6. Delegation Depth and Sub-Delegation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.8">
-                <p id="section-toc.1-1.1.2.8.1"><a href="#section-1.8" class="auto internal xref">1.8</a>.  <a href="#name-7-audit-and-non-repudiation" class="internal xref">7. Audit and Non-Repudiation</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.9">
-                <p id="section-toc.1-1.1.2.9.1"><a href="#section-1.9" class="auto internal xref">1.9</a>.  <a href="#name-8-revocation-and-propagatio" class="internal xref">8. Revocation and Propagation</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.9.2.1">
-                    <p id="section-toc.1-1.1.2.9.2.1.1"><a href="#section-1.9.1" class="auto internal xref">1.9.1</a>.  <a href="#name-81-lazy-revocation-default" class="internal xref">8.1 Lazy Revocation (Default)</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.9.2.2">
-                    <p id="section-toc.1-1.1.2.9.2.2.1"><a href="#section-1.9.2" class="auto internal xref">1.9.2</a>.  <a href="#name-82-strict-revocation" class="internal xref">8.2 Strict Revocation</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.10">
-                <p id="section-toc.1-1.1.2.10.1"><a href="#section-1.10" class="auto internal xref">1.10</a>. <a href="#name-9-security-considerations" class="internal xref">9. Security Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.10.2.1">
-                    <p id="section-toc.1-1.1.2.10.2.1.1"><a href="#section-1.10.1" class="auto internal xref">1.10.1</a>.  <a href="#name-91-token-binding-rfc-8705" class="internal xref">9.1 Token Binding (RFC 8705)</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.10.2.2">
-                    <p id="section-toc.1-1.1.2.10.2.2.1"><a href="#section-1.10.2" class="auto internal xref">1.10.2</a>.  <a href="#name-92-clock-skew" class="internal xref">9.2 Clock Skew</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.10.2.3">
-                    <p id="section-toc.1-1.1.2.10.2.3.1"><a href="#section-1.10.3" class="auto internal xref">1.10.3</a>.  <a href="#name-93-key-rotation" class="internal xref">9.3 Key Rotation</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.10.2.4">
-                    <p id="section-toc.1-1.1.2.10.2.4.1"><a href="#section-1.10.4" class="auto internal xref">1.10.4</a>.  <a href="#name-94-spiffe-trust-domain-vali" class="internal xref">9.4 SPIFFE Trust Domain Validation</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.10.2.5">
-                    <p id="section-toc.1-1.1.2.10.2.5.1"><a href="#section-1.10.5" class="auto internal xref">1.10.5</a>.  <a href="#name-95-scope-validation" class="internal xref">9.5 Scope Validation</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.10.2.6">
-                    <p id="section-toc.1-1.1.2.10.2.6.1"><a href="#section-1.10.6" class="auto internal xref">1.10.6</a>.  <a href="#name-96-logging-and-redaction" class="internal xref">9.6 Logging and Redaction</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.11">
-                <p id="section-toc.1-1.1.2.11.1"><a href="#section-1.11" class="auto internal xref">1.11</a>. <a href="#name-10-relying-party-profile-no" class="internal xref">10. Relying Party Profile (Normative)</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.11.2.1">
-                    <p id="section-toc.1-1.1.2.11.2.1.1"><a href="#section-1.11.1" class="auto internal xref">1.11.1</a>.  <a href="#name-101-token-validation" class="internal xref">10.1 Token Validation</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.11.2.2">
-                    <p id="section-toc.1-1.1.2.11.2.2.1"><a href="#section-1.11.2" class="auto internal xref">1.11.2</a>.  <a href="#name-102-error-handling" class="internal xref">10.2 Error Handling</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.11.2.3">
-                    <p id="section-toc.1-1.1.2.11.2.3.1"><a href="#section-1.11.3" class="auto internal xref">1.11.3</a>.  <a href="#name-103-audit-trail" class="internal xref">10.3 Audit Trail</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.12">
-                <p id="section-toc.1-1.1.2.12.1"><a href="#section-1.12" class="auto internal xref">1.12</a>. <a href="#name-11-backward-compatibility" class="internal xref">11. Backward Compatibility</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.13">
-                <p id="section-toc.1-1.1.2.13.1"><a href="#section-1.13" class="auto internal xref">1.13</a>. <a href="#name-12-iana-considerations" class="internal xref">12. IANA Considerations</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.13.2.1">
-                    <p id="section-toc.1-1.1.2.13.2.1.1"><a href="#section-1.13.1" class="auto internal xref">1.13.1</a>.  <a href="#name-121-oauth-20-grant-type" class="internal xref">12.1 OAuth 2.0 Grant Type</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.13.2.2">
-                    <p id="section-toc.1-1.1.2.13.2.2.1"><a href="#section-1.13.2" class="auto internal xref">1.13.2</a>.  <a href="#name-122-jwt-claims" class="internal xref">12.2 JWT Claims</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.14">
-                <p id="section-toc.1-1.1.2.14.1"><a href="#section-1.14" class="auto internal xref">1.14</a>. <a href="#name-13-conformance" class="internal xref">13. Conformance</a></p>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.15">
-                <p id="section-toc.1-1.1.2.15.1"><a href="#section-1.15" class="auto internal xref">1.15</a>. <a href="#name-14-references" class="internal xref">14. References</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.15.2.1">
-                    <p id="section-toc.1-1.1.2.15.2.1.1"><a href="#section-1.15.1" class="auto internal xref">1.15.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.15.2.2">
-                    <p id="section-toc.1-1.1.2.15.2.2.1"><a href="#section-1.15.2" class="auto internal xref">1.15.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
-</li>
-                </ul>
-</li>
-            </ul>
-</li>
-        </ul>
-</nav>
-</section>
-</div>
-<section id="section-1">
-      <h2 id="name-kaif-kindred-agent-identity">
-<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-kaif-kindred-agent-identity" class="section-name selfRef">KAIF: Kindred Agent Identity Framework</a>
-      </h2>
-<p id="section-1-1"><strong>Internet-Draft</strong><br>
-        <strong>Expires: 27 December 2026</strong><a href="#section-1-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-1">
-        <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
-<thead>
-          <tr>
-            <th class="text-left" rowspan="1" colspan="1"></th>
-            <th class="text-left" rowspan="1" colspan="1"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <strong>Intended Status</strong>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Standards Track</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <strong>Author</strong>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Geoffrey Lundholm</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <strong>Organization</strong>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">Kindred Systems</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <strong>Date</strong>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">27 June 2026</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">
-              <strong>IPR Disclosure</strong>
-</td>
-            <td class="text-left" rowspan="1" colspan="1">IETF Trust Legal Provisions (BCP 78)</td>
-          </tr>
-        </tbody>
-      </table>
-<section id="section-1.1">
-        <h3 id="name-abstract">
-<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-abstract" class="section-name selfRef">Abstract</a>
-        </h3>
-<p id="section-1.1-1">The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token exchange mechanism for delegated agent-to-service authorization, combining RFC 8693 token exchange with SPIFFE workload identity attestation and operator-defined authorization tiers.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
-<p id="section-1.1-2">This document specifies KAIF's protocol mechanics, deployment profiles, and interoperability requirements for systems implementing agent authorization with audit accountability. KAIF is intended for scenarios where an operator (human principal) provisionally authorizes an agent (automated workload) to perform bounded actions on their behalf, with cryptographic proof of authorization, delegation depth tracking, and real-time revocation.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
-<p id="section-1.1-3"><strong>Status of This Memo</strong><a href="#section-1.1-3" class="pilcrow">¶</a></p>
-<p id="section-1.1-4">This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
-<p id="section-1.1-5">Internet-Drafts are working documents of the Internet Engineering Task Force (IETF), its areas, and its working groups. Note that other groups may also distribute working documents as Internet-Drafts. The list of current Internet-Drafts is at <a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a>.<a href="#section-1.1-5" class="pilcrow">¶</a></p>
-<p id="section-1.1-6">Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time. It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress".<a href="#section-1.1-6" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.2">
-        <h3 id="name-1-introduction">
-<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-1-introduction" class="section-name selfRef">1. Introduction</a>
-        </h3>
-<section id="section-1.2.1">
-          <h4 id="name-11-problem-statement">
-<a href="#section-1.2.1" class="section-number selfRef">1.2.1. </a><a href="#name-11-problem-statement" class="section-name selfRef">1.1 Problem Statement</a>
-          </h4>
-<p id="section-1.2.1-1">Contemporary system architectures increasingly rely on autonomous agents—both AI-driven and workflow-based—to execute actions on behalf of human operators in complex, distributed environments. Current authorization models present several challenges:<a href="#section-1.2.1-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="compact type-1" id="section-1.2.1-2">
-<li id="section-1.2.1-2.1">
-              <strong>Coarse-grained control</strong>: Traditional API keys or static tokens provide no granularity on what actions an agent may perform.<a href="#section-1.2.1-2.1" class="pilcrow">¶</a>
-</li>
-            <li id="section-1.2.1-2.2">
-              <strong>Limited auditability</strong>: It is difficult to correlate which agent executed which action, especially in delegated scenarios.<a href="#section-1.2.1-2.2" class="pilcrow">¶</a>
-</li>
-            <li id="section-1.2.1-2.3">
-              <strong>Revocation latency</strong>: Certificate-based models suffer from multi-minute revocation propagation delays.<a href="#section-1.2.1-2.3" class="pilcrow">¶</a>
-</li>
-            <li id="section-1.2.1-2.4">
-              <strong>Workload identity opacity</strong>: There is no standardized way for an authorization service to verify which workload is requesting access.<a href="#section-1.2.1-2.4" class="pilcrow">¶</a>
-</li>
-          </ol>
-<p id="section-1.2.1-3">KAIF addresses these challenges by composing three existing standards:<a href="#section-1.2.1-3" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.2.1-4.1">
-              <strong>RFC 8693</strong>: OAuth 2.0 Token Exchange for subject-actor separation<a href="#section-1.2.1-4.1" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.1-4.2">
-              <strong>SPIFFE/SPIRE</strong>: Cryptographic workload identity and JWT-SVID attestation<a href="#section-1.2.1-4.2" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.1-4.3">
-              <strong>Operator-defined tiers</strong>: A flexible authorization model that avoids hard-coded trust assumptions<a href="#section-1.2.1-4.3" class="pilcrow">¶</a>
-</li>
-          </ul>
-</section>
-<section id="section-1.2.2">
-          <h4 id="name-12-scope-and-intended-deplo">
-<a href="#section-1.2.2" class="section-number selfRef">1.2.2. </a><a href="#name-12-scope-and-intended-deplo" class="section-name selfRef">1.2 Scope and Intended Deployment</a>
-          </h4>
-<p id="section-1.2.2-1">KAIF is designed for operator-initiated, agent-executed, boundary-crossing transactions. A "boundary-crossing transaction" is any action where:<a href="#section-1.2.2-1" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.2.2-2.1">The agent is acting on behalf of a human principal (operator)<a href="#section-1.2.2-2.1" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.2-2.2">The action modifies state in an external system (payment, API mutation, purchase)<a href="#section-1.2.2-2.2" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.2-2.3">Regulatory, financial, or security audit requirements require proof of authorization<a href="#section-1.2.2-2.3" class="pilcrow">¶</a>
-</li>
-          </ul>
-<p id="section-1.2.2-3"><strong>Not in scope for v1.0:</strong><a href="#section-1.2.2-3" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.2.2-4.1">Behavioral trust scoring (agent action pattern analysis)<a href="#section-1.2.2-4.1" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.2-4.2">Peer reputation models<a href="#section-1.2.2-4.2" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.2-4.3">Long-running streaming delegations<a href="#section-1.2.2-4.3" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.2-4.4">Cross-operator federation (see v2.0 roadmap)<a href="#section-1.2.2-4.4" class="pilcrow">¶</a>
-</li>
-          </ul>
-</section>
-<section id="section-1.2.3">
-          <h4 id="name-13-conventions-and-terminol">
-<a href="#section-1.2.3" class="section-number selfRef">1.2.3. </a><a href="#name-13-conventions-and-terminol" class="section-name selfRef">1.3 Conventions and Terminology</a>
-          </h4>
-<p id="section-1.2.3-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all capitals, as shown here.<a href="#section-1.2.3-1" class="pilcrow">¶</a></p>
-<p id="section-1.2.3-2"><strong>KAIF-specific terms:</strong><a href="#section-1.2.3-2" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.2.3-3.1">
-              <strong>Operator</strong>: A human principal (person) who authorizes an agent to act on their behalf.<a href="#section-1.2.3-3.1" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.3-3.2">
-              <strong>Agent</strong>: An automated workload (software) with a SPIFFE identity that executes actions on behalf of an operator.<a href="#section-1.2.3-3.2" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.3-3.3">
-              <strong>Boundary Crossing</strong>: An action that crosses a trust boundary—e.g., calling an external API, initiating a payment, or writing to a regulated log.<a href="#section-1.2.3-3.3" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.3-3.4">
-              <strong>Authorization Tier</strong>: An operator-assigned permission level (PROVISIONAL, STANDARD, VERIFIED, TRUSTED) that determines token TTL and delegation depth.<a href="#section-1.2.3-3.4" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.3-3.5">
-              <strong>Delegation Depth</strong>: The count of intermediate agents in a delegation chain (depth 0 = direct operator→agent, depth 1 = operator→agent1→agent2).<a href="#section-1.2.3-3.5" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.3-3.6">
-              <strong>Revocation</strong>: Immediate invalidation of a token via JTI (JWT ID) denylist.<a href="#section-1.2.3-3.6" class="pilcrow">¶</a>
-</li>
-            <li class="compact" id="section-1.2.3-3.7">
-              <strong>Relying Party</strong>: A third-party service that validates KAIF tokens without running a KAIF server instance.<a href="#section-1.2.3-3.7" class="pilcrow">¶</a>
-</li>
-          </ul>
-</section>
-</section>
-<section id="section-1.3">
-        <h3 id="name-2-protocol-overview">
-<a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-2-protocol-overview" class="section-name selfRef">2. Protocol Overview</a>
-        </h3>
-<section id="section-1.3.1">
-          <h4 id="name-21-three-party-model">
-<a href="#section-1.3.1" class="section-number selfRef">1.3.1. </a><a href="#name-21-three-party-model" class="section-name selfRef">2.1 Three-Party Model</a>
-          </h4>
-<div class="alignLeft art-text artwork" id="section-1.3.1-1">
-<pre>┌────────────┐
+<p><strong>Authoring note:</strong> This markdown file is the source of
+truth for the draft. Generated preview artifacts
+(<code>KAIF-RFC-Draft-00.preview.xml</code>,
+<code>KAIF-RFC-Draft-00.preview.clean.xml</code>,
+<code>KAIF-RFC-Draft-00.preview.txt</code>) are proof outputs only and
+are not edited directly.</p>
+<h2 id="abstract">Abstract</h2>
+<p>The Kindred Agent Identity Framework (KAIF) is an OAuth 2.0 token
+exchange mechanism for delegated agent-to-service authorization,
+combining RFC 8693 token exchange with SPIFFE workload identity
+attestation and operator-assigned authorization tiers.</p>
+<p>This document specifies the protocol mechanics, deployment profiles,
+and interoperability requirements for systems implementing agent
+authorization with audit accountability. KAIF is intended for scenarios
+in which an operator (human principal) provisionally authorizes an agent
+(automated workload) to perform bounded actions on their behalf, with
+cryptographic proof of authorization, delegation depth tracking, and
+revocation in real time.</p>
+<p>This document is intentionally vendor-neutral in its normative
+requirements. Cloud platforms, model providers, workflow systems, and
+audit backends discussed by implementations are informative deployment
+examples, not part of the KAIF wire protocol.</p>
+<p><strong>Status of This Memo</strong></p>
+<p>This Internet-Draft is submitted in full conformance with the
+provisions of BCP 78 and BCP 79.</p>
+<p>Internet-Drafts are working documents of the Internet Engineering
+Task Force (IETF), its areas, and its working groups. Note that other
+groups may also distribute working documents as Internet-Drafts. The
+list of current Internet-Drafts is at
+https://datatracker.ietf.org/drafts/current/.</p>
+<p>Internet-Drafts are draft documents valid for a maximum of six months
+and may be updated, replaced, or obsoleted by other documents at any
+time. It is inappropriate to use Internet-Drafts as reference material
+or to cite them other than as “work in progress”.</p>
+<h2 id="introduction">1. Introduction</h2>
+<h3 id="problem-statement">1.1 Problem Statement</h3>
+<p>Contemporary system architectures increasingly rely on autonomous
+agents, both AI-driven and workflow-based, to execute actions on behalf
+of human operators in complex distributed environments. Current
+authorization models present several challenges:</p>
+<ol type="1">
+<li><strong>Coarse-grained control</strong>: Traditional API keys or
+static tokens provide no granularity on what actions an agent may
+perform.</li>
+<li><strong>Limited auditability</strong>: It is difficult to correlate
+which agent executed which action, especially in delegated
+scenarios.</li>
+<li><strong>Revocation latency</strong>: Certificate-based models suffer
+from multi-minute revocation propagation delays.</li>
+<li><strong>Workload identity opacity</strong>: There is no standardized
+way for an authorization service to verify which workload is requesting
+access.</li>
+</ol>
+<p>KAIF addresses these challenges by combining three existing standards
+and practices:</p>
+<ul>
+<li><strong>RFC 8693</strong>: OAuth 2.0 Token Exchange for
+subject-actor separation</li>
+<li><strong>SPIFFE/SPIRE</strong>: Cryptographic workload identity and
+JWT-SVID attestation</li>
+<li><strong>Operator-assigned authorization tiers</strong>: A flexible
+authorization model that avoids hard-coded trust assumptions</li>
+</ul>
+<h3 id="scope-and-intended-deployment">1.2 Scope and Intended
+Deployment</h3>
+<p>KAIF is intended for operator-initiated, agent-executed,
+boundary-crossing transactions. A “boundary-crossing transaction” is any
+action where:</p>
+<ul>
+<li>The agent is acting on behalf of a human principal (operator)</li>
+<li>The action modifies state in an external system (payment, API
+mutation, purchase)</li>
+<li>Regulatory, financial, or security audit requirements require proof
+of authorization</li>
+</ul>
+<p>The following are out of scope for v1.0:</p>
+<ul>
+<li>Behavioral trust scoring (agent action pattern analysis)</li>
+<li>Peer reputation models</li>
+<li>Long-running streaming delegations</li>
+<li>Cross-operator federation (see v2.0 roadmap)</li>
+</ul>
+<h3 id="conventions-and-terminology">1.3 Conventions and
+Terminology</h3>
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”,
+“SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “NOT RECOMMENDED”, “MAY”, and
+“OPTIONAL” in this document are to be interpreted as described in BCP 14
+[RFC2119] and [RFC8174], when and only when they appear in all capitals,
+as shown here.</p>
+<p><strong>KAIF-specific terms:</strong></p>
+<ul>
+<li><strong>Operator</strong>: A human principal (person) who authorizes
+an agent to act on their behalf.</li>
+<li><strong>Agent</strong>: An automated workload (software) with a
+SPIFFE identity that executes actions on behalf of an operator.</li>
+<li><strong>Boundary Crossing</strong>: An action that crosses a trust
+boundary—e.g., calling an external API, initiating a payment, or writing
+to a regulated log.</li>
+<li><strong>Authorization Tier</strong>: An operator-assigned permission
+level (PROVISIONAL, STANDARD, VERIFIED, TRUSTED) that determines token
+TTL and delegation depth.</li>
+<li><strong>Delegation Depth</strong>: The count of intermediate agents
+in a delegation chain (depth 0 = direct operator→agent, depth 1 =
+operator→agent1→agent2).</li>
+<li><strong>Revocation</strong>: Immediate invalidation of a token via
+JTI (JWT ID) denylist.</li>
+<li><strong>Relying Party</strong>: A third-party service that validates
+KAIF tokens without running a KAIF server instance.</li>
+</ul>
+<h3 id="implementation-status-informative">1.4 Implementation Status
+(Informative)</h3>
+<p>KAIF has been validated in at least one concrete multi-system
+deployment as an implementation-backed protocol design. That deployment
+demonstrated, end to end:</p>
+<ul>
+<li>operator-originated delegation grant issuance</li>
+<li>workload identity presentation during token exchange</li>
+<li>audience-bound authorization for a third-party execution
+surface</li>
+<li>receipt correlation back to the originating workflow</li>
+<li>workflow resumption after external completion</li>
+</ul>
+<p>This evidence indicates that the KAIF handshake is viable across a
+real external boundary. It does not make any specific cloud, AI
+provider, queue, workflow runtime, or datastore normative for
+interoperability. Independent implementations remain necessary to
+establish broader interoperability confidence.</p>
+<h3 id="terminology-stability">1.5 Terminology Stability</h3>
+<p>The protocol wire format in this document uses
+<code>authorization_tier</code> and
+<code>authorization_tier_value</code> as the canonical delegation
+strength fields.</p>
+<p>Implementations MAY use local internal terms such as
+<code>trust_tier</code>, <code>trust_score</code>, or similar, but those
+names are deployment-specific and are not normative protocol vocabulary
+unless explicitly mapped to the KAIF claims defined here.</p>
+<h2 id="protocol-overview">2. Protocol Overview</h2>
+<h3 id="three-party-flow">2.1 Three-Party Flow</h3>
+<pre><code>┌────────────┐
 │  Operator  │ (human, OIDC-authenticated)
 │ (John@co)  │
 └──────┬─────┘
@@ -1645,39 +434,30 @@ li > p:last-of-type:only-child {
        │         │ Party        │
        └────────-│ (e.g.,       │
                  │  Payment API)│
-                 └──────────────┘
-</pre><a href="#section-1.3.1-1" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.3.2">
-          <h4 id="name-22-delegation-grant-subject">
-<a href="#section-1.3.2" class="section-number selfRef">1.3.2. </a><a href="#name-22-delegation-grant-subject" class="section-name selfRef">2.2 Delegation Grant (Subject Token)</a>
-          </h4>
-<p id="section-1.3.2-1">An operator provisions a delegation grant—a signed JWT that authorizes an agent to request access tokens. The grant is issued by the KAIF server and contains:<a href="#section-1.3.2-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.3.2-2">
-<pre>{
-  "iss": "https://auth.example.com",
-  "sub": "operator@example.com",
-  "aud": "spiffe://example.com/agent/lyra",
-  "iat": 1719489600,
-  "exp": 1719493200,
-  "jti": "550e8400-e29b-41d4-a716-446655440000",
-  "scope": "invoke:completion vault:read:anthropic_key",
-  "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
-  "may_act": {
-    "sub": "spiffe://example.com/agent/lyra"
+                 └──────────────┘</code></pre>
+<h3 id="delegation-grant-subject-token">2.2 Delegation Grant (Subject
+Token)</h3>
+<p>An operator provisions a delegation grant, a signed JWT that
+authorizes an agent to request access tokens. A grant issued by the KAIF
+server contains:</p>
+<pre><code>{
+  &quot;iss&quot;: &quot;https://auth.example.com&quot;,
+  &quot;sub&quot;: &quot;operator@example.com&quot;,
+  &quot;aud&quot;: &quot;spiffe://example.com/agent/lyra&quot;,
+  &quot;iat&quot;: 1719489600,
+  &quot;exp&quot;: 1719493200,
+  &quot;jti&quot;: &quot;550e8400-e29b-41d4-a716-446655440000&quot;,
+  &quot;scope&quot;: &quot;invoke:completion vault:read:anthropic_key&quot;,
+  &quot;delegation_id&quot;: &quot;d-550e8400-e29b-41d4-a716-446655440000&quot;,
+  &quot;may_act&quot;: {
+    &quot;sub&quot;: &quot;spiffe://example.com/agent/lyra&quot;
   }
-}
-</pre><a href="#section-1.3.2-2" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.3.3">
-          <h4 id="name-23-token-exchange-request-r">
-<a href="#section-1.3.3" class="section-number selfRef">1.3.3. </a><a href="#name-23-token-exchange-request-r" class="section-name selfRef">2.3 Token Exchange Request (RFC 8693)</a>
-          </h4>
-<p id="section-1.3.3-1">The agent exchanges the delegation grant (subject_token) and its SPIFFE identity JWT-SVID (actor_token) for an access token:<a href="#section-1.3.3-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.3.3-2">
-<pre>POST /oauth/token
+}</code></pre>
+<h3 id="token-exchange-request-rfc-8693">2.3 Token Exchange Request (RFC
+8693)</h3>
+<p>The agent exchanges the delegation grant (subject_token) and its
+SPIFFE identity JWT-SVID (actor_token) for an access token:</p>
+<pre><code>POST /oauth/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=urn:ietf:params:oauth:grant-type:token-exchange
@@ -1686,477 +466,371 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 &amp;actor_token=&lt;svid-jwt&gt;
 &amp;actor_token_type=urn:ietf:params:oauth:token-type:jwt
 &amp;scope=invoke:completion
-&amp;audience=urn:example:payment-api
-</pre><a href="#section-1.3.3-2" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.3.4">
-          <h4 id="name-24-kaif-access-token-respon">
-<a href="#section-1.3.4" class="section-number selfRef">1.3.4. </a><a href="#name-24-kaif-access-token-respon" class="section-name selfRef">2.4 KAIF Access Token (Response)</a>
-          </h4>
-<p id="section-1.3.4-1">The server responds with a signed JWT containing both operator and agent identity, delegation depth, tier, and scope:<a href="#section-1.3.4-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.3.4-2">
-<pre>{
-  "iss": "https://auth.example.com",
-  "sub": "operator@example.com",
-  "aud": "urn:example:payment-api",
-  "iat": 1719489600,
-  "exp": 1719493200,
-  "jti": "650e8400-e29b-41d4-a716-446655440001",
-  "scope": "invoke:completion",
-  "actor": {
-    "sub": "spiffe://example.com/agent/lyra",
-    "svid_thumbprint": "sha256:a1b2c3d4..."
+&amp;audience=urn:example:payment-api</code></pre>
+<h3 id="kaif-access-token-response">2.4 KAIF Access Token
+(Response)</h3>
+<p>The server returns a signed JWT that carries operator identity, agent
+identity, delegation depth, tier, and scope:</p>
+<pre><code>{
+  &quot;iss&quot;: &quot;https://auth.example.com&quot;,
+  &quot;sub&quot;: &quot;operator@example.com&quot;,
+  &quot;aud&quot;: &quot;urn:example:payment-api&quot;,
+  &quot;iat&quot;: 1719489600,
+  &quot;exp&quot;: 1719493200,
+  &quot;jti&quot;: &quot;650e8400-e29b-41d4-a716-446655440001&quot;,
+  &quot;scope&quot;: &quot;invoke:completion&quot;,
+  &quot;actor&quot;: {
+    &quot;sub&quot;: &quot;spiffe://example.com/agent/lyra&quot;,
+    &quot;svid_thumbprint&quot;: &quot;sha256:a1b2c3d4...&quot;
   },
-  "may_act": {
-    "sub": "spiffe://example.com/agent/lyra"
+  &quot;may_act&quot;: {
+    &quot;sub&quot;: &quot;spiffe://example.com/agent/lyra&quot;
   },
-  "kaif": {
-    "authorization_tier": "STANDARD",
-    "authorization_tier_value": 0.65,
-    "delegation_depth": 0,
-    "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
-    "rollback_window": "PT10M",
-    "principal_chain": ["operator@example.com"]
+  &quot;kaif&quot;: {
+    &quot;authorization_tier&quot;: &quot;STANDARD&quot;,
+    &quot;authorization_tier_value&quot;: 0.65,
+    &quot;delegation_depth&quot;: 0,
+    &quot;delegation_id&quot;: &quot;d-550e8400-e29b-41d4-a716-446655440000&quot;,
+    &quot;rollback_window&quot;: &quot;PT10M&quot;,
+    &quot;principal_chain&quot;: [&quot;operator@example.com&quot;]
   }
-}
-</pre><a href="#section-1.3.4-2" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.3.5">
-          <h4 id="name-25-validation-flow">
-<a href="#section-1.3.5" class="section-number selfRef">1.3.5. </a><a href="#name-25-validation-flow" class="section-name selfRef">2.5 Validation Flow</a>
-          </h4>
-<p id="section-1.3.5-1">When an agent uses the access token at a relying party:<a href="#section-1.3.5-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.3.5-2">
-<pre>Agent → Relying Party: "Use this token to execute transaction"
+}</code></pre>
+<h3 id="validation-flow">2.5 Validation Flow</h3>
+<p>When a relying party receives the access token from an agent:</p>
+<pre><code>Agent → Relying Party: &quot;Use this token to execute transaction&quot;
         ↓
-        Relying Party checks:
+        Relying party checks:
         1. Token signature valid against KAIF issuer JWKS ✓
         2. Token not expired ✓
         3. Token not in revocation denylist (call KAIF /introspect) ✓
         4. Scope permits requested action ✓
         5. Delegation depth within policy ✓
         ↓
-        Relying Party: "AUTHORIZED" → execute transaction
+        Relying Party: &quot;AUTHORIZED&quot; → execute transaction
         ↓
-        Relying Party → KAIF Server: Log receipt/audit event
-</pre><a href="#section-1.3.5-2" class="pilcrow">¶</a>
-</div>
-</section>
-</section>
-<section id="section-1.4">
-        <h3 id="name-3-detailed-protocol-specifi">
-<a href="#section-1.4" class="section-number selfRef">1.4. </a><a href="#name-3-detailed-protocol-specifi" class="section-name selfRef">3. Detailed Protocol Specification</a>
-        </h3>
-<section id="section-1.4.1">
-          <h4 id="name-31-endpoint-post-provision">
-<a href="#section-1.4.1" class="section-number selfRef">1.4.1. </a><a href="#name-31-endpoint-post-provision" class="section-name selfRef">3.1 Endpoint: POST /provision</a>
-          </h4>
-<p id="section-1.4.1-1"><strong>Purpose</strong>: Operator provisions a delegation grant to an agent.<a href="#section-1.4.1-1" class="pilcrow">¶</a></p>
-<p id="section-1.4.1-2"><strong>Request</strong>:<a href="#section-1.4.1-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.1-3">
-<pre>{
-  "id_token": "eyJhbGc...",
-  "agent_id": "lyra",
-  "scope": "invoke:completion vault:read:anthropic_key",
-  "ttl_seconds": 600
-}
-</pre><a href="#section-1.4.1-3" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.1-4"><strong>Validation</strong>:
-- <code>id_token</code> MUST be a valid OIDC token from configured IdP
-- <code>agent_id</code> MUST be registered in operator's ACL
-- <code>scope</code> MUST be a subset of agent's permitted scopes
-- <code>ttl_seconds</code> MUST be between 60 and 86400<a href="#section-1.4.1-4" class="pilcrow">¶</a></p>
-<p id="section-1.4.1-5"><strong>Response</strong>:<a href="#section-1.4.1-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.1-6">
-<pre>{
-  "delegation_id": "d-550e8400-e29b-41d4-a716-446655440000",
-  "delegation_token": "eyJhbGc...",
-  "expires_at": 1719493200,
-  "agent_id": "lyra",
-  "scope": "invoke:completion vault:read:anthropic_key"
-}
-</pre><a href="#section-1.4.1-6" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.1-7"><strong>Errors</strong>:
-- <code>invalid_request</code> (400): Missing required fields
-- <code>invalid_grant</code> (400): id_token invalid or expired
-- <code>access_denied</code> (403): Operator not authorized for agent or scope<a href="#section-1.4.1-7" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.4.2">
-          <h4 id="name-32-endpoint-post-oauth-toke">
-<a href="#section-1.4.2" class="section-number selfRef">1.4.2. </a><a href="#name-32-endpoint-post-oauth-toke" class="section-name selfRef">3.2 Endpoint: POST /oauth/token</a>
-          </h4>
-<p id="section-1.4.2-1"><strong>Purpose</strong>: RFC 8693 token exchange (agent requests access token).<a href="#section-1.4.2-1" class="pilcrow">¶</a></p>
-<p id="section-1.4.2-2"><strong>Request</strong>:<a href="#section-1.4.2-2" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.4.2-3">
-<pre>grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+        Relying Party → KAIF Server: Log receipt/audit event</code></pre>
+<h2 id="detailed-protocol-specification">3. Detailed Protocol
+Specification</h2>
+<h3 id="endpoint-post-provision">3.1 Endpoint: POST /provision</h3>
+<p><strong>Purpose</strong>: Operator provisions a delegation grant for
+an agent.</p>
+<p><strong>Request</strong>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;id_token&quot;</span><span class="fu">:</span> <span class="st">&quot;eyJhbGc...&quot;</span><span class="fu">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;agent_id&quot;</span><span class="fu">:</span> <span class="st">&quot;lyra&quot;</span><span class="fu">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;scope&quot;</span><span class="fu">:</span> <span class="st">&quot;invoke:completion vault:read:anthropic_key&quot;</span><span class="fu">,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;ttl_seconds&quot;</span><span class="fu">:</span> <span class="dv">600</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Validation</strong>: - <code>id_token</code> MUST be a valid
+OIDC token from configured IdP - <code>agent_id</code> MUST be
+registered in operator’s ACL - <code>scope</code> MUST be a subset of
+agent’s permitted scopes - <code>ttl_seconds</code> MUST be between 60
+and 86400</p>
+<p><strong>Response</strong>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;delegation_id&quot;</span><span class="fu">:</span> <span class="st">&quot;d-550e8400-e29b-41d4-a716-446655440000&quot;</span><span class="fu">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;delegation_token&quot;</span><span class="fu">:</span> <span class="st">&quot;eyJhbGc...&quot;</span><span class="fu">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;expires_at&quot;</span><span class="fu">:</span> <span class="dv">1719493200</span><span class="fu">,</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;agent_id&quot;</span><span class="fu">:</span> <span class="st">&quot;lyra&quot;</span><span class="fu">,</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;scope&quot;</span><span class="fu">:</span> <span class="st">&quot;invoke:completion vault:read:anthropic_key&quot;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Errors</strong>: - <code>invalid_request</code> (400):
+Missing required fields - <code>invalid_grant</code> (400): id_token
+invalid or expired - <code>access_denied</code> (403): Operator not
+authorized for agent or scope</p>
+<h3 id="endpoint-post-oauthtoken">3.2 Endpoint: POST /oauth/token</h3>
+<p><strong>Purpose</strong>: RFC 8693 token exchange for agent-initiated
+access-token requests.</p>
+<p><strong>Request</strong>:</p>
+<pre><code>grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 &amp;subject_token=&lt;delegation-jwt&gt;
 &amp;subject_token_type=urn:ietf:params:oauth:token-type:access_token
 &amp;actor_token=&lt;svid-jwt&gt;
 &amp;actor_token_type=urn:ietf:params:oauth:token-type:jwt
 &amp;scope=invoke:completion
-&amp;audience=urn:example:payment-api
-</pre><a href="#section-1.4.2-3" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.2-4"><strong>Validation Steps</strong> (in order):<a href="#section-1.4.2-4" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-1.4.2-5">
-<li id="section-1.4.2-5.1">
-              <p id="section-1.4.2-5.1.1">Parse and validate subject_token (delegation grant)<a href="#section-1.4.2-5.1.1" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.4.2-5.1.2.1">MUST have valid signature from KAIF issuer<a href="#section-1.4.2-5.1.2.1" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.1.2.2">MUST not be expired (with 10s clock skew tolerance)<a href="#section-1.4.2-5.1.2.2" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.1.2.3">MUST not be in JTI revocation denylist<a href="#section-1.4.2-5.1.2.3" class="pilcrow">¶</a>
-</li>
-              </ul>
-</li>
-            <li id="section-1.4.2-5.2">
-              <p id="section-1.4.2-5.2.1">Parse and validate actor_token (JWT-SVID)<a href="#section-1.4.2-5.2.1" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.4.2-5.2.2.1">MUST have valid signature from SPIRE bundle<a href="#section-1.4.2-5.2.2.1" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.2.2.2">MUST not be expired<a href="#section-1.4.2-5.2.2.2" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.2.2.3">SPIFFE ID MUST be registered in ACL<a href="#section-1.4.2-5.2.2.3" class="pilcrow">¶</a>
-</li>
-              </ul>
-</li>
-            <li id="section-1.4.2-5.3">
-              <p id="section-1.4.2-5.3.1">Validate scope<a href="#section-1.4.2-5.3.1" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.4.2-5.3.2.1">MUST be subset of subject_token scope<a href="#section-1.4.2-5.3.2.1" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.3.2.2">MUST be subset of actor's permitted scopes (ACL)<a href="#section-1.4.2-5.3.2.2" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.3.2.3">MUST use glob matching (e.g., "vault:read:*" matches "vault:read:key")<a href="#section-1.4.2-5.3.2.3" class="pilcrow">¶</a>
-</li>
-              </ul>
-</li>
-            <li id="section-1.4.2-5.4">
-              <p id="section-1.4.2-5.4.1">Check authorization tier<a href="#section-1.4.2-5.4.1" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.4.2-5.4.2.1">Fetch operator-assigned authorization tier (default 0.5 = STANDARD)<a href="#section-1.4.2-5.4.2.1" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.4.2.2">MUST meet agent's minimum tier requirement<a href="#section-1.4.2-5.4.2.2" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.4.2.3">Determine token TTL based on tier<a href="#section-1.4.2-5.4.2.3" class="pilcrow">¶</a>
-</li>
-              </ul>
-</li>
-            <li id="section-1.4.2-5.5">
-              <p id="section-1.4.2-5.5.1">Compute delegation depth<a href="#section-1.4.2-5.5.1" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.4.2-5.5.2.1">If subject_token is direct provision: depth = 0<a href="#section-1.4.2-5.5.2.1" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.5.2.2">If subject_token is access token from prior exchange: depth = subject.kaif.delegation_depth + 1<a href="#section-1.4.2-5.5.2.2" class="pilcrow">¶</a>
-</li>
-                <li class="compact" id="section-1.4.2-5.5.2.3">MUST not exceed: min(actor ACL depth limit, tier depth limit)<a href="#section-1.4.2-5.5.2.3" class="pilcrow">¶</a>
-</li>
-              </ul>
-</li>
-            <li id="section-1.4.2-5.6">
-              <p id="section-1.4.2-5.6.1">Mint access token with RS256 signature<a href="#section-1.4.2-5.6.1" class="pilcrow">¶</a></p>
-</li>
-          </ol>
-<p id="section-1.4.2-6"><strong>Response</strong>:<a href="#section-1.4.2-6" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.2-7">
-<pre>{
-  "access_token": "eyJhbGc...",
-"issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
-  "token_type": "Bearer",
-  "expires_in": 600,
-  "scope": "invoke:completion"
-}
-</pre><a href="#section-1.4.2-7" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.2-8"><strong>Errors</strong>:
-- <code>invalid_request</code> (400): Malformed request
-- <code>invalid_grant</code> (400): subject_token invalid/expired/revoked
-- <code>invalid_scope</code> (400): Scope not permitted
-- <code>invalid_client</code> (401): actor_token invalid
-- <code>insufficient_trust</code> (403): Authorization tier below minimum
-- <code>delegation_depth_exceeded</code> (403): Depth would exceed limit<a href="#section-1.4.2-8" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.4.3">
-          <h4 id="name-33-endpoint-post-introspect">
-<a href="#section-1.4.3" class="section-number selfRef">1.4.3. </a><a href="#name-33-endpoint-post-introspect" class="section-name selfRef">3.3 Endpoint: POST /introspect</a>
-          </h4>
-<p id="section-1.4.3-1"><strong>Purpose</strong>: RFC 7662 token introspection (for relying parties to verify tokens in real-time).<a href="#section-1.4.3-1" class="pilcrow">¶</a></p>
-<p id="section-1.4.3-2"><strong>Request</strong>:<a href="#section-1.4.3-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.3-3">
-<pre>{
-  "token": "eyJhbGc..."
-}
-</pre><a href="#section-1.4.3-3" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.3-4"><strong>Response</strong> (if active):<a href="#section-1.4.3-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.3-5">
-<pre>{
-  "active": true,
-  "sub": "operator@example.com",
-  "aud": "urn:example:payment-api",
-  "iat": 1719489600,
-  "exp": 1719493200,
-  "scope": "invoke:completion",
-  "actor": {
-    "sub": "spiffe://example.com/agent/lyra"
-  },
-  "kaif": {
-    "authorization_tier": "STANDARD",
-    "delegation_depth": 0
-  }
-}
-</pre><a href="#section-1.4.3-5" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.3-6"><strong>Response</strong> (if revoked or invalid):<a href="#section-1.4.3-6" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.3-7">
-<pre>{
-  "active": false
-}
-</pre><a href="#section-1.4.3-7" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.4.4">
-          <h4 id="name-34-endpoint-post-revoke">
-<a href="#section-1.4.4" class="section-number selfRef">1.4.4. </a><a href="#name-34-endpoint-post-revoke" class="section-name selfRef">3.4 Endpoint: POST /revoke</a>
-          </h4>
-<p id="section-1.4.4-1"><strong>Purpose</strong>: Operator revokes a token immediately.<a href="#section-1.4.4-1" class="pilcrow">¶</a></p>
-<p id="section-1.4.4-2"><strong>Request</strong>:<a href="#section-1.4.4-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.4-3">
-<pre>{
-  "token": "eyJhbGc...",
-  "reason": "operator_request"
-}
-</pre><a href="#section-1.4.4-3" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.4-4"><strong>Response</strong>:<a href="#section-1.4.4-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.4-5">
-<pre>{
-  "revoked": true,
-  "jti": "650e8400-e29b-41d4-a716-446655440001"
-}
-</pre><a href="#section-1.4.4-5" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.4-6"><strong>Mechanics</strong>:
-- Extract JTI from token
-- Add to Redis denylist with TTL = token.exp
-- Publish to revocation channel for multi-instance sync
-- Write audit entry<a href="#section-1.4.4-6" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.4.5">
-          <h4 id="name-35-endpoint-get-well-known-">
-<a href="#section-1.4.5" class="section-number selfRef">1.4.5. </a><a href="#name-35-endpoint-get-well-known-" class="section-name selfRef">3.5 Endpoint: GET /.well-known/jwks.json</a>
-          </h4>
-<p id="section-1.4.5-1"><strong>Purpose</strong>: Public JWKS for external relying parties.<a href="#section-1.4.5-1" class="pilcrow">¶</a></p>
-<p id="section-1.4.5-2"><strong>Response</strong>:<a href="#section-1.4.5-2" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.4.5-3">
-<pre>{
-  "keys": [
-    {
-      "kty": "RSA",
-      "use": "sig",
-      "kid": "2024-06-27-primary",
-      "n": "0vx7agoebGcQ...",
-      "e": "AQAB",
-      "alg": "RS256"
-    },
-    {
-      "kty": "RSA",
-      "use": "sig",
-      "kid": "2024-06-15-retained",
-      "n": "xjlCRBfn...",
-      "e": "AQAB",
-      "alg": "RS256"
-    }
-  ]
-}
-</pre><a href="#section-1.4.5-3" class="pilcrow">¶</a>
-</div>
-<p id="section-1.4.5-4"><strong>Caching</strong>: MUST set <code>Cache-Control: max-age=3600</code><a href="#section-1.4.5-4" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.4.6">
-          <h4 id="name-36-endpoint-get-well-known-">
-<a href="#section-1.4.6" class="section-number selfRef">1.4.6. </a><a href="#name-36-endpoint-get-well-known-" class="section-name selfRef">3.6 Endpoint: GET /.well-known/kaif-metadata.json</a>
-          </h4>
-<p id="section-1.4.6-1"><strong>Purpose</strong>: Operator-provided metadata for relying parties (KAIF v1.1+).<a href="#section-1.4.6-1" class="pilcrow">¶</a></p>
-<p id="section-1.4.6-2"><strong>Response</strong>:<a href="#section-1.4.6-2" class="pilcrow">¶</a></p>
-<div class="breakable lang-json sourcecode" id="section-1.4.6-3">
-<pre>{
-  "issuer": "https://auth.example.com",
-"authorization_endpoint": "https://auth.example.com/oauth/authorize",
-  "token_endpoint": "https://auth.example.com/oauth/token",
-  "introspection_endpoint": "https://auth.example.com/introspect",
-  "revocation_endpoint": "https://auth.example.com/revoke",
-  "jwks_uri": "https://auth.example.com/.well-known/jwks.json",
-  "supported_grant_types": [
-    "urn:ietf:params:oauth:grant-type:token-exchange"
-  ],
-  "token_endpoint_auth_methods_supported": ["none"],
-  "response_types_supported": [],
-  "scopes_supported": [
-    "invoke:completion",
-    "vault:read",
-    "admin:revoke"
-  ],
-  "token_endpoint_auth_methods": ["none"],
-  "kaif": {
-    "authorization_tiers": [
-      {
-        "tier": "PROVISIONAL",
-        "min_value": 0.0,
-        "max_value": 0.49,
-        "token_ttl": 300,
-        "max_delegation_depth": 0
-      },
-      {
-        "tier": "STANDARD",
-        "min_value": 0.5,
-        "max_value": 0.69,
-        "token_ttl": 600,
-        "max_delegation_depth": 1
-      },
-      {
-        "tier": "VERIFIED",
-        "min_value": 0.7,
-        "max_value": 0.89,
-        "token_ttl": 900,
-        "max_delegation_depth": 2
-      },
-      {
-        "tier": "TRUSTED",
-        "min_value": 0.9,
-        "max_value": 1.0,
-        "token_ttl": 900,
-        "max_delegation_depth": 3
-      }
-    ],
-    "revocation_propagation_sla_ms": 100,
-    "audit_log_retention_days": 90
-  }
-}
-</pre><a href="#section-1.4.6-3" class="pilcrow">¶</a>
-</div>
-</section>
-</section>
-<section id="section-1.5">
-        <h3 id="name-4-authorization-tier-model">
-<a href="#section-1.5" class="section-number selfRef">1.5. </a><a href="#name-4-authorization-tier-model" class="section-name selfRef">4. Authorization Tier Model</a>
-        </h3>
-<p id="section-1.5-1">KAIF uses operator-assigned authorization tier values (0.0–1.0) to determine access permissions:<a href="#section-1.5-1" class="pilcrow">¶</a></p>
-<table class="center" id="table-2">
-          <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+&amp;audience=urn:example:payment-api</code></pre>
+<p><strong>Validation steps</strong> (in order):</p>
+<ol type="1">
+<li>Parse and validate subject_token (delegation grant)
+<ul>
+<li>MUST have valid signature from KAIF issuer</li>
+<li>MUST not be expired (with 10s clock skew tolerance)</li>
+<li>MUST not be in JTI revocation denylist</li>
+</ul></li>
+<li>Parse and validate actor_token (JWT-SVID)
+<ul>
+<li>MUST have valid signature from SPIRE bundle</li>
+<li>MUST not be expired</li>
+<li>SPIFFE ID MUST be registered in ACL</li>
+</ul></li>
+<li>Validate scope
+<ul>
+<li>MUST be subset of subject_token scope</li>
+<li>MUST be subset of actor’s permitted scopes (ACL)</li>
+<li>MUST use glob matching (e.g., “vault:read:*” matches
+“vault:read:key”)</li>
+</ul></li>
+<li>Check authorization tier
+<ul>
+<li>Fetch the operator-assigned authorization tier (default 0.5 =
+STANDARD)</li>
+<li>MUST meet agent’s minimum tier requirement</li>
+<li>Determine token TTL based on tier</li>
+</ul></li>
+<li>Compute delegation depth
+<ul>
+<li>If subject_token is direct provision: depth = 0</li>
+<li>If subject_token is access token from prior exchange: depth =
+subject.kaif.delegation_depth + 1</li>
+<li>MUST not exceed: min(actor ACL depth limit, tier depth limit)</li>
+</ul></li>
+<li>Mint access token with RS256 signature</li>
+</ol>
+<p><strong>Response</strong>:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;access_token&quot;</span><span class="fu">:</span> <span class="st">&quot;eyJhbGc...&quot;</span><span class="fu">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;issued_token_type&quot;</span><span class="fu">:</span> <span class="st">&quot;urn:ietf:params:oauth:token-type:access_token&quot;</span><span class="fu">,</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;token_type&quot;</span><span class="fu">:</span> <span class="st">&quot;Bearer&quot;</span><span class="fu">,</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;expires_in&quot;</span><span class="fu">:</span> <span class="dv">600</span><span class="fu">,</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;scope&quot;</span><span class="fu">:</span> <span class="st">&quot;invoke:completion&quot;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Errors</strong>: - <code>invalid_request</code> (400):
+Malformed request - <code>invalid_grant</code> (400): subject_token
+invalid/expired/revoked - <code>invalid_scope</code> (400): Scope not
+permitted - <code>invalid_client</code> (401): actor_token invalid -
+<code>insufficient_trust</code> (403): Authorization tier below minimum
+- <code>delegation_depth_exceeded</code> (403): Depth would exceed
+limit</p>
+<h3 id="endpoint-post-introspect">3.3 Endpoint: POST /introspect</h3>
+<p><strong>Purpose</strong>: RFC 7662 token introspection for relying
+parties that verify tokens in real time.</p>
+<p><strong>Request</strong>:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;token&quot;</span><span class="fu">:</span> <span class="st">&quot;eyJhbGc...&quot;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Response</strong> (if active):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;active&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;sub&quot;</span><span class="fu">:</span> <span class="st">&quot;operator@example.com&quot;</span><span class="fu">,</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;aud&quot;</span><span class="fu">:</span> <span class="st">&quot;urn:example:payment-api&quot;</span><span class="fu">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;iat&quot;</span><span class="fu">:</span> <span class="dv">1719489600</span><span class="fu">,</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;exp&quot;</span><span class="fu">:</span> <span class="dv">1719493200</span><span class="fu">,</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;scope&quot;</span><span class="fu">:</span> <span class="st">&quot;invoke:completion&quot;</span><span class="fu">,</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;actor&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;sub&quot;</span><span class="fu">:</span> <span class="st">&quot;spiffe://example.com/agent/lyra&quot;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;kaif&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;authorization_tier&quot;</span><span class="fu">:</span> <span class="st">&quot;STANDARD&quot;</span><span class="fu">,</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;delegation_depth&quot;</span><span class="fu">:</span> <span class="dv">0</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Response</strong> (if revoked or invalid):</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;active&quot;</span><span class="fu">:</span> <span class="kw">false</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="endpoint-post-revoke">3.4 Endpoint: POST /revoke</h3>
+<p><strong>Purpose</strong>: Operator revokes a token.</p>
+<p><strong>Request</strong>:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;token&quot;</span><span class="fu">:</span> <span class="st">&quot;eyJhbGc...&quot;</span><span class="fu">,</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;reason&quot;</span><span class="fu">:</span> <span class="st">&quot;operator_request&quot;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Response</strong>:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;revoked&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;jti&quot;</span><span class="fu">:</span> <span class="st">&quot;650e8400-e29b-41d4-a716-446655440001&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Mechanics</strong>: - Extract JTI from token - Add to Redis
+denylist with TTL = token.exp - Publish to revocation channel for
+multi-instance sync - Write audit entry</p>
+<h3 id="endpoint-get-.well-knownjwks.json">3.5 Endpoint: GET
+/.well-known/jwks.json</h3>
+<p><strong>Purpose</strong>: Public JWKS document for external relying
+parties.</p>
+<p><strong>Response</strong>:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;keys&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;kty&quot;</span><span class="fu">:</span> <span class="st">&quot;RSA&quot;</span><span class="fu">,</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;use&quot;</span><span class="fu">:</span> <span class="st">&quot;sig&quot;</span><span class="fu">,</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;kid&quot;</span><span class="fu">:</span> <span class="st">&quot;2024-06-27-primary&quot;</span><span class="fu">,</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;n&quot;</span><span class="fu">:</span> <span class="st">&quot;0vx7agoebGcQ...&quot;</span><span class="fu">,</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;e&quot;</span><span class="fu">:</span> <span class="st">&quot;AQAB&quot;</span><span class="fu">,</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;alg&quot;</span><span class="fu">:</span> <span class="st">&quot;RS256&quot;</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;kty&quot;</span><span class="fu">:</span> <span class="st">&quot;RSA&quot;</span><span class="fu">,</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;use&quot;</span><span class="fu">:</span> <span class="st">&quot;sig&quot;</span><span class="fu">,</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;kid&quot;</span><span class="fu">:</span> <span class="st">&quot;2024-06-15-retained&quot;</span><span class="fu">,</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;n&quot;</span><span class="fu">:</span> <span class="st">&quot;xjlCRBfn...&quot;</span><span class="fu">,</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;e&quot;</span><span class="fu">:</span> <span class="st">&quot;AQAB&quot;</span><span class="fu">,</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;alg&quot;</span><span class="fu">:</span> <span class="st">&quot;RS256&quot;</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Caching</strong>: MUST set
+<code>Cache-Control: max-age=3600</code></p>
+<h3 id="endpoint-get-.well-knownkaif-metadata.json">3.6 Endpoint: GET
+/.well-known/kaif-metadata.json</h3>
+<p><strong>Purpose</strong>: Issuer metadata for relying parties (KAIF
+v1.1+).</p>
+<p><strong>Response</strong>:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;issuer&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.example.com&quot;</span><span class="fu">,</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;authorization_endpoint&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.example.com/oauth/authorize&quot;</span><span class="fu">,</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;token_endpoint&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.example.com/oauth/token&quot;</span><span class="fu">,</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;introspection_endpoint&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.example.com/introspect&quot;</span><span class="fu">,</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;revocation_endpoint&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.example.com/revoke&quot;</span><span class="fu">,</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;jwks_uri&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.example.com/.well-known/jwks.json&quot;</span><span class="fu">,</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;supported_grant_types&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;urn:ietf:params:oauth:grant-type:token-exchange&quot;</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;token_endpoint_auth_methods_supported&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;none&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;response_types_supported&quot;</span><span class="fu">:</span> <span class="ot">[]</span><span class="fu">,</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;scopes_supported&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;invoke:completion&quot;</span><span class="ot">,</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;vault:read&quot;</span><span class="ot">,</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;admin:revoke&quot;</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;token_endpoint_auth_methods&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;none&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;kaif&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;authorization_tiers&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;tier&quot;</span><span class="fu">:</span> <span class="st">&quot;PROVISIONAL&quot;</span><span class="fu">,</span></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;min_value&quot;</span><span class="fu">:</span> <span class="fl">0.0</span><span class="fu">,</span></span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_value&quot;</span><span class="fu">:</span> <span class="fl">0.49</span><span class="fu">,</span></span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;token_ttl&quot;</span><span class="fu">:</span> <span class="dv">300</span><span class="fu">,</span></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_delegation_depth&quot;</span><span class="fu">:</span> <span class="dv">0</span></span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span></span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;tier&quot;</span><span class="fu">:</span> <span class="st">&quot;STANDARD&quot;</span><span class="fu">,</span></span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;min_value&quot;</span><span class="fu">:</span> <span class="fl">0.5</span><span class="fu">,</span></span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_value&quot;</span><span class="fu">:</span> <span class="fl">0.69</span><span class="fu">,</span></span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;token_ttl&quot;</span><span class="fu">:</span> <span class="dv">600</span><span class="fu">,</span></span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_delegation_depth&quot;</span><span class="fu">:</span> <span class="dv">1</span></span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span></span>
+<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;tier&quot;</span><span class="fu">:</span> <span class="st">&quot;VERIFIED&quot;</span><span class="fu">,</span></span>
+<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;min_value&quot;</span><span class="fu">:</span> <span class="fl">0.7</span><span class="fu">,</span></span>
+<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_value&quot;</span><span class="fu">:</span> <span class="fl">0.89</span><span class="fu">,</span></span>
+<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;token_ttl&quot;</span><span class="fu">:</span> <span class="dv">900</span><span class="fu">,</span></span>
+<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_delegation_depth&quot;</span><span class="fu">:</span> <span class="dv">2</span></span>
+<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span></span>
+<span id="cb16-43"><a href="#cb16-43" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;tier&quot;</span><span class="fu">:</span> <span class="st">&quot;TRUSTED&quot;</span><span class="fu">,</span></span>
+<span id="cb16-44"><a href="#cb16-44" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;min_value&quot;</span><span class="fu">:</span> <span class="fl">0.9</span><span class="fu">,</span></span>
+<span id="cb16-45"><a href="#cb16-45" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_value&quot;</span><span class="fu">:</span> <span class="fl">1.0</span><span class="fu">,</span></span>
+<span id="cb16-46"><a href="#cb16-46" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;token_ttl&quot;</span><span class="fu">:</span> <span class="dv">900</span><span class="fu">,</span></span>
+<span id="cb16-47"><a href="#cb16-47" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;max_delegation_depth&quot;</span><span class="fu">:</span> <span class="dv">3</span></span>
+<span id="cb16-48"><a href="#cb16-48" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
+<span id="cb16-49"><a href="#cb16-49" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb16-50"><a href="#cb16-50" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;revocation_propagation_sla_ms&quot;</span><span class="fu">:</span> <span class="dv">100</span><span class="fu">,</span></span>
+<span id="cb16-51"><a href="#cb16-51" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;audit_log_retention_days&quot;</span><span class="fu">:</span> <span class="dv">90</span></span>
+<span id="cb16-52"><a href="#cb16-52" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb16-53"><a href="#cb16-53" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h2 id="authorization-tier-model">4. Authorization Tier Model</h2>
+<p>KAIF uses operator-assigned authorization tier values in the range
+0.0–1.0 to determine access permissions:</p>
+<table>
 <thead>
-            <tr>
-              <th class="text-left" rowspan="1" colspan="1">Tier</th>
-              <th class="text-left" rowspan="1" colspan="1">Range</th>
-              <th class="text-left" rowspan="1" colspan="1">Token TTL</th>
-              <th class="text-left" rowspan="1" colspan="1">Max Depth</th>
-              <th class="text-left" rowspan="1" colspan="1">Use Case</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">PROVISIONAL</td>
-              <td class="text-left" rowspan="1" colspan="1">0.0–0.49</td>
-              <td class="text-left" rowspan="1" colspan="1">300s</td>
-              <td class="text-left" rowspan="1" colspan="1">0</td>
-              <td class="text-left" rowspan="1" colspan="1">New agents, limited trust</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">STANDARD</td>
-              <td class="text-left" rowspan="1" colspan="1">0.5–0.69</td>
-              <td class="text-left" rowspan="1" colspan="1">600s</td>
-              <td class="text-left" rowspan="1" colspan="1">1</td>
-              <td class="text-left" rowspan="1" colspan="1">Established agents</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">VERIFIED</td>
-              <td class="text-left" rowspan="1" colspan="1">0.7–0.89</td>
-              <td class="text-left" rowspan="1" colspan="1">900s</td>
-              <td class="text-left" rowspan="1" colspan="1">2</td>
-              <td class="text-left" rowspan="1" colspan="1">High-confidence agents</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">TRUSTED</td>
-              <td class="text-left" rowspan="1" colspan="1">0.9–1.0</td>
-              <td class="text-left" rowspan="1" colspan="1">900s</td>
-              <td class="text-left" rowspan="1" colspan="1">3</td>
-              <td class="text-left" rowspan="1" colspan="1">Critical operators, full delegation</td>
-            </tr>
-          </tbody>
-        </table>
-<p id="section-1.5-3"><strong>Setting tier values</strong>:<a href="#section-1.5-3" class="pilcrow">¶</a></p>
-<p id="section-1.5-4">Operators assign tier values to agents based on their operational context (not automated behavioral scoring in v1.0). For example:<a href="#section-1.5-4" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.5-5.1">New agent: 0.3 (PROVISIONAL, untested)<a href="#section-1.5-5.1" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.5-5.2">Stable agent with 6 months history: 0.6 (STANDARD)<a href="#section-1.5-5.2" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.5-5.3">Agent in production payment path: 0.85 (VERIFIED)<a href="#section-1.5-5.3" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.5-5.4">Root operator with full authority: 1.0 (TRUSTED)<a href="#section-1.5-5.4" class="pilcrow">¶</a>
-</li>
-        </ul>
-</section>
-<section id="section-1.6">
-        <h3 id="name-5-scope-model">
-<a href="#section-1.6" class="section-number selfRef">1.6. </a><a href="#name-5-scope-model" class="section-name selfRef">5. Scope Model</a>
-        </h3>
-<p id="section-1.6-1">KAIF scopes follow OAuth 2.0 conventions with glob-pattern support:<a href="#section-1.6-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.6-2">
-<pre>scope ::= scope-name ( ":" scope-name )*
-scope-name ::= identifier | "*"
-</pre><a href="#section-1.6-2" class="pilcrow">¶</a>
-</div>
-<p id="section-1.6-3"><strong>Examples</strong>:<a href="#section-1.6-3" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.6-4.1">
-            <code>invoke:completion</code> — Invoke a specific completion (exact match)<a href="#section-1.6-4.1" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.6-4.2">
-            <code>vault:read:*</code> — Read any vault key (glob)<a href="#section-1.6-4.2" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.6-4.3">
-            <code>admin:*</code> — All admin operations (glob)<a href="#section-1.6-4.3" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.6-4.4">
-            <code>vault:read:anthropic_key</code> — Read one specific key (exact match)<a href="#section-1.6-4.4" class="pilcrow">¶</a>
-</li>
-        </ul>
-<p id="section-1.6-5"><strong>Validation</strong>: Use micromatch library for glob pattern matching. Exact matches take precedence.<a href="#section-1.6-5" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.7">
-        <h3 id="name-6-delegation-depth-and-sub-">
-<a href="#section-1.7" class="section-number selfRef">1.7. </a><a href="#name-6-delegation-depth-and-sub-" class="section-name selfRef">6. Delegation Depth and Sub-Delegation</a>
-        </h3>
-<p id="section-1.7-1">An agent MAY create a delegation chain by using its access token as the subject_token in a second token exchange, creating a sub-delegated token.<a href="#section-1.7-1" class="pilcrow">¶</a></p>
-<p id="section-1.7-2"><strong>Rules</strong>:<a href="#section-1.7-2" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.7-3.1">Depth 0: Operator → Agent (direct)<a href="#section-1.7-3.1" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.7-3.2">Depth 1: Operator → Agent1 → Agent2 (sub-delegation)<a href="#section-1.7-3.2" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.7-3.3">Depth N: Limited by min(ACL max_depth, authorization_tier max_depth)<a href="#section-1.7-3.3" class="pilcrow">¶</a>
-</li>
-        </ul>
-<p id="section-1.7-4"><strong>Restrictions</strong>:<a href="#section-1.7-4" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.7-5.1">Parent token's <code>may_sub_delegate</code> flag MUST be true<a href="#section-1.7-5.1" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.7-5.2">Parent token MUST be in VERIFIED or TRUSTED tier<a href="#section-1.7-5.2" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.7-5.3">Sub-delegated token scope MUST be subset of parent scope<a href="#section-1.7-5.3" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.7-5.4">Depth MUST be strictly increasing (no cycles)<a href="#section-1.7-5.4" class="pilcrow">¶</a>
-</li>
-        </ul>
-<p id="section-1.7-6"><strong>Example</strong>:<a href="#section-1.7-6" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.7-7">
-<pre>1. Operator authorizes Agent1
+<tr>
+<th>Tier</th>
+<th>Range</th>
+<th>Token TTL</th>
+<th>Max Depth</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PROVISIONAL</td>
+<td>0.0–0.49</td>
+<td>300s</td>
+<td>0</td>
+<td>New agents, limited trust</td>
+</tr>
+<tr>
+<td>STANDARD</td>
+<td>0.5–0.69</td>
+<td>600s</td>
+<td>1</td>
+<td>Established agents</td>
+</tr>
+<tr>
+<td>VERIFIED</td>
+<td>0.7–0.89</td>
+<td>900s</td>
+<td>2</td>
+<td>High-confidence agents</td>
+</tr>
+<tr>
+<td>TRUSTED</td>
+<td>0.9–1.0</td>
+<td>900s</td>
+<td>3</td>
+<td>Critical operators, full delegation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Assigning tier values</strong>:</p>
+<p>Operators assign tier values to agents based on their operational
+context, not automated behavioral scoring in v1.0. Examples:</p>
+<ul>
+<li>New agent: 0.3 (PROVISIONAL, untested)</li>
+<li>Stable agent with 6 months history: 0.6 (STANDARD)</li>
+<li>Agent in production payment path: 0.85 (VERIFIED)</li>
+<li>Root operator with full authority: 1.0 (TRUSTED)</li>
+</ul>
+<h2 id="scope-model">5. Scope Model</h2>
+<p>KAIF scopes follow OAuth 2.0 conventions with glob-pattern
+support:</p>
+<pre><code>scope ::= scope-name ( &quot;:&quot; scope-name )*
+scope-name ::= identifier | &quot;*&quot;</code></pre>
+<p><strong>Examples</strong>:</p>
+<ul>
+<li><code>invoke:completion</code> — Invoke a specific completion (exact
+match)</li>
+<li><code>vault:read:*</code> — Read any vault key (glob)</li>
+<li><code>admin:*</code> — All admin operations (glob)</li>
+<li><code>vault:read:anthropic_key</code> — Read one specific key (exact
+match)</li>
+</ul>
+<p><strong>Validation</strong>: Implementations MUST evaluate exact
+matches before glob patterns, or use an equivalent matcher. Substring
+matching is not sufficient.</p>
+<h2 id="delegation-depth-and-sub-delegation">6. Delegation Depth and
+Sub-Delegation</h2>
+<p>An agent MAY create a delegation chain by using its access token as
+the subject_token in a second token exchange, creating a sub-delegated
+token.</p>
+<p><strong>Rules</strong>:</p>
+<ul>
+<li>Depth 0: Operator → Agent (direct)</li>
+<li>Depth 1: Operator → Agent1 → Agent2 (sub-delegation)</li>
+<li>Depth N: Limited by min(ACL max_depth, authorization_tier
+max_depth)</li>
+</ul>
+<p><strong>Restrictions</strong>:</p>
+<ul>
+<li>The parent token’s <code>may_sub_delegate</code> flag MUST be
+true.</li>
+<li>The parent token MUST be in VERIFIED or TRUSTED tier.</li>
+<li>The sub-delegated token scope MUST be a subset of the parent
+scope.</li>
+<li>Depth MUST be strictly increasing, with no cycles.</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code>1. Operator authorizes Agent1
   (depth 0, may_sub_delegate: true, scope: invoke:*)
   -&gt; token T1 with delegation_depth: 0
 
@@ -2168,327 +842,404 @@ scope-name ::= identifier | "*"
 
 3. Agent2 attempts to sub-delegate to Agent3
   -&gt; check T2.delegation_depth + 1 &lt;= ACL max
-  -&gt; issue token T3 with delegation_depth: 2
-</pre><a href="#section-1.7-7" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.8">
-        <h3 id="name-7-audit-and-non-repudiation">
-<a href="#section-1.8" class="section-number selfRef">1.8. </a><a href="#name-7-audit-and-non-repudiation" class="section-name selfRef">7. Audit and Non-Repudiation</a>
-        </h3>
-<p id="section-1.8-1">Every KAIF operation appends an immutable audit entry using SHA-256 hash chaining:<a href="#section-1.8-1" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.8-2">
-<pre>entry = {
+  -&gt; issue token T3 with delegation_depth: 2</code></pre>
+<h2 id="audit-and-non-repudiation">7. Audit and Non-Repudiation</h2>
+<p>Every KAIF operation appends an immutable audit entry, linked by
+SHA-256 hash chaining:</p>
+<pre><code>entry = {
   id: UUID v4,
   ts: ISO 8601,
   action:
-    "DELEGATION_PROVISIONED" |
-    "TOKEN_ISSUED" |
-    "TOKEN_REVOKED" |
+    &quot;DELEGATION_PROVISIONED&quot; |
+    &quot;TOKEN_ISSUED&quot; |
+    &quot;TOKEN_REVOKED&quot; |
     ...,
   agent_id: SPIFFE ID,
   human_id: operator email,
   detail: JSON,
   hash: SHA256(prev_hash | ts | action | detail),
   prev_hash: hash of previous entry
-}
-</pre><a href="#section-1.8-2" class="pilcrow">¶</a>
-</div>
-<p id="section-1.8-3"><strong>Verification</strong>:<a href="#section-1.8-3" class="pilcrow">¶</a></p>
-<p id="section-1.8-4">External parties can verify audit chain integrity by replaying the hash computation:<a href="#section-1.8-4" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-1.8-5">
-<pre>expected_hash = SHA256(prev_hash | ts | action | detail)
-assert actual_hash == expected_hash
-</pre><a href="#section-1.8-5" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.9">
-        <h3 id="name-8-revocation-and-propagatio">
-<a href="#section-1.9" class="section-number selfRef">1.9. </a><a href="#name-8-revocation-and-propagatio" class="section-name selfRef">8. Revocation and Propagation</a>
-        </h3>
-<p id="section-1.9-1">KAIF provides two revocation models:<a href="#section-1.9-1" class="pilcrow">¶</a></p>
-<section id="section-1.9.1">
-          <h4 id="name-81-lazy-revocation-default">
-<a href="#section-1.9.1" class="section-number selfRef">1.9.1. </a><a href="#name-81-lazy-revocation-default" class="section-name selfRef">8.1 Lazy Revocation (Default)</a>
-          </h4>
-<p id="section-1.9.1-1">Relying parties cache tokens and check expiry locally. Revocation is eventual—denylist is checked on next refresh.<a href="#section-1.9.1-1" class="pilcrow">¶</a></p>
-<p id="section-1.9.1-2"><strong>Latency</strong>: Minutes (depends on token cache TTL)<a href="#section-1.9.1-2" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.9.2">
-          <h4 id="name-82-strict-revocation">
-<a href="#section-1.9.2" class="section-number selfRef">1.9.2. </a><a href="#name-82-strict-revocation" class="section-name selfRef">8.2 Strict Revocation</a>
-          </h4>
-<p id="section-1.9.2-1">Relying parties call <code>/introspect</code> on every token use to check real-time revocation status.<a href="#section-1.9.2-1" class="pilcrow">¶</a></p>
-<p id="section-1.9.2-2"><strong>Latency</strong>: &lt;100ms (Redis denylist lookup)<a href="#section-1.9.2-2" class="pilcrow">¶</a></p>
-<p id="section-1.9.2-3">Operators choose strict vs. lazy based on their risk tolerance and throughput requirements.<a href="#section-1.9.2-3" class="pilcrow">¶</a></p>
-</section>
-</section>
-<section id="section-1.10">
-        <h3 id="name-9-security-considerations">
-<a href="#section-1.10" class="section-number selfRef">1.10. </a><a href="#name-9-security-considerations" class="section-name selfRef">9. Security Considerations</a>
-        </h3>
-<section id="section-1.10.1">
-          <h4 id="name-91-token-binding-rfc-8705">
-<a href="#section-1.10.1" class="section-number selfRef">1.10.1. </a><a href="#name-91-token-binding-rfc-8705" class="section-name selfRef">9.1 Token Binding (RFC 8705)</a>
-          </h4>
-<p id="section-1.10.1-1">KAIF SHOULD support mutual TLS (mTLS) token binding. When an agent presents a client certificate, KAIF MUST include:<a href="#section-1.10.1-1" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-1.10.1-2">
-<pre>"cnf": {
-  "x5t#S256": "sha256:a1b2c3d4..."
-}
-</pre><a href="#section-1.10.1-2" class="pilcrow">¶</a>
-</div>
-<p id="section-1.10.1-3">The relying party MUST verify that the mTLS handshake certificate thumbprint matches the token's <code>cnf</code> value.<a href="#section-1.10.1-3" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.10.2">
-          <h4 id="name-92-clock-skew">
-<a href="#section-1.10.2" class="section-number selfRef">1.10.2. </a><a href="#name-92-clock-skew" class="section-name selfRef">9.2 Clock Skew</a>
-          </h4>
-<p id="section-1.10.2-1">All timestamp validation MUST use 10-second clock skew tolerance (not configurable).<a href="#section-1.10.2-1" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.10.3">
-          <h4 id="name-93-key-rotation">
-<a href="#section-1.10.3" class="section-number selfRef">1.10.3. </a><a href="#name-93-key-rotation" class="section-name selfRef">9.3 Key Rotation</a>
-          </h4>
-<p id="section-1.10.3-1">KAIF MUST support zero-downtime key rotation by maintaining both active and retained keys in the JWKS. Relying parties MUST accept tokens signed with either key for a retention period (recommended: 7 days).<a href="#section-1.10.3-1" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.10.4">
-          <h4 id="name-94-spiffe-trust-domain-vali">
-<a href="#section-1.10.4" class="section-number selfRef">1.10.4. </a><a href="#name-94-spiffe-trust-domain-vali" class="section-name selfRef">9.4 SPIFFE Trust Domain Validation</a>
-          </h4>
-<p id="section-1.10.4-1">KAIF MUST validate that actor_token SPIFFE ID matches the configured SPIRE trust domain. Mismatched trust domains MUST be rejected with <code>invalid_client</code>.<a href="#section-1.10.4-1" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.10.5">
-          <h4 id="name-95-scope-validation">
-<a href="#section-1.10.5" class="section-number selfRef">1.10.5. </a><a href="#name-95-scope-validation" class="section-name selfRef">9.5 Scope Validation</a>
-          </h4>
-<p id="section-1.10.5-1">Scope validation MUST use exact-match-first, then glob matching. Substring matching MUST NOT be used (e.g., "vault:read" does NOT match "vault:read:key").<a href="#section-1.10.5-1" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.10.6">
-          <h4 id="name-96-logging-and-redaction">
-<a href="#section-1.10.6" class="section-number selfRef">1.10.6. </a><a href="#name-96-logging-and-redaction" class="section-name selfRef">9.6 Logging and Redaction</a>
-          </h4>
-<p id="section-1.10.6-1">KAIF implementations MUST:
-- Log JTI (not token values)
-- Redact <code>subject_token</code>, <code>actor_token</code>, <code>authorization</code> headers in HTTP logs
-- Never log private key material
-- Include request ID for tracing<a href="#section-1.10.6-1" class="pilcrow">¶</a></p>
-</section>
-</section>
-<section id="section-1.11">
-        <h3 id="name-10-relying-party-profile-no">
-<a href="#section-1.11" class="section-number selfRef">1.11. </a><a href="#name-10-relying-party-profile-no" class="section-name selfRef">10. Relying Party Profile (Normative)</a>
-        </h3>
-<p id="section-1.11-1">A third-party service that accepts KAIF tokens MUST implement:<a href="#section-1.11-1" class="pilcrow">¶</a></p>
-<section id="section-1.11.1">
-          <h4 id="name-101-token-validation">
-<a href="#section-1.11.1" class="section-number selfRef">1.11.1. </a><a href="#name-101-token-validation" class="section-name selfRef">10.1 Token Validation</a>
-          </h4>
-<div class="alignLeft art-text artwork" id="section-1.11.1-1">
-<pre>1. Fetch JWKS from issuer's /.well-known/jwks.json (cache 3600s)
+}</code></pre>
+<p><strong>Verification</strong>:</p>
+<p>External parties can verify audit chain integrity by replaying the
+hash computation:</p>
+<pre><code>expected_hash = SHA256(prev_hash | ts | action | detail)
+assert actual_hash == expected_hash</code></pre>
+<h2 id="revocation-and-propagation">8. Revocation and Propagation</h2>
+<p>KAIF provides two revocation models:</p>
+<h3 id="lazy-revocation-default">8.1 Lazy Revocation (Default)</h3>
+<p>Relying parties MAY cache tokens and check expiry locally. Revocation
+is eventual: the denylist is checked on the next refresh.</p>
+<p><strong>Latency</strong>: Minutes (depends on token cache TTL)</p>
+<h3 id="strict-revocation">8.2 Strict Revocation</h3>
+<p>Relying parties call <code>/introspect</code> on every token use to
+check revocation status in real time.</p>
+<p><strong>Latency</strong>: &lt;100ms (Redis denylist lookup)</p>
+<p>Operators choose strict vs. lazy based on their risk tolerance and
+throughput requirements.</p>
+<h3 id="ha-backed-revocation-stores">8.3 HA-Backed Revocation
+Stores</h3>
+<p>KAIF deployments commonly back the JTI denylist and audit chain with
+a managed Redis service.</p>
+<p>When the backing store is a managed HA service that does not expose
+customer-triggerable restart or failover operations, implementations
+MUST validate continuity through client-observable behavior rather than
+cluster control-plane actions.</p>
+<p>At minimum, a conformant deployment using such a service MUST
+demonstrate:</p>
+<ul>
+<li>Redis client reconnect after transient disconnect</li>
+<li>Denylist persistence across reconnect</li>
+<li>Audit hash-chain continuity across reconnect</li>
+<li>Resumption of successful writes after reconnect</li>
+</ul>
+<p>Platform-specific HA limitations and validation methods SHOULD be
+documented in implementation reports or deployment profiles, not
+embedded into interoperable wire semantics.</p>
+<h2 id="security-considerations">9. Security Considerations</h2>
+<h3 id="token-binding-rfc-8705">9.1 Token Binding (RFC 8705)</h3>
+<p>KAIF SHOULD support mutual TLS (mTLS) token binding. When an agent
+presents a client certificate, KAIF MUST include:</p>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;cnf&quot;</span><span class="er">:</span> <span class="fu">{</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;x5t#S256&quot;</span><span class="fu">:</span> <span class="st">&quot;sha256:a1b2c3d4...&quot;</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>The relying party MUST verify that the mTLS handshake certificate
+thumbprint matches the token’s <code>cnf</code> value.</p>
+<h3 id="clock-skew">9.2 Clock Skew</h3>
+<p>All timestamp validation MUST use 10-second clock skew tolerance (not
+configurable).</p>
+<h3 id="key-rotation">9.3 Key Rotation</h3>
+<p>KAIF MUST support zero-downtime key rotation by maintaining both
+active and retained keys in the JWKS. Relying parties MUST accept tokens
+signed with either key for a retention period (recommended: 7 days).</p>
+<h3 id="spiffe-trust-domain-validation">9.4 SPIFFE Trust Domain
+Validation</h3>
+<p>KAIF MUST validate that actor_token SPIFFE ID matches the configured
+SPIRE trust domain. Mismatched trust domains MUST be rejected with
+<code>invalid_client</code>.</p>
+<h3 id="scope-validation">9.5 Scope Validation</h3>
+<p>Scope validation MUST use exact-match-first, then glob matching.
+Substring matching MUST NOT be used (e.g., “vault:read” does NOT match
+“vault:read:key”).</p>
+<h3 id="logging-and-redaction">9.6 Logging and Redaction</h3>
+<p>KAIF implementations MUST: - Log JTI (not token values) - Redact
+<code>subject_token</code>, <code>actor_token</code>,
+<code>authorization</code> headers in HTTP logs - Never log private key
+material - Include request ID for tracing</p>
+<h3 id="threat-model-summary">9.7 Threat Model Summary</h3>
+<table>
+<colgroup>
+<col style="width: 19%" />
+<col style="width: 15%" />
+<col style="width: 35%" />
+<col style="width: 29%" />
+</colgroup>
+<thead>
+<tr>
+<th>Attacker</th>
+<th>Threat</th>
+<th>Required Control</th>
+<th>Residual Risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>External caller without delegation</td>
+<td>Attempts token exchange without operator grant</td>
+<td><code>subject_token</code> signature, expiry, revocation, and ACL
+validation</td>
+<td>Stolen valid grant until expiry or revocation</td>
+</tr>
+<tr>
+<td>Compromised workload</td>
+<td>Uses wrong or forged workload identity</td>
+<td><code>actor_token</code> JWT-SVID validation against trust bundle
+and ACL-bound SPIFFE ID</td>
+<td>Abuse by a legitimately attested but compromised workload</td>
+</tr>
+<tr>
+<td>Token thief</td>
+<td>Replays access token at relying party</td>
+<td>Short TTL, optional mTLS binding, strict introspection for high-risk
+paths</td>
+<td>Replay window exists when relying parties use lazy revocation</td>
+</tr>
+<tr>
+<td>Over-privileged intermediary agent</td>
+<td>Attempts excessive sub-delegation</td>
+<td>Scope subset checks, <code>may_sub_delegate</code>, depth
+enforcement, tier gating</td>
+<td>Misconfigured ACL or operator approval can still over-authorize</td>
+</tr>
+<tr>
+<td>Malicious or faulty relying party</td>
+<td>Accepts invalid, expired, or wrong-audience token</td>
+<td>Mandatory JWKS validation, expiry checks, audience checks, optional
+strict introspection</td>
+<td>Weak local policy at relying party remains possible</td>
+</tr>
+<tr>
+<td>Audit tampering actor</td>
+<td>Alters forensic record after issuance</td>
+<td>Hash-chained audit entries and externally verifiable
+<code>prev_hash</code> continuity</td>
+<td>Record deletion or total store loss still requires external
+retention strategy</td>
+</tr>
+</tbody>
+</table>
+<h3 id="privacy-and-data-minimization">9.8 Privacy and Data
+Minimization</h3>
+<p>KAIF is intended to prove delegated authority, not to maximize
+identity disclosure. Implementations SHOULD minimize personal and
+operational data as follows:</p>
+<ul>
+<li><code>sub</code> SHOULD use the least identifying operator handle
+consistent with the deployment’s audit requirements.</li>
+<li><code>principal_chain</code> SHOULD contain only the identities
+required to explain delegation lineage.</li>
+<li>Audit <code>detail</code> fields SHOULD exclude prompt bodies,
+business payloads, secrets, and raw token material unless separately
+required by policy.</li>
+<li>Relying parties SHOULD log JTI, actor identity, action, and result
+before logging broader contextual data.</li>
+<li>Operators and deployments SHOULD define retention periods for audit
+entries and principal-chain material consistent with legal and
+regulatory requirements.</li>
+</ul>
+<h2 id="relying-party-profile-normative">10. Relying Party Profile
+(Normative)</h2>
+<p>A third-party service that accepts KAIF tokens MUST implement:</p>
+<h3 id="token-validation">10.1 Token Validation</h3>
+<pre><code>1. Fetch JWKS from issuer&#39;s /.well-known/jwks.json (cache 3600s)
 2. Verify token signature using KID matching (try each key)
 3. Verify exp &gt; now (with 10s clock skew)
 4. If lazy revocation: done
 5. If strict revocation: POST /introspect to check JTI denylist
 6. Extract scope, verify requested action is permitted
-7. Extract actor.sub (SPIFFE ID), log for audit trail
-</pre><a href="#section-1.11.1-1" class="pilcrow">¶</a>
-</div>
-</section>
-<section id="section-1.11.2">
-          <h4 id="name-102-error-handling">
-<a href="#section-1.11.2" class="section-number selfRef">1.11.2. </a><a href="#name-102-error-handling" class="section-name selfRef">10.2 Error Handling</a>
-          </h4>
-<table class="center" id="table-3">
-            <caption><a href="#table-3" class="selfRef">Table 3</a></caption>
+7. Extract actor.sub (SPIFFE ID), log for audit trail</code></pre>
+<h3 id="error-handling">10.2 Error Handling</h3>
+<table>
+<colgroup>
+<col style="width: 34%" />
+<col style="width: 25%" />
+<col style="width: 40%" />
+</colgroup>
 <thead>
-              <tr>
-                <th class="text-left" rowspan="1" colspan="1">Condition</th>
-                <th class="text-left" rowspan="1" colspan="1">Action</th>
-                <th class="text-left" rowspan="1" colspan="1">HTTP Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Signature invalid</td>
-                <td class="text-left" rowspan="1" colspan="1">Reject</td>
-                <td class="text-left" rowspan="1" colspan="1">401 Unauthorized</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Expired</td>
-                <td class="text-left" rowspan="1" colspan="1">Reject</td>
-                <td class="text-left" rowspan="1" colspan="1">401 Unauthorized</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Revoked (strict mode)</td>
-                <td class="text-left" rowspan="1" colspan="1">Reject</td>
-                <td class="text-left" rowspan="1" colspan="1">401 Unauthorized</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Scope insufficient</td>
-                <td class="text-left" rowspan="1" colspan="1">Reject</td>
-                <td class="text-left" rowspan="1" colspan="1">403 Forbidden</td>
-              </tr>
-              <tr>
-                <td class="text-left" rowspan="1" colspan="1">Introspect unreachable (strict mode)</td>
-                <td class="text-left" rowspan="1" colspan="1">Degrade or reject (policy choice)</td>
-                <td class="text-left" rowspan="1" colspan="1">503 Service Unavailable</td>
-              </tr>
-            </tbody>
-          </table>
-</section>
-<section id="section-1.11.3">
-          <h4 id="name-103-audit-trail">
-<a href="#section-1.11.3" class="section-number selfRef">1.11.3. </a><a href="#name-103-audit-trail" class="section-name selfRef">10.3 Audit Trail</a>
-          </h4>
-<p id="section-1.11.3-1">Relying parties SHOULD log:
-- Timestamp of token use
-- JTI
-- Actor SPIFFE ID
-- Scope used
-- Action executed
-- Result (success/failure)<a href="#section-1.11.3-1" class="pilcrow">¶</a></p>
-<p id="section-1.11.3-2">This enables cross-party forensics if a token is misused.<a href="#section-1.11.3-2" class="pilcrow">¶</a></p>
-</section>
-</section>
-<section id="section-1.12">
-        <h3 id="name-11-backward-compatibility">
-<a href="#section-1.12" class="section-number selfRef">1.12. </a><a href="#name-11-backward-compatibility" class="section-name selfRef">11. Backward Compatibility</a>
-        </h3>
-<p id="section-1.12-1">This is KAIF v1.0 (initial standards track). Future versions:<a href="#section-1.12-1" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.12-2.1">
-            <strong>v1.1</strong>: Issuer metadata endpoint (<code>.well-known/kaif-metadata.json</code>)<a href="#section-1.12-2.1" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.12-2.2">
-            <strong>v2.0</strong>: Multi-issuer federation, cross-operator delegation<a href="#section-1.12-2.2" class="pilcrow">¶</a>
-</li>
-          <li class="compact" id="section-1.12-2.3">
-            <strong>v3.0</strong>: Behavioral trust signals (optional, opt-in per operator)<a href="#section-1.12-2.3" class="pilcrow">¶</a>
-</li>
-        </ul>
-<p id="section-1.12-3">Implementations MUST gracefully ignore unrecognized claims in KAIF tokens to allow forward compatibility.<a href="#section-1.12-3" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.13">
-        <h3 id="name-12-iana-considerations">
-<a href="#section-1.13" class="section-number selfRef">1.13. </a><a href="#name-12-iana-considerations" class="section-name selfRef">12. IANA Considerations</a>
-        </h3>
-<p id="section-1.13-1">This document registers the following with IANA:<a href="#section-1.13-1" class="pilcrow">¶</a></p>
-<section id="section-1.13.1">
-          <h4 id="name-121-oauth-20-grant-type">
-<a href="#section-1.13.1" class="section-number selfRef">1.13.1. </a><a href="#name-121-oauth-20-grant-type" class="section-name selfRef">12.1 OAuth 2.0 Grant Type</a>
-          </h4>
-<p id="section-1.13.1-1"><strong>Type</strong>: urn:ietf:params:oauth:grant-type:token-exchange (RFC 8693)<a href="#section-1.13.1-1" class="pilcrow">¶</a></p>
-<p id="section-1.13.1-2"><strong>Description</strong>: Token exchange grant (already registered, KAIF profiles its use)<a href="#section-1.13.1-2" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.13.2">
-          <h4 id="name-122-jwt-claims">
-<a href="#section-1.13.2" class="section-number selfRef">1.13.2. </a><a href="#name-122-jwt-claims" class="section-name selfRef">12.2 JWT Claims</a>
-          </h4>
-<p id="section-1.13.2-1"><strong>Claim name</strong>: <code>kaif</code><br>
-            <strong>Claim description</strong>: Container for KAIF-specific claims (authorization_tier, delegation_depth, principal_chain)<br>
-            <strong>JWT claims registry</strong>: Requested<a href="#section-1.13.2-1" class="pilcrow">¶</a></p>
-</section>
-</section>
-<section id="section-1.14">
-        <h3 id="name-13-conformance">
-<a href="#section-1.14" class="section-number selfRef">1.14. </a><a href="#name-13-conformance" class="section-name selfRef">13. Conformance</a>
-        </h3>
-<p id="section-1.14-1">An implementation claims KAIF v1.0 conformance if it:<a href="#section-1.14-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="compact type-1" id="section-1.14-2">
-<li id="section-1.14-2.1">✅ Implements POST /oauth/token with RFC 8693 semantics<a href="#section-1.14-2.1" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.2">✅ Implements POST /introspect with RFC 7662 semantics<a href="#section-1.14-2.2" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.3">✅ Validates actor_token as JWT-SVID from SPIRE bundle<a href="#section-1.14-2.3" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.4">✅ Enforces scope glob matching (via micromatch or equivalent)<a href="#section-1.14-2.4" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.5">✅ Supports delegation depth tracking and enforcement<a href="#section-1.14-2.5" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.6">✅ Publishes JWKS with active + retained keys<a href="#section-1.14-2.6" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.7">✅ Maintains audit trail with SHA-256 hashing<a href="#section-1.14-2.7" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.8">✅ Supports JTI revocation with sub-second propagation<a href="#section-1.14-2.8" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.9">✅ Validates 10-second clock skew (no more)<a href="#section-1.14-2.9" class="pilcrow">¶</a>
-</li>
-          <li id="section-1.14-2.10">✅ Passes KAIF conformance test suite<a href="#section-1.14-2.10" class="pilcrow">¶</a>
-</li>
-        </ol>
-<p id="section-1.14-3">Conformance is verified by passing the test fixtures in <a href="TBD">kaif-conformance-kit</a>.<a href="#section-1.14-3" class="pilcrow">¶</a></p>
-</section>
-<section id="section-1.15">
-        <h3 id="name-14-references">
-<a href="#section-1.15" class="section-number selfRef">1.15. </a><a href="#name-14-references" class="section-name selfRef">14. References</a>
-        </h3>
-<section id="section-1.15.1">
-          <h4 id="name-normative-references">
-<a href="#section-1.15.1" class="section-number selfRef">1.15.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
-          </h4>
-<ul class="normal">
-<li class="normal" id="section-1.15.1-1.1">
-              <p id="section-1.15.1-1.1.1">[RFC2119] Bradner, S., "Key words for use in Protocols to Indicate Requirement Levels", BCP 14, RFC 2119, DOI 10.17487/RFC2119, March 1997, <a href="https://www.rfc-editor.org/rfc/rfc2119.html">https://www.rfc-editor.org/rfc/rfc2119.html</a>.<a href="#section-1.15.1-1.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.1-1.2">
-              <p id="section-1.15.1-1.2.1">[RFC6234] Eastlake 3rd, D. and T. Hansen, "US Secure Hash and HMAC: SHA and SHA-based HMAC and HKDF", RFC 6234, DOI 10.17487/RFC6234, May 2011, <a href="https://www.rfc-editor.org/rfc/rfc6234.html">https://www.rfc-editor.org/rfc/rfc6234.html</a>.<a href="#section-1.15.1-1.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.1-1.3">
-              <p id="section-1.15.1-1.3.1">[RFC7231] Fielding, R. and J. Reschke, "Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content", RFC 7231, DOI 10.17487/RFC7231, June 2014, <a href="https://www.rfc-editor.org/rfc/rfc7231.html">https://www.rfc-editor.org/rfc/rfc7231.html</a>.<a href="#section-1.15.1-1.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.1-1.4">
-              <p id="section-1.15.1-1.4.1">[RFC7517] Jones, M., "JSON Web Key (JWK)", STD 81, RFC 7517, DOI 10.17487/RFC7517, May 2015, <a href="https://www.rfc-editor.org/rfc/rfc7517.html">https://www.rfc-editor.org/rfc/rfc7517.html</a>.<a href="#section-1.15.1-1.4.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.1-1.5">
-              <p id="section-1.15.1-1.5.1">[RFC7662] Richer, J., Ed., "OAuth 2.0 Token Introspection", RFC 7662, DOI 10.17487/RFC7662, October 2015, <a href="https://www.rfc-editor.org/rfc/rfc7662.html">https://www.rfc-editor.org/rfc/rfc7662.html</a>.<a href="#section-1.15.1-1.5.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.1-1.6">
-              <p id="section-1.15.1-1.6.1">[RFC8174] Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174, May 2018, <a href="https://www.rfc-editor.org/rfc/rfc8174.html">https://www.rfc-editor.org/rfc/rfc8174.html</a>.<a href="#section-1.15.1-1.6.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.1-1.7">
-              <p id="section-1.15.1-1.7.1">[RFC8693] Jones, M., Denniss, F., and B. Campbell, "OAuth 2.0 Token Exchange", STD 96, RFC 8693, DOI 10.17487/RFC8693, August 2020, <a href="https://www.rfc-editor.org/rfc/rfc8693.html">https://www.rfc-editor.org/rfc/rfc8693.html</a>.<a href="#section-1.15.1-1.7.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-</section>
-<section id="section-1.15.2">
-          <h4 id="name-informative-references">
-<a href="#section-1.15.2" class="section-number selfRef">1.15.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
-          </h4>
-<ul class="normal">
-<li class="normal" id="section-1.15.2-1.1">
-              <p id="section-1.15.2-1.1.1">[RFC7636] Sakimura, N., Bradley, J., and N. Agarwal, "Proof Key for Public OAuth 2.0 Authorization Code Exchange (PKCE)", RFC 7636, DOI 10.17487/RFC7636, September 2015, <a href="https://www.rfc-editor.org/rfc/rfc7636.html">https://www.rfc-editor.org/rfc/rfc7636.html</a>.<a href="#section-1.15.2-1.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.2-1.2">
-              <p id="section-1.15.2-1.2.1">[RFC8705] Campbell, B., Bradley, J., Sakimura, N., and T. Lodderstedt, "OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens", RFC 8705, DOI 10.17487/RFC8705, February 2020, <a href="https://www.rfc-editor.org/rfc/rfc8705.html">https://www.rfc-editor.org/rfc/rfc8705.html</a>.<a href="#section-1.15.2-1.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.2-1.3">
-              <p id="section-1.15.2-1.3.1">[SPIFFE] CNCF, "Secure Production Identity Framework for Everyone", <a href="https://spiffe.io/">https://spiffe.io/</a>.<a href="#section-1.15.2-1.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-1.15.2-1.4">
-              <p id="section-1.15.2-1.4.1">[SPIRE] CNCF, "SPIFFE Runtime Environment", <a href="https://spiffe.io/docs/latest/spire/">https://spiffe.io/docs/latest/spire/</a>.<a href="#section-1.15.2-1.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-1.15.2-2"><strong>Author's Address</strong><a href="#section-1.15.2-2" class="pilcrow">¶</a></p>
-<p id="section-1.15.2-3">Geoffrey Lundholm<br>
-Kindred Systems<br>
-London, United Kingdom<br>
-Email: kindred@kindredsystems.ai<a href="#section-1.15.2-3" class="pilcrow">¶</a></p>
-<p id="section-1.15.2-4"><strong>Version History</strong><a href="#section-1.15.2-4" class="pilcrow">¶</a></p>
-<ul class="compact">
-<li class="compact" id="section-1.15.2-5.1">v0.0 (2026-06-27): Initial draft, WIP for standardization feedback<a href="#section-1.15.2-5.1" class="pilcrow">¶</a>
-</li>
-          </ul>
-</section>
-</section>
-</section>
-<script>const toc = document.getElementById("toc");
-toc.querySelector("h2").addEventListener("click", e => {
-  toc.classList.toggle("active");
-});
-toc.querySelector("nav").addEventListener("click", e => {
-  toc.classList.remove("active");
-});
-</script>
+<tr>
+<th>Condition</th>
+<th>Action</th>
+<th>HTTP Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Signature invalid</td>
+<td>Reject</td>
+<td>401 Unauthorized</td>
+</tr>
+<tr>
+<td>Expired</td>
+<td>Reject</td>
+<td>401 Unauthorized</td>
+</tr>
+<tr>
+<td>Revoked (strict mode)</td>
+<td>Reject</td>
+<td>401 Unauthorized</td>
+</tr>
+<tr>
+<td>Scope insufficient</td>
+<td>Reject</td>
+<td>403 Forbidden</td>
+</tr>
+<tr>
+<td>Introspect unreachable (strict mode)</td>
+<td>Degrade or reject (policy choice)</td>
+<td>503 Service Unavailable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="audit-trail">10.3 Audit Trail</h3>
+<p>Relying parties SHOULD log: - Timestamp of token use - JTI - Actor
+SPIFFE ID - Scope used - Action executed - Result (success/failure)</p>
+<p>This enables cross-party forensics if a token is misused.</p>
+<h2 id="backward-compatibility">11. Backward Compatibility</h2>
+<p>This is KAIF v1.0, the initial standards-track release. Future
+versions:</p>
+<ul>
+<li><strong>v1.1</strong>: Issuer metadata endpoint
+(<code>.well-known/kaif-metadata.json</code>)</li>
+<li><strong>v2.0</strong>: Multi-issuer federation, cross-operator
+delegation</li>
+<li><strong>v3.0</strong>: Behavioral trust signals (optional, opt-in
+per operator)</li>
+</ul>
+<p>Implementations MUST gracefully ignore unrecognized claims in KAIF
+tokens to allow forward compatibility.</p>
+<h2 id="iana-considerations">12. IANA Considerations</h2>
+<p>This document registers the following values with IANA:</p>
+<h3 id="oauth-2.0-grant-type">12.1 OAuth 2.0 Grant Type</h3>
+<p><strong>Type</strong>:
+urn:ietf:params:oauth:grant-type:token-exchange (RFC 8693)</p>
+<p><strong>Description</strong>: Token exchange grant (already
+registered; KAIF profiles its use)</p>
+<h3 id="jwt-claims">12.2 JWT Claims</h3>
+<p><strong>Claim name</strong>: <code>kaif</code><br />
+<strong>Claim description</strong>: Container for KAIF-specific claims
+(authorization_tier, delegation_depth, principal_chain)<br />
+<strong>JWT claims registry</strong>: Requested</p>
+<h2 id="conformance">13. Conformance</h2>
+<p>An implementation claims KAIF v1.0 conformance if it:</p>
+<ol type="1">
+<li>Implements POST /oauth/token with RFC 8693 semantics</li>
+<li>Implements POST /introspect with RFC 7662 semantics</li>
+<li>Validates actor_token as JWT-SVID from a configured SPIRE bundle or
+equivalent SPIFFE trust source</li>
+<li>Enforces scope glob matching with exact-match-first behavior</li>
+<li>Supports delegation depth tracking and enforcement</li>
+<li>Publishes JWKS with active and retained keys</li>
+<li>Maintains an audit trail with SHA-256 hash chaining</li>
+<li>Supports JTI revocation with sub-second propagation</li>
+<li>Validates timestamps with 10-second clock skew tolerance</li>
+<li>Passes the KAIF conformance test suite</li>
+</ol>
+<p>Conformance is demonstrated by passing the KAIF conformance kit
+included with this repository.</p>
+<p>Protocol conformance and deployment evidence are related but
+distinct:</p>
+<ul>
+<li>Protocol conformance establishes that an implementation speaks KAIF
+correctly.</li>
+<li>Deployment evidence establishes that a specific operating
+environment behaved correctly under real conditions.</li>
+</ul>
+<p>An implementation MAY publish deployment evidence, interoperability
+notes, or platform-specific profiles in addition to protocol conformance
+results.</p>
+<h3 id="interoperability-evidence-informative">13.1 Interoperability
+Evidence (Informative)</h3>
+<p>A report SHOULD clearly state:</p>
+<ol type="1">
+<li>which parts of the KAIF handshake were exercised</li>
+<li>whether the relying party was independent from the authorization
+server</li>
+<li>which delivery, receipt, or resume semantics were validated beyond
+token issuance</li>
+<li>which deployment details are informative examples rather than
+normative protocol requirements</li>
+<li>which claims were not tested</li>
+</ol>
+<h3 id="revocation-store-resilience-profile">13.2 Revocation-Store
+Resilience Profile</h3>
+<p>If a deployment uses a managed Redis service for denylist and audit
+persistence, conformance evidence SHOULD include a revocation-store
+resilience profile.</p>
+<p>That profile SHOULD verify:</p>
+<ol type="1">
+<li>Redis client reconnect recovery</li>
+<li>Denylist persistence after reconnect</li>
+<li>Audit chain <code>prev_hash</code> continuity after reconnect</li>
+<li>Successful new delegation, token issuance, and revocation writes
+after reconnect</li>
+</ol>
+<p>If the platform does not expose customer-triggerable restart or
+failover operations, the implementation MUST document that limitation
+and MAY satisfy this profile using client-side disconnect and reconnect
+simulation plus state verification.</p>
+<h2
+id="appendix-a.-illustrative-implementation-status-informative">Appendix
+A. Illustrative Implementation Status (Informative)</h2>
+<p>One implementation-backed validation of KAIF exercised the following
+path:</p>
+<ol type="1">
+<li>an operator provisioned a delegation grant for a registered
+workload</li>
+<li>the workload exchanged that grant together with its workload
+identity for an audience-bound token</li>
+<li>a third-party execution surface accepted the boundary request</li>
+<li>a completion receipt was written back to the originating system</li>
+<li>the originating workflow resumed and completed its downstream
+steps</li>
+</ol>
+<p>This validation supports the claim that KAIF can convey delegated
+authority, workload identity, audience restriction, and correlated
+receipt data across a real external boundary.</p>
+<p>This validation does not, by itself, prove:</p>
+<ul>
+<li>interoperability across multiple independent KAIF
+implementations</li>
+<li>standardization of any particular cloud transport, agent runtime,
+queue, workflow engine, or datastore</li>
+<li>completeness of every optional KAIF feature or future extension</li>
+</ul>
+<p>Implementers SHOULD publish similarly bounded implementation reports
+so that protocol review can distinguish wire-level interoperability from
+deployment-specific success.</p>
+<h2 id="references">14. References</h2>
+<h3 id="normative-references">Normative References</h3>
+<ul>
+<li><p>[RFC2119] Bradner, S., “Key words for use in Protocols to
+Indicate Requirement Levels”, BCP 14, RFC 2119, DOI 10.17487/RFC2119,
+March 1997, <a href="https://www.rfc-editor.org/rfc/rfc2119.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc2119.html</a>.</p></li>
+<li><p>[RFC6234] Eastlake 3rd, D. and T. Hansen, “US Secure Hash and
+HMAC: SHA and SHA-based HMAC and HKDF”, RFC 6234, DOI 10.17487/RFC6234,
+May 2011, <a href="https://www.rfc-editor.org/rfc/rfc6234.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc6234.html</a>.</p></li>
+<li><p>[RFC7231] Fielding, R. and J. Reschke, “Hypertext Transfer
+Protocol (HTTP/1.1): Semantics and Content”, RFC 7231, DOI
+10.17487/RFC7231, June 2014, <a
+href="https://www.rfc-editor.org/rfc/rfc7231.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc7231.html</a>.</p></li>
+<li><p>[RFC7517] Jones, M., “JSON Web Key (JWK)”, STD 81, RFC 7517, DOI
+10.17487/RFC7517, May 2015, <a
+href="https://www.rfc-editor.org/rfc/rfc7517.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc7517.html</a>.</p></li>
+<li><p>[RFC7662] Richer, J., Ed., “OAuth 2.0 Token Introspection”, RFC
+7662, DOI 10.17487/RFC7662, October 2015, <a
+href="https://www.rfc-editor.org/rfc/rfc7662.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc7662.html</a>.</p></li>
+<li><p>[RFC8174] Leiba, B., “Ambiguity of Uppercase vs Lowercase in RFC
+2119 Key Words”, BCP 14, RFC 8174, DOI 10.17487/RFC8174, May 2018, <a
+href="https://www.rfc-editor.org/rfc/rfc8174.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc8174.html</a>.</p></li>
+<li><p>[RFC8693] Jones, M., Denniss, F., and B. Campbell, “OAuth 2.0
+Token Exchange”, STD 96, RFC 8693, DOI 10.17487/RFC8693, August 2020, <a
+href="https://www.rfc-editor.org/rfc/rfc8693.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc8693.html</a>.</p></li>
+</ul>
+<h3 id="informative-references">Informative References</h3>
+<ul>
+<li><p>[RFC7636] Sakimura, N., Bradley, J., and N. Agarwal, “Proof Key
+for Public OAuth 2.0 Authorization Code Exchange (PKCE)”, RFC 7636, DOI
+10.17487/RFC7636, September 2015, <a
+href="https://www.rfc-editor.org/rfc/rfc7636.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc7636.html</a>.</p></li>
+<li><p>[RFC8705] Campbell, B., Bradley, J., Sakimura, N., and T.
+Lodderstedt, “OAuth 2.0 Mutual-TLS Client Authentication and
+Certificate-Bound Access Tokens”, RFC 8705, DOI 10.17487/RFC8705,
+February 2020, <a href="https://www.rfc-editor.org/rfc/rfc8705.html"
+class="uri">https://www.rfc-editor.org/rfc/rfc8705.html</a>.</p></li>
+<li><p>[SPIFFE] CNCF, “Secure Production Identity Framework for
+Everyone”, <a href="https://spiffe.io/"
+class="uri">https://spiffe.io/</a>.</p></li>
+<li><p>[SPIRE] CNCF, “SPIFFE Runtime Environment”, <a
+href="https://spiffe.io/docs/latest/spire/"
+class="uri">https://spiffe.io/docs/latest/spire/</a>.</p></li>
+</ul>
+<hr />
+<p><strong>Author’s Address</strong></p>
+<p>Geoffrey Lundholm<br />
+Kindred Systems<br />
+London, United Kingdom<br />
+Email: kindred@kindredsystems.ai</p>
+<hr />
+<p><strong>Version History</strong></p>
+<ul>
+<li>v0.0 (2026-06-27): Initial public draft for standardization
+feedback</li>
+</ul>
 </body>
 </html>

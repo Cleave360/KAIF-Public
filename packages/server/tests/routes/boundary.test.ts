@@ -24,7 +24,7 @@ function setTestEnv() {
   process.env['KAIF_ISSUER'] = 'https://auth.test.example'
   process.env['KAIF_REDIS_URL'] = 'redis://localhost:6379'
   process.env['KAIF_SPIRE_BUNDLE_ENDPOINT'] = 'http://spire.test:8081'
-  process.env['KAIF_SPIRE_TRUST_DOMAIN'] = 'kindred.systems'
+  process.env['KAIF_SPIRE_TRUST_DOMAIN'] = 'example.org'
   process.env['KAIF_IDP_JWKS_URL'] = 'https://idp.test/.well-known/jwks.json'
   process.env['KAIF_IDP_ISSUER'] = 'https://idp.test'
   process.env['KAIF_AGENTS_CONFIG_PATH'] = AGENTS_CONFIG
@@ -185,9 +185,11 @@ describe('POST /v1/boundary/authorize', () => {
       })),
     })
 
-    expect(res.statusCode).toBe(200)
+    expect(res.statusCode).toBe(202)
     const body = res.json()
     expect(body.decision).toBe('permit')
+    expect(body.status).toBe('accepted')
+    expect(body.async).toBe(true)
     expect(body.boundary.request_id).toBe('req-123')
     expect(body.boundary.workflow_id).toBe('foundry_boundary_review_auto_recipe_v2')
     expect(body.authority.agent_spiffe_id).toBe(LYRA_SPIFFE)
@@ -198,11 +200,11 @@ describe('POST /v1/boundary/authorize', () => {
     expect(typeof body.token.access_token).toBe('string')
     expect(body.evidence.audit_hash).toMatch(/^[a-f0-9]{64}$/)
     expect(body.receipt.receipt_version).toBe('v1')
-    expect(body.receipt.result.status).toBe('success')
-    expect(body.receipt.provider_request_id).toBe('foundry-req-123')
-    expect(body.receipt.token_jti).toBe(body.authority.token_jti)
-    expect(body.receipt.delegation_id).toBe(body.authority.delegation_id)
+    expect(body.receipt.result.status).toBe('paused')
+    expect(body.receipt.result.provider_code).toBe('pending')
+    expect(body.receipt.result.provider_message).toBe('Accepted for asynchronous continuation')
 
+    await new Promise((resolve) => setTimeout(resolve, 50))
     const auditRaw = await redis.lrange('kaif:audit:global', 0, -1)
     const auditActions = auditRaw.map((entry) => JSON.parse(entry).action)
     expect(auditActions).toContain('BOUNDARY_PERMIT')
@@ -234,7 +236,7 @@ describe('POST /v1/boundary/authorize', () => {
   })
 
   it('uses the Foundry project agent mode when configured', async () => {
-    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/kindred-1882'
+    process.env['KAIF_FOUNDRY_PROJECT_ENDPOINT'] = 'https://example-resource.services.ai.azure.com/api/projects/example-project'
     process.env['KAIF_FOUNDRY_API_VERSION'] = '2025-05-15-preview'
     process.env['KAIF_FOUNDRY_MODE'] = 'project_agent'
     process.env['KAIF_FOUNDRY_AUTH_MODE'] = 'azure_ad'
@@ -246,7 +248,7 @@ describe('POST /v1/boundary/authorize', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = input instanceof URL ? input.toString() : String(input)
-      expect(url).toContain('/api/projects/kindred-1882/openai/v1/responses')
+      expect(url).toContain('/api/projects/example-project/openai/v1/responses')
       const headers = init?.headers as Record<string, string> | undefined
       expect(headers?.['authorization']).toBe('Bearer foundry-token')
       const body = JSON.parse(String(init?.body))
@@ -300,11 +302,20 @@ describe('POST /v1/boundary/authorize', () => {
       })),
     })
 
-    expect(res.statusCode).toBe(200)
+    expect(res.statusCode).toBe(202)
     const body = res.json()
     expect(body.decision).toBe('permit')
-    expect(body.receipt.result.status).toBe('success')
-    expect(body.receipt.receipt_payload.result.content).toContain('foundry_boundary_wrapper_v1')
+    expect(body.status).toBe('accepted')
+    expect(body.async).toBe(true)
+    expect(body.receipt.result.status).toBe('paused')
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    const auditRaw = await redis.lrange('kaif:audit:global', 0, -1)
+    const receiptEntry = auditRaw
+      .map((entry) => JSON.parse(entry))
+      .find((entry) => entry.action === 'BOUNDARY_RECEIPT')
+    expect(receiptEntry?.detail).toContain('status=success')
+    expect(receiptEntry?.detail).toContain('provider_code=200')
   })
 
   it('returns a structured deny response when bound human intent is incomplete', async () => {

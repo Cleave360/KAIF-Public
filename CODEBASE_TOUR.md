@@ -132,6 +132,7 @@ This is the **core KAIF operation**. Understanding this flow is essential.
 │    • Query agents.yaml for SPIFFE ID                                    │
 │    • Returns 403 access_denied if not registered                        │
 │    → Extracts: permitted_scopes, trust_tier_minimum, max_depth         │
+│      (`trust_tier_minimum` is the current ACL field name)              │
 └──────────────────────┬──────────────────────────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -143,10 +144,13 @@ This is the **core KAIF operation**. Understanding this flow is essential.
 └──────────────────────┬──────────────────────────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 6. Fetch trust score for agent                                          │
+│ 6. Fetch authorization tier value for agent                             │
 │    • Query Redis: kaif:trust:<spiffe_id>                                │
 │    • Default: 0.5 if not found (STANDARD tier)                          │
-│    • Resolve tier from score (PROVISIONAL|STANDARD|VERIFIED|TRUSTED)    │
+│    • Resolve authorization tier from value                              │
+│      (PROVISIONAL|STANDARD|VERIFIED|TRUSTED)                            │
+│    • Current implementation internals may still label these             │
+│      values as trust_score and trust_tier                               │
 │    → Returns 403 insufficient_trust if < minimum tier for ACL           │
 └──────────────────────┬──────────────────────────────────────────────────┘
                        ▼
@@ -160,7 +164,7 @@ This is the **core KAIF operation**. Understanding this flow is essential.
 └──────────────────────┬──────────────────────────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 8. Resolve token TTL from trust tier                                    │
+│ 8. Resolve token TTL from authorization tier                            │
 │    • PROVISIONAL: 300s (5 min)                                          │
 │    • STANDARD: 600s (10 min)                                            │
 │    • VERIFIED: 900s (15 min)                                            │
@@ -185,8 +189,9 @@ This is the **core KAIF operation**. Understanding this flow is essential.
 │    • actor.svid_thumbprint: sha256:<hex> of SVID cert                   │
 │                                                                          │
 │    KAIF extension claims (in .kaif field):                              │
-│    • kaif.trust_score: agent's current trust score (0.0-1.0)            │
-│    • kaif.trust_tier: tier label (VERIFIED, etc.)                       │
+│    • kaif.authorization_tier_value: agent's operator-assigned           │
+│      authorization value (0.0-1.0)                                      │
+│    • kaif.authorization_tier: tier label (VERIFIED, etc.)               │
 │    • kaif.delegation_depth: depth in chain (0 = direct from human)      │
 │    • kaif.delegation_id: uuid v4 (unique per issuance)                  │
 │    • kaif.rollback_window: ISO 8601 duration (e.g., "PT10M")            │
@@ -411,7 +416,7 @@ function assertTierMinimum(score, required): void  // throws if insufficient
 agents:
   lyra:                                 # agent name (key)
     spiffe_id: "spiffe://example.org/ns/adaptive-layer/agent/lyra"
-    trust_tier_minimum: STANDARD        # minimum tier to operate
+    trust_tier_minimum: STANDARD        # implementation ACL field name for minimum authorization tier
     permitted_scopes:                   # glob supported
       - "vault:read:*"
       - "invoke:completion"
@@ -508,7 +513,7 @@ curl -X POST http://localhost:8080/introspect \
   "sub": "user@example.com",
   "aud": "my-service",
   "exp": 1716252000,
-  "kaif": { "trust_score": 0.75, ... }
+  "kaif": { "authorization_tier_value": 0.75, ... }
 }
 ```
 

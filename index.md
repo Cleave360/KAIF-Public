@@ -23,7 +23,7 @@
 ### Current Snapshot (July 2, 2026)
 
 - Protocol and implementation phases complete; **boundary receipt contract** integration now merged (v0.2 feature).
-- Trust model extended with **operator-scoped authorization gates** (numeric value, backward-compatible `trust_score`/`trust_tier` naming).
+- Authorization model extended with **operator-scoped authorization gates** (numeric value, with some legacy implementation identifiers still referring to `trust_score`/`trust_tier`).
 - RFC 8705 token binding support via `KAIFConfirmationClaim` (jkt, x5t#S256).
 - Release-quality hardening ongoing: resilience evidence, production deployment posture, standards-track publication.
 - Conformance suite validated: 7 core KAIF fixtures, 10 Redis resilience test cases; CI workflow hardened with robust SVID extraction.
@@ -130,12 +130,12 @@ KAIF/
 
 ## 🔐 Core Concepts
 
-### Trust Model and Tiers
+### Authorization Model and Tiers
 
-**Trust Tier** — Classification of agent security posture  
+**Authorization Tier** — Classification of agent security posture
 **Components:**
-- **Authorization Tier Value** (0.0-1.0 numeric): Operator-assigned authorization gate value (stored in current schema fields as `trust_score`)
-- **Trust Tier Label**: PROVISIONAL, STANDARD, VERIFIED, TRUSTED
+- **Authorization Tier Value** (0.0-1.0 numeric): Operator-assigned authorization gate value
+- **Authorization Tier Label**: PROVISIONAL, STANDARD, VERIFIED, TRUSTED
 - **Privileges**: TTL, max delegation depth, minimum required for operations
 
 | Tier | Score Range | Token TTL | Max Depth | Use Case |
@@ -158,7 +158,7 @@ KAIF/
 - Expiry (typically 1 hour)
 
 **ACL (agents.yaml)** — Defines per-agent capabilities:
-- `trust_tier_minimum`: Minimum tier to operate
+- `trust_tier_minimum`: Current ACL field name for the minimum authorization tier to operate
 - `permitted_scopes`: Allowed permissions (glob supported, e.g., `vault:read:*`)
 - `may_sub_delegate`: Can delegate to other agents?
 - `max_delegation_depth`: How deep can sub-delegation go?
@@ -169,7 +169,7 @@ KAIF/
 
 **Request Flow:**
 1. Agent → Server: JWT-SVID (proof of identity) + Delegation grant (human authority)
-2. Server: Validate SVID → Lookup ACL → Check trust tier → Issue KAIF JWT
+2. Server: Validate SVID → Lookup ACL → Check authorization tier → Issue KAIF JWT
 3. Agent ← Server: Bearer token (RSA-2048 signed)
 4. Agent → External Service: Authorization header with token
 5. Service: Validate signature against JWKS at `/.well-known/jwks.json`
@@ -178,7 +178,7 @@ KAIF/
 - `iss`: Issuer (KAIF server)
 - `sub`: Human principal (email)
 - `actor.sub`: Agent SPIFFE ID
-- `kaif.trust_score`: Current authorization tier value
+- `kaif.authorization_tier_value`: Current authorization tier value
 - `kaif.delegation_depth`: Depth in chain
 - `kaif.principal_chain`: Human emails (audit trail)
 - `jti`: Unique ID (for revocation)
@@ -308,7 +308,7 @@ Latest verification snapshot (as of commit `0bce02f`, July 2, 2026):
 - **Conformance suite validated**: 7 core KAIF fixtures (KAIF-001..KAIF-007) + 10 Redis resilience cases (REDIS-001..REDIS-010); CI workflow hardened with robust JWT-SVID extraction
 - **Local demo** end-to-end: provisioning, token exchange, claims validation with decoded JWT output; dev-mode SVID fallback for bootstrap environments
 - **Redis resilience** attested: connectivity to Azure Managed Redis, denylist persistence, audit continuity, automatic reconnect recovery
-- **Type system extended**: KAIFConfirmationClaim for RFC 8705 mTLS binding (jkt, x5t#S256), backward-compatible trust_score/trust_tier naming
+- **Type system extended**: KAIFConfirmationClaim for RFC 8705 mTLS binding (jkt, x5t#S256), with legacy implementation compatibility around older trust_score/trust_tier identifiers
 
 Reference points: [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [conformance/README.md](conformance/README.md), [boundary_contract.md](boundary_contract.md), [security/FOUNDRY_BOUNDARY_RECEIPT_CONTRACT_V1.md](security/FOUNDRY_BOUNDARY_RECEIPT_CONTRACT_V1.md)
 

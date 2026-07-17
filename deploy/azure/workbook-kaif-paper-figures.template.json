@@ -1,0 +1,172 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# KAIF Paper Figures Workbook\nThis workbook is a publication-focused subset (10 charts) for methods/results reporting."
+      },
+      "name": "header"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Figure Set A: System Reliability"
+      },
+      "name": "section-a"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppRequests\n| project ts=TimeGenerated, ok=Success\n| where ts > ago(7d)\n| summarize requests=count(), success_rate=100.0*countif(ok==true)/count() by bin(ts, 15m)\n| order by ts asc",
+        "title": "A1 Request Volume and Success Rate",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "a1"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppRequests\n| project ts=TimeGenerated, dur_ms=todouble(DurationMs)\n| where ts > ago(7d)\n| summarize p50=percentile(dur_ms,50), p95=percentile(dur_ms,95), p99=percentile(dur_ms,99) by bin(ts, 15m)\n| order by ts asc",
+        "title": "A2 End-to-End Latency (p50/p95/p99)",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "a2"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppRequests\n| project ts=TimeGenerated, code=tostring(ResultCode)\n| where ts > ago(7d)\n| extend bucket=case(code == '429','429', code startswith '4','4xx', code startswith '5','5xx', 'other')\n| summarize failures=count() by bin(ts, 15m), bucket\n| order by ts asc",
+        "title": "A3 Error Distribution (4xx/5xx/429)",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "areachart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "a3"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Figure Set B: Foundry Agent Performance and Cost"
+      },
+      "name": "section-b"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppDependencies\n| project ts=TimeGenerated, tgt=tostring(Target), ok=Success, props=todynamic(Properties)\n| where ts > ago(7d)\n| where tgt has 'services.ai.azure.com' or tostring(props.component) == 'foundry'\n| summarize calls=count(), success_rate=100.0*countif(ok==true)/count() by bin(ts, 15m)\n| order by ts asc",
+        "title": "B1 Foundry Calls and Success Rate",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "b1"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppDependencies\n| project ts=TimeGenerated, tgt=tostring(Target), dur_ms=todouble(DurationMs), props=todynamic(Properties)\n| where ts > ago(7d)\n| where tgt has 'services.ai.azure.com' or tostring(props.component) == 'foundry'\n| summarize p50=percentile(dur_ms,50), p95=percentile(dur_ms,95), p99=percentile(dur_ms,99) by bin(ts, 15m)\n| order by ts asc",
+        "title": "B2 Foundry Latency (p50/p95/p99)",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "b2"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppTraces\n| project ts=TimeGenerated, props=todynamic(Properties)\n| where ts > ago(7d)\n| extend prompt_tokens=todouble(props.prompt_tokens), completion_tokens=todouble(props.completion_tokens), total_tokens=todouble(props.total_tokens)\n| where isnotnull(total_tokens) or isnotnull(prompt_tokens) or isnotnull(completion_tokens)\n| summarize prompt_tokens=sum(coalesce(prompt_tokens, 0.0)), completion_tokens=sum(coalesce(completion_tokens, 0.0)), total_tokens=sum(coalesce(total_tokens, 0.0)) by bin(ts, 30m)\n| extend est_cost_usd = total_tokens * 0.000001\n| order by ts asc",
+        "title": "B3 Token Volume and Estimated Cost",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "b3"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Figure Set C: Redis Resource Behavior"
+      },
+      "name": "section-c"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureMetrics\n| where TimeGenerated > ago(7d)\n| where ResourceProvider =~ 'MICROSOFT.CACHE'\n| where MetricName in ('cachehits','cachemisses')\n| summarize v=sum(Total) by bin(TimeGenerated, 15m), MetricName\n| evaluate pivot(MetricName, sum(v))\n| extend hit_ratio = todouble(cachehits) / (todouble(cachehits) + todouble(cachemisses))\n| project TimeGenerated, hit_ratio\n| order by TimeGenerated asc",
+        "title": "C1 Redis Cache Hit Ratio",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart",
+        "resourceIds": ["LOG_ANALYTICS_WORKSPACE_RESOURCE_ID"]
+      },
+      "name": "c1"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureMetrics\n| where TimeGenerated > ago(7d)\n| where ResourceProvider =~ 'MICROSOFT.CACHE'\n| where MetricName in ('evictedkeys','connectedclients','usedmemory')\n| summarize avg_value=avg(Total) by bin(TimeGenerated, 15m), MetricName\n| order by TimeGenerated asc",
+        "title": "C2 Redis Evictions, Clients, Memory",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart",
+        "resourceIds": ["LOG_ANALYTICS_WORKSPACE_RESOURCE_ID"]
+      },
+      "name": "c2"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Figure Set D: Governance and Workflow Integrity"
+      },
+      "name": "section-d"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let src = AppTraces\n| project ts=TimeGenerated, props=todynamic(Properties), msg=tostring(Message)\n| where ts > ago(7d)\n| extend event_type = iff(isnotempty(tostring(props.event_type)), tostring(props.event_type), case(\n    msg has '\"event_type\":\"dns.node.pause\"', 'dns.node.pause',\n    msg has '\"event_type\":\"dns.node.resume\"', 'dns.node.resume',\n    ''\n));\nlet pauses = src\n| where event_type == 'dns.node.pause'\n| project run_id=tostring(props.run_id), ts=ts;\nlet resumes = src\n| where event_type == 'dns.node.resume'\n| project run_id=tostring(props.run_id), resume_ts=ts;\npauses\n| join kind=leftouter resumes on run_id\n| summarize paused=count(), resumed=countif(isnotempty(resume_ts)) by bin(ts, 1h)\n| extend resume_rate = 100.0 * resumed / paused\n| order by ts asc",
+        "title": "D1 Pause to Resume Success Rate",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "d1"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let src = AppTraces\n| project ts=TimeGenerated, props=todynamic(Properties), msg=tostring(Message)\n| where ts > ago(7d)\n| extend event_type = iff(isnotempty(tostring(props.event_type)), tostring(props.event_type), case(\n    msg has '\"event_type\":\"workflow.run.start\"', 'workflow.run.start',\n    msg has '\"event_type\":\"workflow.run.finish\"', 'workflow.run.finish',\n    ''\n));\nlet starts = src\n| where event_type == 'workflow.run.start'\n| project run_id=tostring(props.run_id), start_ts=ts;\nlet finishes = src\n| where event_type == 'workflow.run.finish'\n| project run_id=tostring(props.run_id), finish_ts=ts;\nstarts\n| join kind=inner finishes on run_id\n| extend runtime_ms = datetime_diff('millisecond', finish_ts, start_ts)\n| summarize p50=percentile(runtime_ms,50), p95=percentile(runtime_ms,95), p99=percentile(runtime_ms,99) by bin(start_ts, 1h)\n| order by start_ts asc",
+        "title": "D2 End to End Workflow Runtime",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+      },
+      "name": "d2"
+    }
+  ],
+  "isLocked": false,
+  "fallbackResourceIds": ["APP_INSIGHTS_RESOURCE_ID"]
+}

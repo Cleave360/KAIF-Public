@@ -86,10 +86,10 @@ This page is maintained as the implementation moves from feature-complete alpha 
 
 **Authorization Tier Value**
 - Numeric value `0.0-1.0` used as the operator-assigned authorization gate value
-- Backward-compatible field names in claims and storage still use `trust_score` and `trust_tier`
+- Some implementation internals and compatibility shims may still use `trust_score` and `trust_tier`
 - Resolved tier is sourced from Redis key namespace `kaif:trust:<spiffe_id>`
 
-**Trust Score Signal**
+**Authorization Tier Signal**
 - Internal signal structure can include behavioural and peer components, but these are outside v1 conformance scope
 - Current enforcement behavior treats the numeric value as an authorization gate (not autonomous risk scoring)
 
@@ -166,16 +166,16 @@ This page is maintained as the implementation moves from feature-complete alpha 
 - `kaif`: KAIFExtensionClaims (KAIF-specific fields)
 
 **KAIFExtensionClaims** (in `kaif` field)
-- `trust_score`: Agent's trust score (0.0–1.0)
-- `trust_tier`: Resolved tier label
+- `authorization_tier_value`: Operator-assigned authorization value (0.0–1.0)
+- `authorization_tier`: Resolved tier label
 - `delegation_depth`: Depth in delegation chain (0 = direct from human)
 - `delegation_id`: UUID of the delegation grant
 - `rollback_window`: ISO 8601 duration string (e.g., "PT10M")
 - `principal_chain`: Array of human emails (oldest first)
 
 Terminology note:
-- Documentation may refer to these as `authorization_tier_value` and `authorization_tier` for operator readability.
-- Wire-format and TypeScript compatibility currently remain `trust_score` and `trust_tier`.
+- The public protocol and RFC use `authorization_tier_value` and `authorization_tier` as the canonical claim names.
+- Some implementation internals may still refer to legacy compatibility names such as `trust_score` and `trust_tier`.
 
 **KAIFActorClaim** (in `actor` field)
 - `sub`: Actor's SPIFFE ID
@@ -224,7 +224,7 @@ SUB_DELEGATION_ISSUED | REVOCATION_PROPAGATED
 
 **AgentACL**
 - `spiffe_id`: Workload's SPIFFE ID (must match SPIRE-issued SVID)
-- `trust_tier_minimum`: Minimum tier required for any operation
+- `trust_tier_minimum`: Current ACL field name for the minimum authorization tier required for any operation
 - `permitted_scopes`: Array of allowed scopes (glob supported)
 - `may_sub_delegate`: Boolean; can this agent delegate to others?
 - `max_delegation_depth`: Max depth for delegated tokens (0 = no sub-delegation)

@@ -1,0 +1,220 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# KAIF Research Metrics Workbook\nImport this workbook, then replace placeholder resource IDs in each query item.\n\nRequired placeholders:\n- APP_INSIGHTS_RESOURCE_ID\n- LOG_ANALYTICS_WORKSPACE_RESOURCE_ID"
+      },
+      "name": "header"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## 1) Reliability and Performance"
+      },
+      "name": "section-reliability"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppRequests\n| project ts=TimeGenerated, ok=Success\n| where ts > ago(7d)\n| summarize Requests=count(), SuccessRate=100.0*countif(ok==true)/count() by bin(ts, 5m)\n| order by ts asc",
+        "size": 0,
+        "title": "Request Volume and Success Rate",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "req-success"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppRequests\n| project ts=TimeGenerated, route=Name, dur_ms=todouble(DurationMs)\n| where ts > ago(7d)\n| summarize p50=percentile(dur_ms,50), p95=percentile(dur_ms,95), p99=percentile(dur_ms,99) by bin(ts, 5m), route\n| order by ts asc",
+        "size": 0,
+        "title": "Request Latency Percentiles (p50/p95/p99)",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "req-tail-latency"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppRequests\n| project ts=TimeGenerated, code=tostring(ResultCode), ok=Success, props=todynamic(Properties)\n| where ts > ago(7d)\n| extend bucket=case(\n    code == '429', '429',\n    code startswith '4', '4xx',\n    code startswith '5', '5xx',\n    ok == false and tostring(props.error_type) has 'timeout', 'timeout',\n    ok == false and tostring(props.error_type) has 'auth', 'auth',\n    'other')\n| summarize Failures=count() by bin(ts, 5m), bucket\n| order by ts asc",
+        "size": 0,
+        "title": "Error Taxonomy (4xx/5xx/429/timeout/auth)",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "areachart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "error-taxonomy"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## 2) Foundry Agent Metrics"
+      },
+      "name": "section-foundry"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppDependencies\n| project ts=TimeGenerated, tgt=tostring(Target), ok=Success, props=todynamic(Properties)\n| where ts > ago(7d)\n| where tgt has 'services.ai.azure.com' or tostring(props.component) == 'foundry'\n| summarize calls=count(), success_rate=100.0*countif(ok==true)/count() by bin(ts, 5m)\n| order by ts asc",
+        "size": 0,
+        "title": "Foundry Calls and Success Rate",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "foundry-calls"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppDependencies\n| project ts=TimeGenerated, tgt=tostring(Target), dur_ms=todouble(DurationMs), props=todynamic(Properties)\n| where ts > ago(7d)\n| where tgt has 'services.ai.azure.com' or tostring(props.component) == 'foundry'\n| summarize p50=percentile(dur_ms,50), p95=percentile(dur_ms,95), p99=percentile(dur_ms,99) by bin(ts, 5m)\n| order by ts asc",
+        "size": 0,
+        "title": "Foundry Latency Percentiles",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "foundry-latency"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AppTraces\n| project ts=TimeGenerated, props=todynamic(Properties)\n| where ts > ago(7d)\n| extend prompt_tokens=todouble(props.prompt_tokens), completion_tokens=todouble(props.completion_tokens), total_tokens=todouble(props.total_tokens)\n| where isnotnull(total_tokens) or isnotnull(prompt_tokens) or isnotnull(completion_tokens)\n| summarize prompt_tokens=sum(coalesce(prompt_tokens, 0.0)), completion_tokens=sum(coalesce(completion_tokens, 0.0)), total_tokens=sum(coalesce(total_tokens, 0.0)) by bin(ts, 15m)\n| extend est_cost_usd = total_tokens * 0.000001\n| order by ts asc",
+        "size": 0,
+        "title": "Foundry Tokens and Estimated Cost",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "foundry-tokens"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## 3) Redis Health (Azure Managed Redis)"
+      },
+      "name": "section-redis"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureMetrics\n| where TimeGenerated > ago(7d)\n| where ResourceProvider =~ 'MICROSOFT.CACHE'\n| where MetricName in ('cachehits', 'cachemisses')\n| summarize v=sum(Total) by bin(TimeGenerated, 5m), MetricName\n| evaluate pivot(MetricName, sum(v))\n| extend hit_ratio = todouble(cachehits) / (todouble(cachehits) + todouble(cachemisses))\n| project TimeGenerated, hit_ratio\n| order by TimeGenerated asc",
+        "size": 0,
+        "title": "Redis Cache Hit Ratio",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart",
+        "resourceIds": [
+          "LOG_ANALYTICS_WORKSPACE_RESOURCE_ID"
+        ]
+      },
+      "name": "redis-hit-ratio"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureMetrics\n| where TimeGenerated > ago(7d)\n| where ResourceProvider =~ 'MICROSOFT.CACHE'\n| where MetricName in ('connectedclients','evictedkeys','usedmemory')\n| summarize avg_value=avg(Total) by bin(TimeGenerated, 5m), MetricName\n| order by TimeGenerated asc",
+        "size": 0,
+        "title": "Redis Connected Clients, Evictions, Memory",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart",
+        "resourceIds": [
+          "LOG_ANALYTICS_WORKSPACE_RESOURCE_ID"
+        ]
+      },
+      "name": "redis-health"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## 4) Governance and Workflow Integrity"
+      },
+      "name": "section-governance"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let src = AppTraces\n| project ts=TimeGenerated, props=todynamic(Properties), msg=tostring(Message)\n| where ts > ago(7d)\n| extend event_type = iff(isnotempty(tostring(props.event_type)), tostring(props.event_type), case(\n    msg has '\"event_type\":\"kaif.boundary.permit\"', 'kaif.boundary.permit',\n    msg has '\"event_type\":\"kaif.boundary.deny\"', 'kaif.boundary.deny',\n    ''\n));\nsrc\n| where event_type in ('kaif.boundary.permit','kaif.boundary.deny')\n| summarize permits=countif(event_type=='kaif.boundary.permit'), denies=countif(event_type=='kaif.boundary.deny') by bin(ts, 15m)\n| extend permit_rate = 100.0*permits / (permits + denies)\n| order by ts asc",
+        "size": 0,
+        "title": "KAIF Boundary Permit vs Deny",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "kaif-permit-deny"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let src = AppTraces\n| project ts=TimeGenerated, props=todynamic(Properties), msg=tostring(Message)\n| where ts > ago(7d)\n| extend event_type = iff(isnotempty(tostring(props.event_type)), tostring(props.event_type), case(\n    msg has '\"event_type\":\"dns.node.pause\"', 'dns.node.pause',\n    msg has '\"event_type\":\"dns.node.resume\"', 'dns.node.resume',\n    msg has '\"event_type\":\"kaif.receipt.persisted\"', 'kaif.receipt.persisted',\n    msg has '\"event_type\":\"dns.context.write.success\"', 'dns.context.write.success',\n    ''\n));\nlet pauses = src\n| where event_type == 'dns.node.pause'\n| project run_id=tostring(props.run_id), request_id=tostring(props.request_id), pause_ts=ts;\nlet resumes = src\n| where event_type == 'dns.node.resume'\n| project run_id=tostring(props.run_id), resume_ts=ts;\nlet receipts = src\n| where event_type in ('kaif.receipt.persisted','dns.context.write.success')\n| project request_id=tostring(props.request_id), receipt_ts=ts;\npauses\n| join kind=leftouter resumes on run_id\n| join kind=leftouter receipts on request_id\n| summarize paused=count(), resumed=countif(isnotempty(resume_ts)), receipt_correlated=countif(isnotempty(receipt_ts)) by bin(pause_ts, 1h)\n| extend resume_rate=100.0*resumed/paused, receipt_corr_rate=100.0*receipt_correlated/paused\n| order by pause_ts asc",
+        "size": 0,
+        "title": "Pause-Resume Rate and Receipt Correlation",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "pause-resume-corr"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let src = AppTraces\n| project ts=TimeGenerated, props=todynamic(Properties), msg=tostring(Message)\n| where ts > ago(7d)\n| extend event_type = iff(isnotempty(tostring(props.event_type)), tostring(props.event_type), case(\n    msg has '\"event_type\":\"workflow.run.start\"', 'workflow.run.start',\n    msg has '\"event_type\":\"workflow.run.finish\"', 'workflow.run.finish',\n    ''\n));\nlet starts = src\n| where event_type == 'workflow.run.start'\n| project run_id=tostring(props.run_id), start_ts=ts;\nlet finishes = src\n| where event_type == 'workflow.run.finish'\n| project run_id=tostring(props.run_id), finish_ts=ts;\nstarts\n| join kind=inner finishes on run_id\n| extend e2e_ms = datetime_diff('millisecond', finish_ts, start_ts)\n| summarize p50=percentile(e2e_ms,50), p95=percentile(e2e_ms,95), p99=percentile(e2e_ms,99) by bin(start_ts, 1h)\n| order by start_ts asc",
+        "size": 0,
+        "title": "End-to-End Workflow Runtime Percentiles",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart",
+        "resourceIds": [
+          "APP_INSIGHTS_RESOURCE_ID"
+        ]
+      },
+      "name": "e2e-runtime"
+    }
+  ],
+  "isLocked": false,
+  "fallbackResourceIds": [
+    "APP_INSIGHTS_RESOURCE_ID"
+  ]
+}
