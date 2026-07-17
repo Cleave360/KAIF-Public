@@ -63,7 +63,7 @@ The following are out of scope for v1.0:
 
 ### 1.3 Conventions and Terminology
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC2119] and [RFC8174], when and only when they appear in all capitals, as shown here.
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all capitals, as shown here.
 
 **KAIF-specific terms:**
 
@@ -276,12 +276,12 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 
 1. Parse and validate subject_token (delegation grant)
    - MUST have valid signature from KAIF issuer
-   - MUST not be expired (with 10s clock skew tolerance)
-   - MUST not be in JTI revocation denylist
+   - MUST NOT be expired (with 10s clock skew tolerance)
+   - MUST NOT be in JTI revocation denylist
    
 2. Parse and validate actor_token (JWT-SVID)
    - MUST have valid signature from SPIRE bundle
-   - MUST not be expired
+   - MUST NOT be expired
    - SPIFFE ID MUST be registered in ACL
    
 3. Validate scope
@@ -297,7 +297,7 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 5. Compute delegation depth
    - If subject_token is direct provision: depth = 0
    - If subject_token is access token from prior exchange: depth = subject.kaif.delegation_depth + 1
-   - MUST not exceed: min(actor ACL depth limit, tier depth limit)
+   - MUST NOT exceed: min(actor ACL depth limit, tier depth limit)
    
 6. Mint access token with RS256 signature
 
@@ -808,19 +808,17 @@ Implementers SHOULD publish similarly bounded implementation reports so that pro
 
 - [RFC6234] Eastlake 3rd, D. and T. Hansen, "US Secure Hash and HMAC: SHA and SHA-based HMAC and HKDF", RFC 6234, DOI 10.17487/RFC6234, May 2011, <https://www.rfc-editor.org/rfc/rfc6234.html>.
 
-- [RFC7231] Fielding, R. and J. Reschke, "Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content", RFC 7231, DOI 10.17487/RFC7231, June 2014, <https://www.rfc-editor.org/rfc/rfc7231.html>.
+- [RFC9110] Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke, Ed., "HTTP Semantics", STD 97, RFC 9110, DOI 10.17487/RFC9110, June 2022, <https://www.rfc-editor.org/rfc/rfc9110.html>.
 
-- [RFC7517] Jones, M., "JSON Web Key (JWK)", STD 81, RFC 7517, DOI 10.17487/RFC7517, May 2015, <https://www.rfc-editor.org/rfc/rfc7517.html>.
+- [RFC7517] Jones, M., "JSON Web Key (JWK)", RFC 7517, DOI 10.17487/RFC7517, May 2015, <https://www.rfc-editor.org/rfc/rfc7517.html>.
 
 - [RFC7662] Richer, J., Ed., "OAuth 2.0 Token Introspection", RFC 7662, DOI 10.17487/RFC7662, October 2015, <https://www.rfc-editor.org/rfc/rfc7662.html>.
 
 - [RFC8174] Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174, May 2018, <https://www.rfc-editor.org/rfc/rfc8174.html>.
 
-- [RFC8693] Jones, M., Denniss, F., and B. Campbell, "OAuth 2.0 Token Exchange", STD 96, RFC 8693, DOI 10.17487/RFC8693, August 2020, <https://www.rfc-editor.org/rfc/rfc8693.html>.
+- [RFC8693] Jones, M., Denniss, F., and B. Campbell, "OAuth 2.0 Token Exchange", RFC 8693, DOI 10.17487/RFC8693, August 2020, <https://www.rfc-editor.org/rfc/rfc8693.html>.
 
 ### Informative References
-
-- [RFC7636] Sakimura, N., Bradley, J., and N. Agarwal, "Proof Key for Public OAuth 2.0 Authorization Code Exchange (PKCE)", RFC 7636, DOI 10.17487/RFC7636, September 2015, <https://www.rfc-editor.org/rfc/rfc7636.html>.
 
 - [RFC8705] Campbell, B., Bradley, J., Sakimura, N., and T. Lodderstedt, "OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens", RFC 8705, DOI 10.17487/RFC8705, February 2020, <https://www.rfc-editor.org/rfc/rfc8705.html>.
 
